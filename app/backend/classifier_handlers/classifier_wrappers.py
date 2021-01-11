@@ -21,7 +21,7 @@ class BertTimelineClassifierWrapper:
         """ Return the tweet which is most likely to contain fake news, along with the probability """
         predictions = self._predict("individual", preprocessed_tweets)
         tweet_index = predictions.flatten().argmax()
-        return (original_tweets[tweet_index], predictions[tweet_index])
+        return (original_tweets[tweet_index], predictions[tweet_index] * 100)
 
     def _predict(self, classifier_mode, preprocessed_tweets):
         self.classifier.set_encoding("individual")
