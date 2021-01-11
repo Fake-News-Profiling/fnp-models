@@ -36,16 +36,16 @@
             {% endif %}
 
             <p>
-                We looked at {{ username }}'s last {{ num_tweets }} tweets and have predicted a 
+                We looked at {{ username }}'s last {{ num_tweets_assessed }} tweets and have predicted a 
                 {{ '%.2f' % spreader_probability }}% likelihood that they are a fake news spreader.
             </p>
 
             <h2>
-                From their tweets, we thought this was the most likely tweet to be fake news:
+                From their tweets, we thought this was the most likely tweet to be fake news ({{ '%.2f' % spreader_tweet_probability }}% likelihood):
             </h2>
             <blockquote class="twitter-tweet" data-lang="en">
-                <p lang="en" dir="ltr">{{ fake_tweet }}</p>
-                &mdash; <a href="https://twitter.com/{{ username }}/status/{{ fake_tweet_id }}">@{{ username }}</a>
+                <p lang="en" dir="ltr">{{ spreader_tweet }}</p>
+                &mdash; <a href="https://twitter.com/{{ username }}/status/{{ spreader_tweet_id }}">@{{ username }}</a>
             </blockquote>
         </div>
 	</div>
