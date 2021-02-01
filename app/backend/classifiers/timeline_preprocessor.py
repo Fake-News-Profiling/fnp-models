@@ -10,7 +10,7 @@ from unidecode import unidecode
 
 class TweetPreprocessor:
     def __init__(self, tweets):
-        """ Constructs a new InputPreprocessor object, given a list of tweets. """
+        """ Constructs a new TweetPreprocessor object, given a list of tweets. """
         self.tweets = list(map(lambda tweet: tweet.text, tweets))
         self._preprocess()
 
