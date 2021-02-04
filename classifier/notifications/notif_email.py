@@ -2,7 +2,7 @@ import smtplib, ssl
 import os
 
 
-def send_email(to_addrs, message):
+def send_email(message, to_addrs="jljh1g18@soton.ac.uk"):
     """ Send a plain text email """
     with smtplib.SMTP_SSL(
         "smtp.gmail.com", 
@@ -13,5 +13,5 @@ def send_email(to_addrs, message):
         passw = os.getenv("ML_FAKENEWS_NOTIF")
         smtp_server.login(user, passw)
         
-        smtp_server.sendmail(user, to_addrs, message)
+        smtp_server.sendmail(user, to_addrs, "\n"+message)
     
