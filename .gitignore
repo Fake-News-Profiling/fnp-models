@@ -1,3 +1,9 @@
-/venv/
-/scripts/run_app.sh
+# IDE
 /.vscode/
+/.idea/
+
+# Virtual Env
+/venv/
+
+# Scripts
+/scripts/run_app.sh
