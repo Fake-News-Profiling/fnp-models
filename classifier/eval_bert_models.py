@@ -31,139 +31,169 @@ def load_data():
  tweet_val, label_val, 
  tweet_test, label_test) = load_data()
 
-# Preprocess dataset
-def preprocess_tweets(tweet_train, tweet_val, tweet_test):
-    tweet_preprocessor = processing.BertTweetFeedDataPreprocessor(
-        transformers = [
-            processing.tag_indicators,
-            processing.replace_xml_and_html,
-            processing.replace_emojis,
-            processing.remove_punctuation,
-            processing.replace_tags,
-            processing.remove_hashtag_chars,
-            processing.replace_accented_chars,
-            processing.tag_numbers,
-            processing.remove_stopwords,
-            processing.remove_extra_spacing,
-        ])
-    tweet_train_processed = tweet_preprocessor.transform(tweet_train)
-    tweet_val_processed = tweet_preprocessor.transform(tweet_val)
-    tweet_test_processed = tweet_preprocessor.transform(tweet_test)
-    return (tweet_train_processed, tweet_val_processed, tweet_test_processed)
+# Preprocess search
+def preprocess_funcs_search(processing_funcs, model_params, X_train, y_train, X_val, y_val, save_path):
+    for i, funcs in enumerate(processing_funcs):
+        preprocessor = processing.BertTweetFeedDataPreprocessor(transformers=funcs)
+        X_train_processed = preprocessor.transform(X_train)
+        X_val_processed = preprocessor.transform(X_val)
+        
+        with open(save_path + "train_history.txt", "a") as file:
+            file.write(f"\n-----Preprocessing funcs are: {funcs}")
 
-# Preprocess dataset
-tweet_preprocessor = processing.BertTweetFeedDataPreprocessor(
-    transformers = [
-        processing.tag_indicators,
-        processing.replace_xml_and_html,
-        processing.replace_emojis,
-        processing.remove_punctuation,
-        processing.replace_tags,
-        processing.remove_hashtag_chars,
-        processing.replace_accented_chars,
-        processing.tag_numbers,
-        processing.remove_stopwords,
-        processing.remove_extra_spacing,
-    ])
-tweet_train_processed = tweet_preprocessor.transform(tweet_train)
-tweet_val_processed = tweet_preprocessor.transform(tweet_val)
-tweet_test_processed = tweet_preprocessor.transform(tweet_test)
+        for params in model_params:
+            if len(funcs) == 0 and params["batch_size"] != 80:
+                continue
+            bert_size = params["bert_size"]
+            lr = params["learning_rate"]
+            optimizer_name = params["optimizer"]
+            batch_size = params["batch_size"]
+            epochs = 10
+            name = f"{i}-{params['model_type']}_{bert_size}_{batch_size}_{str(lr)[0]}_{'A' if optimizer_name == 'adam' else 'AW'}"
+            print("\n", name, "\n")
+            
+            with tf.device(('/gpu:0' if batch_size < 32 else '/cpu:0')):
+                model_handler = bclf.BertModelEvalHandler(
+                    params["bert_url"], bert_size, params["tokenizer"], bclf.dense_bert_model)
 
+                train_history = model_handler.train_bert(
+                    X_train_processed,
+                    y_train,
+                    batch_size,
+                    epochs,
+                    X_val_processed,
+                    y_val,
+                    optimizer_name,
+                    lr,
+                    save_path + name + "/cp.ckpt",
+                    save_path + "logs/" + name,
+                )
 
-# BERT Feed Model with 256 input size
-print("\n\n\nBERT Feed Model with 256 input size")
-bert_url = "https://tfhub.dev/tensorflow/small_bert/bert_en_uncased_L-12_H-256_A-4/1"
-bert_size = 256
-models = [(batch_size, epochs, lr, optimizer_name)
-         for batch_size in [32]
-         for epochs in [10]
-         for lr in [3e-5, 2e-5]
-         for optimizer_name in ['adam', 'adamw']]
-
-model_path = "training/bert_feed/initial_eval/"
-
-
-for batch_size, epochs, lr, optimizer_name in models:
-    with tf.device(('/gpu:0' if batch_size < 16 else '/cpu:0')):
-        model_name = f"bert256-batch_size{batch_size}-epochs{epochs}-lr{lr}-optimizer{optimizer_name}"
-        model_handler = bclf.BertModelEvalHandler(
-            bert_url, bert_size, bclf.BertTweetFeedTokenizer, bclf.dense_bert_model)
-
-        train_history = model_handler.train_bert(
-            tweet_train_processed,
-            label_train,
-            batch_size,
-            epochs,
-            tweet_val_processed,
-            label_val,
-            optimizer_name,
-            lr,
-            model_path + model_name + "/cp.ckpt",
-            model_path + "logs/" + model_name,
-        )
-
-        text = f"Finished training {model_name}, training history was:\n{train_history.history}"
-        print(text)
-        send_email(text)
-        with open(model_path+"train_history.txt", "a") as file:
             def join_hist_array(array):
                 return ",".join([str(i) for i in array])
 
-            name = f"F_{bert_size}_{batch_size}_{str(lr)[0]}_{'A' if optimizer_name == 'adam' else 'AW'}"
             file_text = ", ,".join([
                 ",".join([str(bert_size), str(batch_size), str(lr), optimizer_name, name]), 
                 join_hist_array(train_history.history['loss']),
                 join_hist_array(train_history.history['val_loss']),
                 join_hist_array(train_history.history['binary_accuracy']),
                 join_hist_array(train_history.history['val_binary_accuracy']),
-            ]) + "\n"
-            file.write(file_text)
+            ])
+            with open(save_path + "train_history.txt", "a") as file:
+                file.write("\n"+file_text)
+    
+        send_email(f"Finished training for preprocessing funcs:\n{funcs}")
+        
 
+preprocess_funcs_search(
+    processing_funcs=[
+        # No preprocessing functions (raw data)
+        [],
+        # Remove HTML, replace emojis, remove accented chars, replace tags
+        [processing.replace_xml_and_html,
+         processing.replace_emojis, 
+         processing.replace_accented_chars, 
+         processing.replace_tags, 
+         processing.remove_extra_spacing],
+        # Remove HTML, replace emojis, remove accented chars, replace tags, remove punctuation, tag numbers
+        [processing.replace_xml_and_html,
+         processing.replace_emojis, 
+         processing.replace_accented_chars, 
+         processing.remove_punctuation,
+         processing.replace_tags,
+         processing.remove_hashtag_chars,
+         processing.tag_numbers,
+         processing.remove_extra_spacing],
+        # Remove HTML, replace emojis, remove accented chars, replace tags, remove punctuation, tag numbers, remove stopwords
+        [processing.replace_xml_and_html,
+         processing.replace_emojis, 
+         processing.replace_accented_chars, 
+         processing.remove_punctuation,
+         processing.replace_tags,
+         processing.remove_hashtag_chars,
+         processing.tag_numbers,
+         processing.remove_stopwords,
+         processing.remove_extra_spacing],
+    ],
+    model_params=[
+        # F_128_8_2_AW
+        {"model_type": "F",
+         "bert_size": 128, 
+         "learning_rate": 2e-5, 
+         "optimizer": "adamw", 
+         "batch_size": 8,
+         "tokenizer": bclf.BertTweetFeedTokenizer, 
+         "bert_url": "https://tfhub.dev/tensorflow/small_bert/bert_en_uncased_L-12_H-128_A-2/1"},
+        # F_128_16_2_AW
+        {"model_type": "F",
+         "bert_size": 128, 
+         "learning_rate": 2e-5, 
+         "optimizer": "adamw", 
+         "batch_size": 16,
+         "tokenizer": bclf.BertTweetFeedTokenizer, 
+         "bert_url": "https://tfhub.dev/tensorflow/small_bert/bert_en_uncased_L-12_H-128_A-2/1"},
+        # F_128_24_2_AW
+        {"model_type": "F",
+         "bert_size": 128, 
+         "learning_rate": 2e-5, 
+         "optimizer": "adamw", 
+         "batch_size": 24,
+         "tokenizer": bclf.BertTweetFeedTokenizer, 
+         "bert_url": "https://tfhub.dev/tensorflow/small_bert/bert_en_uncased_L-12_H-128_A-2/1"},
+        # F_128_32_3_AW
+        {"model_type": "F",
+         "bert_size": 128, 
+         "learning_rate": 3e-5, 
+         "optimizer": "adamw", 
+         "batch_size": 32,
+         "tokenizer": bclf.BertTweetFeedTokenizer, 
+         "bert_url": "https://tfhub.dev/tensorflow/small_bert/bert_en_uncased_L-12_H-128_A-2/1"},
+        # F_128_32_5_AW
+        {"model_type": "F",
+         "bert_size": 128, 
+         "learning_rate": 5e-5, 
+         "optimizer": "adamw", 
+         "batch_size": 32,
+         "tokenizer": bclf.BertTweetFeedTokenizer, 
+         "bert_url": "https://tfhub.dev/tensorflow/small_bert/bert_en_uncased_L-12_H-128_A-2/1"},
+        # F_128_40_5_AW
+        {"model_type": "F",
+         "bert_size": 128, 
+         "learning_rate": 5e-5, 
+         "optimizer": "adamw", 
+         "batch_size": 40,
+         "tokenizer": bclf.BertTweetFeedTokenizer, 
+         "bert_url": "https://tfhub.dev/tensorflow/small_bert/bert_en_uncased_L-12_H-128_A-2/1"},
+        # F_256_24_5_AW
+        {"model_type": "F",
+         "bert_size": 256, 
+         "learning_rate": 5e-5, 
+         "optimizer": "adamw", 
+         "batch_size": 24,
+         "tokenizer": bclf.BertTweetFeedTokenizer, 
+         "bert_url": "https://tfhub.dev/tensorflow/small_bert/bert_en_uncased_L-12_H-256_A-4/1"},
+        # F_256_64_5_AW
+        {"model_type": "F",
+         "bert_size": 256, 
+         "learning_rate": 5e-5, 
+         "optimizer": "adamw", 
+         "batch_size": 64,
+         "tokenizer": bclf.BertTweetFeedTokenizer, 
+         "bert_url": "https://tfhub.dev/tensorflow/small_bert/bert_en_uncased_L-12_H-256_A-4/1"},
+        # F_256_80_5_AW
+        {"model_type": "F",
+         "bert_size": 256, 
+         "learning_rate": 5e-5, 
+         "optimizer": "adamw", 
+         "batch_size": 80,
+         "tokenizer": bclf.BertTweetFeedTokenizer, 
+         "bert_url": "https://tfhub.dev/tensorflow/small_bert/bert_en_uncased_L-12_H-256_A-4/1"},
+    ],
+    X_train=tweet_train,
+    y_train=label_train,
+    X_val=tweet_val,
+    y_val=label_val,
+    save_path="training/preprocessing/initial_eval/",
+)
 
-# BERT Individual Model with 256 input size
-print("\n\n\nBERT Individual Model with 256 input size")
-bert_url = "https://tfhub.dev/tensorflow/small_bert/bert_en_uncased_L-12_H-256_A-4/1"
-bert_size = 256
-models = [(batch_size, epochs, lr, optimizer_name)
-         for batch_size in [8, 16, 24, 32]
-         for epochs in [10]
-         for lr in [5e-5, 3e-5, 2e-5]
-         for optimizer_name in ['adam', 'adamw']]
-
-model_path = "training/bert_individual/initial_eval/"
-
-for batch_size, epochs, lr, optimizer_name in models:
-    with tf.device(('/gpu:0' if batch_size < 16 else '/cpu:0')):
-        model_name = f"bert256-batch_size{batch_size}-epochs{epochs}-lr{lr}-optimizer{optimizer_name}"
-        model_handler = bclf.BertModelEvalHandler(
-            bert_url, bert_size, bclf.BertIndividualTweetTokenizer, bclf.dense_bert_model)
-
-        train_history = model_handler.train_bert(
-            tweet_train_processed,
-            label_train,
-            batch_size,
-            epochs,
-            tweet_val_processed,
-            label_val,
-            optimizer_name,
-            lr,
-            model_path + model_name + "/cp.ckpt",
-            model_path + "logs/" + model_name,
-        )
-
-        text = f"Finished training {model_name}, training history was:\n{train_history.history}"
-        print(text)
-        send_email(text)
-        with open(model_path+"train_history.txt", "a") as file:
-            def join_hist_array(array):
-                return ",".join([str(i) for i in array])
-
-            name = f"I_{bert_size}_{batch_size}_{str(lr)[0]}_{'A' if optimizer_name == 'adam' else 'AW'}"
-            file_text = ", ,".join([
-                ",".join([str(bert_size), str(batch_size), str(lr), optimizer_name, name]), 
-                join_hist_array(train_history.history['loss']),
-                join_hist_array(train_history.history['val_loss']),
-                join_hist_array(train_history.history['binary_accuracy']),
-                join_hist_array(train_history.history['val_binary_accuracy']),
-            ]) + "\n"
-            file.write(file_text)
+send_email("Finished training")
