@@ -1,2 +1,2 @@
-from tokenizers import AbstractBertTokenizer, BertIndividualTweetTokenizer, BertTweetFeedTokenizer
-from models import BaseBertWrapper, SingleDenseBertWrapper
+from bert.tokenizers import AbstractBertTokenizer, BertIndividualTweetTokenizer, BertTweetFeedTokenizer
+from bert.models import BaseBertWrapper, SingleDenseBertWrapper

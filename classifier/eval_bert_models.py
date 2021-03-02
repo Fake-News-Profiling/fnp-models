@@ -23,13 +23,16 @@ import ipynb.fs.full.preprocessing as processing
 import ipynb.fs.full.bert_fake_news_classifier as bclf
 from ipynb.fs.full.notif_email import send_email
 
+from data.data_parser import Tweet
+
 # Load the saved dataset split
 def load_data():
-    return np.load("datasets/en_split_data.npy", allow_pickle=True)
+    return np.load("datasets/en_split_data-backup.npy", allow_pickle=True)
 
 (tweet_train, label_train, 
  tweet_val, label_val, 
  tweet_test, label_test) = load_data()
+
 
 # Preprocess dataset
 def preprocess_tweets(tweet_train, tweet_val, tweet_test):
@@ -111,7 +114,7 @@ for batch_size, epochs, lr, optimizer_name in models:
 
             name = f"F_{bert_size}_{batch_size}_{str(lr)[0]}_{'A' if optimizer_name == 'adam' else 'AW'}"
             file_text = ", ,".join([
-                ",".join([str(bert_size), str(batch_size), str(lr), optimizer_name, name]), 
+                ",".join([str(bert_size), str(batch_size), str(lr), optimizer_name, name]),
                 join_hist_array(train_history.history['loss']),
                 join_hist_array(train_history.history['val_loss']),
                 join_hist_array(train_history.history['binary_accuracy']),
@@ -160,7 +163,7 @@ for batch_size, epochs, lr, optimizer_name in models:
 
             name = f"I_{bert_size}_{batch_size}_{str(lr)[0]}_{'A' if optimizer_name == 'adam' else 'AW'}"
             file_text = ", ,".join([
-                ",".join([str(bert_size), str(batch_size), str(lr), optimizer_name, name]), 
+                ",".join([str(bert_size), str(batch_size), str(lr), optimizer_name, name]),
                 join_hist_array(train_history.history['loss']),
                 join_hist_array(train_history.history['val_loss']),
                 join_hist_array(train_history.history['binary_accuracy']),
