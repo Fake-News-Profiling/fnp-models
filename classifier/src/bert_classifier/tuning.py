@@ -1,7 +1,7 @@
 from functools import partial
 
 import tensorflow as tf
-from tensorflow.keras.layers import Dense, Input
+from tensorflow.keras.layers import Input, Dense, BatchNormalization, Dropout
 from tensorflow.keras.callbacks import EarlyStopping, LearningRateScheduler, TensorBoard
 from official.nlp import optimization
 from kerastuner.tuners import BayesianOptimization
@@ -26,10 +26,26 @@ class FullBayesianOptimizationTuner(BayesianOptimization):
 
 def _build_ffnn(hp, bert_hidden_layer_size):
     model = tf.keras.models.Sequential([
+        # Input
         Input(shape=(bert_hidden_layer_size,), dtype=tf.float32),
+
+        # Layer 1
+        BatchNormalization(),
         Dense(bert_hidden_layer_size * 2, activation="relu"),
+        Dropout(hp.Float("rate", 0.01, 0.5, sampling="linear")),
+
+        # Layer 2
+        BatchNormalization(),
         Dense(bert_hidden_layer_size, activation="relu"),
+        Dropout(hp.Float("rate", 0.01, 0.5, sampling="linear")),
+
+        # Layer 3
+        BatchNormalization(),
         Dense(bert_hidden_layer_size // 2, activation="relu"),
+        Dropout(hp.Float("rate", 0.01, 0.5, sampling="linear")),
+
+        # Output layer
+        BatchNormalization(),
         Dense(1, activation="sigmoid"),
     ])
 
@@ -67,7 +83,7 @@ def tune_ffnn(X_train, y_train, X_val, y_val):
 
         # Create the keras Tuner and performs a search
         tuner = FullBayesianOptimizationTuner(
-            hp_batch_size=lambda hp: hp.Choice("batch_size", [16, 32, 64, 80]),
+            hp_batch_size=lambda hp: hp.Choice("batch_size", [16, 32, 64, 80, 96, 112]),
             hp_epochs=lambda hp: hp.Fixed("epochs", 50),
             hypermodel=partial(_build_ffnn, bert_hidden_layer_size=bert_hidden_layer_size),
             objective="val_loss",
@@ -81,7 +97,7 @@ def tune_ffnn(X_train, y_train, X_val, y_val):
             y=y_train_bert_out,
             validation_data=(X_val_bert_out, y_val_bert_out),
             callbacks=[
-                EarlyStopping("val_loss", patience=5),
+                EarlyStopping("val_loss", patience=2),
                 TensorBoard(log_dir=tuner.directory + "/" + tuner.project_name + "/logs", histogram_freq=1)
             ]
         )
