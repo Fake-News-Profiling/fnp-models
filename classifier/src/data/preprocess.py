@@ -93,7 +93,6 @@ class BertTweetFeedDataPreprocessor:
                 remove_hashtag_chars,
                 replace_accented_chars,
                 tag_numbers,
-                remove_stopwords,
                 remove_extra_spacing,
             ]
         self.transformers = transformers

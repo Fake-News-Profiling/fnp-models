@@ -1,30 +1,16 @@
 from functools import partial
 
 import tensorflow as tf
+from kerastuner import HyperParameters
 from tensorflow.keras.layers import Input, Dense, BatchNormalization, Dropout
-from tensorflow.keras.callbacks import EarlyStopping, LearningRateScheduler, TensorBoard
-from official.nlp import optimization
-from kerastuner.tuners import BayesianOptimization
+from tensorflow.keras.callbacks import EarlyStopping, TensorBoard
 
-from bert import BaseBertWrapper, BertTweetFeedTokenizer
-
-
-class FullBayesianOptimizationTuner(BayesianOptimization):
-    """ BayesianOptimization eras Tuner which also tunes batch_size and epochs """
-
-    def __init__(self, hp_batch_size, hp_epochs, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.hp_batch_size = hp_batch_size
-        self.hp_epochs = hp_epochs
-
-    def run_trial(self, trial, *fit_args, **fit_kwargs):
-        fit_kwargs["batch_size"] = self.hp_batch_size(trial.hyperparameters)
-        fit_kwargs["epochs"] = self.hp_epochs(trial.hyperparameters)
-
-        super().run_trial(trial, *fit_args, **fit_kwargs)
+from bert import BertTweetFeedTokenizer, build_base_bert
+from bert_classifier import BayesianOptimizationTunerWithFitHyperParameters
 
 
 def _build_ffnn(hp, bert_hidden_layer_size):
+    """ Build and compile a FFNN Keras Model for hyper-parameter tuning """
     model = tf.keras.models.Sequential([
         # Input
         Input(shape=(bert_hidden_layer_size,), dtype=tf.float32),
@@ -62,6 +48,7 @@ def _build_ffnn(hp, bert_hidden_layer_size):
 
 
 def tune_ffnn(X_train, y_train, X_val, y_val):
+    """ Tune a FFNN Keras Model for BERT outputs """
     bert_encoder_url = "https://tfhub.dev/tensorflow/small_bert/bert_en_uncased_L-12_H-128_A-2/1"
     bert_hidden_layer_size = 128
     bert_weights_path = "../training/bert_feed/initial_eval/bert128-batch_size32-epochs10-lr5e-05-optimizeradamw/cp" \
@@ -69,33 +56,32 @@ def tune_ffnn(X_train, y_train, X_val, y_val):
 
     with tf.device("/cpu:0"):
         # Create BERT Model and predict training/validation data
-        bert = BaseBertWrapper(
+        bert, x_train_bert, y_train_bert, x_val_bert, y_val_bert = build_base_bert(
             encoder_url=bert_encoder_url,
             trainable=False,
-            tokenizer_class=BertTweetFeedTokenizer,
             hidden_layer_size=bert_hidden_layer_size,
+            tokenizer_class=BertTweetFeedTokenizer,
+            data_train=(X_train, y_train),
+            data_val=(X_val, y_val),
         )
-        bert.setup_model()
         bert.load_weights(bert_weights_path)
+        hps = HyperParameters()
+        hps.Choice("batch_size", [16, 32, 64, 80])
+        hps.Fixed("epochs", 50)
 
-        X_train_bert_out, y_train_bert_out = bert.predict(X_train, y_train)
-        X_val_bert_out, y_val_bert_out = bert.predict(X_val, y_val)
-
-        # Create the keras Tuner and performs a search
-        tuner = FullBayesianOptimizationTuner(
-            hp_batch_size=lambda hp: hp.Choice("batch_size", [16, 32, 64, 80, 96, 112]),
-            hp_epochs=lambda hp: hp.Fixed("epochs", 50),
+        tuner = BayesianOptimizationTunerWithFitHyperParameters(
+            hyperparameters=hps,
             hypermodel=partial(_build_ffnn, bert_hidden_layer_size=bert_hidden_layer_size),
             objective="val_loss",
             max_trials=50,
-            directory="../training/bert_clf/testing/ffnn",
-            project_name="bert_ffnn",
+            directory="../training/bert_clf/initial_eval",
+            project_name="ffnn",
         )
 
         tuner.search(
-            x=X_train_bert_out,
-            y=y_train_bert_out,
-            validation_data=(X_val_bert_out, y_val_bert_out),
+            x=x_train_bert,
+            y=y_train_bert,
+            validation_data=(x_val_bert, y_val_bert),
             callbacks=[
                 EarlyStopping("val_loss", patience=2),
                 TensorBoard(log_dir=tuner.directory + "/" + tuner.project_name + "/logs", histogram_freq=1)
@@ -103,3 +89,11 @@ def tune_ffnn(X_train, y_train, X_val, y_val):
         )
 
         return tuner
+
+
+"""
+TODO:
+* Look at max pooling BERT outputs vs pushing each BERT output through the FFNN
+* Evaluate different FFNNs
+* Evaluate training BERT using the FFNN
+"""

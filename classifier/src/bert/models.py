@@ -1,71 +1,51 @@
-from typing import Type
-
 from tensorflow_hub import KerasLayer
 import tensorflow as tf
-from tensorflow.keras.layers import Dense, Input
-from tensorflow.keras.models import Model
-
-from bert import AbstractBertTokenizer
+from tensorflow.keras import Model
+from tensorflow.keras.layers import Input, Dense, BatchNormalization, Dropout
 
 
-class BaseBertWrapper:
-    """ Base wrapper for BERT KerasModels """
-    def __init__(self, encoder_url: str, trainable: bool, tokenizer_class: Type[AbstractBertTokenizer], hidden_layer_size: int):
-        self.encoder = KerasLayer(encoder_url, trainable=trainable)
-        self.tokenizer = tokenizer_class(self.encoder, hidden_layer_size)
-        self.hidden_layer_size = hidden_layer_size
-        self.bert_input, self.bert_output = self._setup_bert_layers()
+def bert_layers(encoder_url, trainable, hidden_layer_size, tokenizer_class=None, data_train=None, data_val=None,
+                shuffle_data=False):
+    encoder = KerasLayer(encoder_url, trainable=trainable)
 
-    def _setup_bert_layers(self):
-        def input_layer(input_name):
-            return Input(shape=(self.hidden_layer_size,), dtype=tf.int32, name=input_name)
+    # BERT's input and output layers
+    def input_layer(input_name):
+        return Input(shape=(hidden_layer_size,), dtype=tf.int32, name=input_name)
 
-        inputs = {
-            'input_word_ids': input_layer("inputs/input_word_ids"),
-            'input_mask': input_layer("inputs/input_mask"),
-            'input_type_ids': input_layer("inputs/input_type_ids"),
-        }
+    inputs = {
+        'input_word_ids': input_layer("inputs/input_word_ids"),
+        'input_mask': input_layer("inputs/input_mask"),
+        'input_type_ids': input_layer("inputs/input_type_ids"),
+    }
+    output = encoder(inputs)
 
-        # BERT's input and output layers
-        return inputs, self.encoder(inputs)
+    # Tokenize input
+    if tokenizer_class is not None:
+        tokenizer = tokenizer_class(encoder, hidden_layer_size)
+        x_train = tokenizer.tokenize_input(data_train[0])
+        y_train = tokenizer.tokenize_labels(data_train[1])
+        x_val = tokenizer.tokenize_input(data_val[0])
+        y_val = tokenizer.tokenize_labels(data_val[1])
 
-    def setup_model(self):
-        self.model = Model(self.bert_input, self.bert_output["pooled_output"])
+        if shuffle_data:
+            y_train = _shuffle_tensor_with_seed(y_train, seed=1)
+            x_train = {k: _shuffle_tensor_with_seed(v, seed=1) for k, v in x_train.items()}
 
-    def load_weights(self, weights_path):
-        self.model.load_weights(weights_path)
+        return inputs, output, x_train, y_train, x_val, y_val
 
-    def compile(self, *args, **kwargs):
-        pass
-
-    def fit(self, X, y, batch_size, epochs, X_val, y_val, callbacks=None):
-        """ Tokenizes the inputted data and fits the KerasModel """
-        X_tokenized = self.tokenizer.tokenize_input(X)
-        y_tokenized = self.tokenizer.tokenize_labels(y)
-        X_val_tokenized = self.tokenizer.tokenize_input(X_val)
-        y_val_tokenized = self.tokenizer.tokenize_labels(y_val)
-
-        return self.model.fit(
-            x=X_tokenized,
-            y=y_tokenized,
-            batch_size=batch_size,
-            epochs=epochs,
-            callbacks=callbacks,
-            validation_data=(X_val_tokenized, y_val_tokenized)
-        )
-
-    def predict(self, X, y=None):
-        """ Tokenizes the inputted data and predicts using the KerasModel """
-        X_tokenized = self.tokenizer.tokenize_input(X)
-        prediction = self.model.predict(X_tokenized)
-        if y is not None:
-            return prediction, self.tokenizer.tokenize_labels(y)
-
-        return prediction
+    return inputs, output
 
 
-class SingleDenseBertWrapper(BaseBertWrapper):
-    """ BERT wrapper whose output is a single Dense sigmoid layer """
-    def setup_model(self):
-        dense_output = Dense(1, activation='sigmoid')(self.bert_output['pooled_output'])
-        self.model = Model(self.bert_input, dense_output)
+def _shuffle_tensor_with_seed(tensor, seed=1):
+    tf.random.set_seed(1)
+    return tf.random.shuffle(tensor, seed=seed)
+
+
+def build_base_bert(*args, **kwargs):
+    inputs, output, data = bert_layers(*args, **kwargs)
+    model = Model(inputs, output["pooled_output"])
+
+    if len(data) > 0:
+        return (model, *data)
+
+    return model
