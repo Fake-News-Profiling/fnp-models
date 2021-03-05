@@ -21,13 +21,15 @@ class AbstractBertTokenizer(ABC):
         """ Tokenize input data """
         return
 
-    def tokenize_labels(self, y):
+    def tokenize_labels(self, y, user_label_pattern=True):
         """ Tokenize input data labels """
-        if self.label_pattern is not None:
+        if self.label_pattern is not None and user_label_pattern:
             labels = [int(v) for v, n in zip(y, self.label_pattern) for _ in range(n)]
             return tf.convert_to_tensor(labels, tf.int32)
+        elif not user_label_pattern:
+            return tf.convert_to_tensor([int(v) for v in y], tf.int32)
         else:
-            raise Exception("Must tokenize the input first")
+            raise Exception("blah blah")
 
     def _format_bert_tokens(self, ragged_word_ids):
         """ Create, format and pad BERT's input tensors """

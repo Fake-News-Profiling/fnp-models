@@ -3,7 +3,7 @@ from functools import partial
 import numpy as np
 import tensorflow as tf
 from tensorflow.keras import Model
-from tensorflow.keras.layers import Dense, BatchNormalization, Dropout
+from tensorflow.keras.layers import Dense, BatchNormalization, Dropout, Input, GlobalMaxPool1D
 from tensorflow.keras.callbacks import EarlyStopping, TensorBoard, TerminateOnNaN
 from official.nlp import optimization
 from kerastuner import HyperParameters
@@ -24,26 +24,12 @@ def _build_nn_classifier(hp, hidden_layer_size, input_data_len):
     classification layer for user-level classification
     """
 
-    # FFNN with num of layers and num neurons as hyper-parameters
-    # BERT -> (Drop -> BatchNorm -> Dense){2}
-    dropout_rate = hp.Float(f"dropout_rate", 0.2, 0.3, sampling="log")
-
-    def ff_layer(_prev_layer, dense_units, activation="relu"):
-        drop = Dropout(dropout_rate)(_prev_layer)
-        batch = BatchNormalization()(drop)
-        dense = Dense(dense_units, activation=activation)(batch)
-        return dense
-
-    prev_layer = bert_output["pooled_output"]
-    dense_0_unit = hp.Choice("dense_0_unit", [hidden_layer_size // 2, 3 * hidden_layer_size // 4, hidden_layer_size])
-
-    for i in range(2):
-        prev_layer = ff_layer(prev_layer, dense_0_unit // max(1, i * 2))
-
-    last_layer = ff_layer(prev_layer, 1, activation="sigmoid")
+    inputs = Input((None, hidden_layer_size))
+    max_pool = GlobalMaxPool1D()(inputs)
+    dense_clf = Dense(1, activation="sigmoid")(max_pool)
 
     # Build model
-    model = Model(bert_input, last_layer)
+    model = Model(inputs, dense_clf)
     num_train_steps = hp.get("epochs") * input_data_len // hp.get("batch_size")
     optimizer = optimization.create_optimizer(
         init_lr=hp.Fixed("learning_rate", 5e-5),
@@ -59,9 +45,9 @@ def _build_nn_classifier(hp, hidden_layer_size, input_data_len):
     return model
 
 
-def tune_bert_ffnn(X_train, y_train, X_val, y_val, bert_encoder_url, bert_size, project_name, tf_train_device="/gpu:0",
-                   epochs=8, batch_sizes=None, max_trials=30):
-    """ Tune a BERT+FFNN Keras Model """
+def tune_bert_nn_classifier(X_train, y_train, X_val, y_val, bert_encoder_url, bert_size, project_name, bert_weights,
+                            tf_train_device="/gpu:0", epochs=8, batch_sizes=None, max_trials=30):
+    """ Tune a BERT final classifier """
     if batch_sizes is None:
         batch_sizes = [24, 32]
 
@@ -74,6 +60,9 @@ def tune_bert_ffnn(X_train, y_train, X_val, y_val, bert_encoder_url, bert_size, 
             tokenizer_class=BertTweetFeedTokenizer,
             return_tokenizer=True
         )
+        print("Loading model")
+        bert_model.load_weights(bert_weights).expect_partial()
+        print("Loaded BERT")
 
         def _bert_tokenize_predict(data):
             predictions = []
@@ -81,10 +70,22 @@ def tune_bert_ffnn(X_train, y_train, X_val, y_val, bert_encoder_url, bert_size, 
                 tokenized_data = bert_tokenizer.tokenize_input(np.asarray([tweet_feed]))
                 predictions.append(bert_model.predict([tokenized_data]))
 
-            return predictions
+            max_num_chunks = 60
 
-        x_train_bert = _bert_tokenize_predict(X_train)  # shape=(num_users, num_tweets, bert_size)
+            return tf.convert_to_tensor([
+                tf.pad(user, paddings=[[0, max_num_chunks - len(user)], [0, 0]], constant_values=-1)
+                for user in predictions
+            ])
+
+        x_train_bert = _bert_tokenize_predict(X_train)  # shape=(num_users, 60, bert_size)
+        print(x_train_bert.shape)
+        y_train_bert = bert_tokenizer.tokenize_labels(y_train, user_label_pattern=False)
+        print(y_train_bert.shape)
         x_val_bert = _bert_tokenize_predict(X_val)
+        print(x_val_bert.shape)
+        y_val_bert = bert_tokenizer.tokenize_labels(y_val, user_label_pattern=False)
+        print(y_val_bert.shape)
+        print("Predictions done")
 
     # Create the keras Tuner and performs a search
     with tf.device(tf_train_device):
@@ -95,11 +96,9 @@ def tune_bert_ffnn(X_train, y_train, X_val, y_val, bert_encoder_url, bert_size, 
         tuner = BayesianOptimizationTunerWithFitHyperParameters(
             hyperparameters=hps,
             hypermodel=partial(
-                _build_ffnn,
+                _build_nn_classifier,
                 hidden_layer_size=bert_size,
-                bert_input=bert_input,
-                bert_output=bert_output,
-                input_data_len=len(x_train_bert["input_word_ids"]),
+                input_data_len=len(x_train_bert),
             ),
             objective="val_loss",
             max_trials=max_trials,

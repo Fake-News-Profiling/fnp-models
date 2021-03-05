@@ -1,3 +1,5 @@
+from typing import List
+
 from tensorflow_hub import KerasLayer
 import tensorflow as tf
 from tensorflow.keras import Model
@@ -21,13 +23,13 @@ def bert_layers(encoder_url, trainable, hidden_layer_size, tokenizer_class=None,
 
     # Tokenize input
     if tokenizer_class is not None:
-        tokenizer = tokenizer_class(encoder, hidden_layer_size, overlap=tokenizer_overlap)
+        tokenizer = tokenizer_class(encoder, hidden_layer_size)
         if return_tokenizer:
             return inputs, output, tokenizer
 
-        x_train = tokenizer.tokenize_input(data_train[0])
+        x_train = tokenizer.tokenize_input(data_train[0], overlap=tokenizer_overlap)
         y_train = tokenizer.tokenize_labels(data_train[1])
-        x_val = tokenizer.tokenize_input(data_val[0])
+        x_val = tokenizer.tokenize_input(data_val[0], overlap=tokenizer_overlap)
         y_val = tokenizer.tokenize_labels(data_val[1])
 
         if shuffle_data:
@@ -48,7 +50,9 @@ def build_base_bert(*args, **kwargs):
     inputs, output, data = bert_layers(*args, **kwargs)
     model = Model(inputs, output["pooled_output"])
 
-    if len(data) > 0:
+    if isinstance(data, List):
         return (model, *data)
+    elif data is not None:
+        return model, data
 
     return model
