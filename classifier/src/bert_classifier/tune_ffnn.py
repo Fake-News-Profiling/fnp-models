@@ -95,10 +95,3 @@ def tune_ffnn(X_train, y_train, X_val, y_val):
         )
 
         return tuner
-
-
-"""
-TODO:
-* Pool BERT (already fine-tuned) pooled_outputs, and then push through a FFNN
-* Look at different BERT Feed tokenization overlaps
-"""

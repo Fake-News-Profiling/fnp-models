@@ -24,15 +24,16 @@ def _build_nn_classifier(hp, hidden_layer_size, input_data_len):
     classification layer for user-level classification
     """
 
-    inputs = Input((None, hidden_layer_size))
-    max_pool = GlobalMaxPool1D()(inputs)
-    dense_clf = Dense(1, activation="sigmoid")(max_pool)
+    model = tf.keras.Sequential([
+        Input((None, hidden_layer_size)),
+        Dropout(hp.Float("dropout_rate", 0, 0.5)),
+        GlobalMaxPool1D(),
+        Dense(1, activation="sigmoid"),
+    ])
 
-    # Build model
-    model = Model(inputs, dense_clf)
     num_train_steps = hp.get("epochs") * input_data_len // hp.get("batch_size")
     optimizer = optimization.create_optimizer(
-        init_lr=hp.Fixed("learning_rate", 5e-5),
+        init_lr=hp.Float("learning_rate", 1e-6, 1e-3, sampling="log"),
         num_train_steps=num_train_steps,
         num_warmup_steps=num_train_steps // 10,
         optimizer_type='adamw',
@@ -53,6 +54,7 @@ def tune_bert_nn_classifier(X_train, y_train, X_val, y_val, bert_encoder_url, be
 
     with tf.device("/cpu:0"):
         # Create BERT Model and predict training/validation data
+        print("Loading BERT model")
         bert_model, bert_tokenizer = build_base_bert(
             encoder_url=bert_encoder_url,
             trainable=False,
@@ -60,9 +62,7 @@ def tune_bert_nn_classifier(X_train, y_train, X_val, y_val, bert_encoder_url, be
             tokenizer_class=BertTweetFeedTokenizer,
             return_tokenizer=True
         )
-        print("Loading model")
         bert_model.load_weights(bert_weights).expect_partial()
-        print("Loaded BERT")
 
         def _bert_tokenize_predict(data):
             predictions = []
@@ -77,15 +77,13 @@ def tune_bert_nn_classifier(X_train, y_train, X_val, y_val, bert_encoder_url, be
                 for user in predictions
             ])
 
+        print("Making BERT predictions")
         x_train_bert = _bert_tokenize_predict(X_train)  # shape=(num_users, 60, bert_size)
-        print(x_train_bert.shape)
         y_train_bert = bert_tokenizer.tokenize_labels(y_train, user_label_pattern=False)
-        print(y_train_bert.shape)
         x_val_bert = _bert_tokenize_predict(X_val)
-        print(x_val_bert.shape)
         y_val_bert = bert_tokenizer.tokenize_labels(y_val, user_label_pattern=False)
-        print(y_val_bert.shape)
-        print("Predictions done")
+        assert len(x_train_bert) == len(X_train)
+        assert len(y_train_bert) == len(y_train)
 
     # Create the keras Tuner and performs a search
     with tf.device(tf_train_device):
@@ -105,6 +103,7 @@ def tune_bert_nn_classifier(X_train, y_train, X_val, y_val, bert_encoder_url, be
             directory="../training/bert_clf/initial_eval",
             project_name=project_name,
         )
+        print("Beginning tuning")
         tuner.search(
             x=x_train_bert,
             y=y_train_bert,

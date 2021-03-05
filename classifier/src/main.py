@@ -5,7 +5,10 @@ from bert_classifier.tune_ffnn import tune_ffnn
 from bert_classifier.tune_bert_ffnn import tune_bert_ffnn
 from bert_classifier.tune_bert_combined_ffnn import tune_bert_nn_classifier
 
-# tf.config.experimental.set_memory_growth(tf.config.list_physical_devices('GPU')[0], True)
+# Allow GPU memory growth
+gpus = tf.config.list_physical_devices('GPU')
+if len(gpus) > 0:
+    tf.config.experimental.set_memory_growth(gpus[0], True)
 
 
 def main():
@@ -32,12 +35,23 @@ def main():
         bert_encoder_url="https://tfhub.dev/tensorflow/small_bert/bert_en_uncased_L-12_H-128_A-2/1",
         bert_size=128,
         project_name="bert_ffnn_11",
-        bert_weights=r"C:\Users\joshh\Desktop\Uni\Soton Uni - Yr 3\COMP3200\fake-news-profiling\classifier\training\bert_clf\initial_eval\bert_ffnn_6\trial_0b\checkpoint",
-        tf_train_device="/cpu:0",
-        max_trials=20,
-        batch_sizes=[16, 24, 32],
+        bert_weights="../training/bert_clf/initial_eval/bert_ffnn_6/trial_0b51ec0b3a25404c4fb4ee3bdeaa8d66/checkpoints/"
+                     "epoch_0/checkpoint",
+        max_trials=100,
+        epochs=20,
+        batch_sizes=[8, 16, 24, 32, 48, 64, 80, 96],
     )
+    print(tuner.results_summary(2))
 
 
 if __name__ == "__main__":
     main()
+
+
+"""
+TODO:
+* Review tune_bert_ffnn's trials in bert_ffnn_10, find the best ones and continue finding the optimal FFNN hps
+* Pool BERT (already fine-tuned) pooled_outputs, and then push through a FFNN
+* Look at different BERT Feed tokenization overlaps
+"""
+
