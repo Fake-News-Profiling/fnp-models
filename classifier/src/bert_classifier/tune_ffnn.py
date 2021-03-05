@@ -9,6 +9,12 @@ from bert import BertTweetFeedTokenizer, build_base_bert
 from bert_classifier import BayesianOptimizationTunerWithFitHyperParameters
 
 
+"""
+Tuning objective: Feed predictions from an already fine-tuned BERT model into a FFNN, and train the FFNN on the 
+classification task.
+"""
+
+
 def _build_ffnn(hp, bert_hidden_layer_size):
     """ Build and compile a FFNN Keras Model for hyper-parameter tuning """
     model = tf.keras.models.Sequential([
@@ -64,7 +70,7 @@ def tune_ffnn(X_train, y_train, X_val, y_val):
             data_train=(X_train, y_train),
             data_val=(X_val, y_val),
         )
-        bert.load_weights(bert_weights_path)
+        bert.load_weights(bert_weights_path).expect_partial()
         hps = HyperParameters()
         hps.Choice("batch_size", [16, 32, 64, 80])
         hps.Fixed("epochs", 50)
@@ -93,7 +99,6 @@ def tune_ffnn(X_train, y_train, X_val, y_val):
 
 """
 TODO:
-* Look at max pooling BERT outputs vs pushing each BERT output through the FFNN
-* Evaluate different FFNNs
-* Evaluate training BERT using the FFNN
+* Pool BERT (already fine-tuned) pooled_outputs, and then push through a FFNN
+* Look at different BERT Feed tokenization overlaps
 """

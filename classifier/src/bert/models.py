@@ -1,11 +1,11 @@
 from tensorflow_hub import KerasLayer
 import tensorflow as tf
 from tensorflow.keras import Model
-from tensorflow.keras.layers import Input, Dense, BatchNormalization, Dropout
+from tensorflow.keras.layers import Input
 
 
 def bert_layers(encoder_url, trainable, hidden_layer_size, tokenizer_class=None, data_train=None, data_val=None,
-                shuffle_data=False):
+                shuffle_data=False, tokenizer_overlap=50, return_tokenizer=False):
     encoder = KerasLayer(encoder_url, trainable=trainable)
 
     # BERT's input and output layers
@@ -21,7 +21,10 @@ def bert_layers(encoder_url, trainable, hidden_layer_size, tokenizer_class=None,
 
     # Tokenize input
     if tokenizer_class is not None:
-        tokenizer = tokenizer_class(encoder, hidden_layer_size)
+        tokenizer = tokenizer_class(encoder, hidden_layer_size, overlap=tokenizer_overlap)
+        if return_tokenizer:
+            return inputs, output, tokenizer
+
         x_train = tokenizer.tokenize_input(data_train[0])
         y_train = tokenizer.tokenize_labels(data_train[1])
         x_val = tokenizer.tokenize_input(data_val[0])
