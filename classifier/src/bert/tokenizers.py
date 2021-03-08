@@ -93,3 +93,9 @@ class BertTweetFeedTokenizer(AbstractBertTokenizer):
         ]
 
         return list(map(self._format_bert_word_piece_input, tokens))
+
+    @staticmethod
+    def get_data_len(X_data_lens, bert_size, overlap=50):
+        return sum([
+            (sum(tweet_feed) + len(tweet_feed) - 1) / (bert_size - 2 - overlap) for tweet_feed in X_data_lens
+        ])

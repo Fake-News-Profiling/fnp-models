@@ -6,8 +6,7 @@ from tensorflow.keras import Model
 from tensorflow.keras.layers import Input
 
 
-def bert_layers(encoder_url, trainable, hidden_layer_size, tokenizer_class=None, data_train=None, data_val=None,
-                shuffle_data=False, tokenizer_overlap=50, return_tokenizer=False):
+def bert_layers(encoder_url, trainable, hidden_layer_size, return_encoder=False):
     encoder = KerasLayer(encoder_url, trainable=trainable)
 
     # BERT's input and output layers
@@ -21,24 +20,33 @@ def bert_layers(encoder_url, trainable, hidden_layer_size, tokenizer_class=None,
     }
     output = encoder(inputs)
 
-    # Tokenize input
-    if tokenizer_class is not None:
-        tokenizer = tokenizer_class(encoder, hidden_layer_size)
-        if return_tokenizer:
-            return inputs, output, tokenizer
-
-        x_train = tokenizer.tokenize_input(data_train[0], overlap=tokenizer_overlap)
-        y_train = tokenizer.tokenize_labels(data_train[1])
-        x_val = tokenizer.tokenize_input(data_val[0], overlap=tokenizer_overlap)
-        y_val = tokenizer.tokenize_labels(data_val[1])
-
-        if shuffle_data:
-            y_train = _shuffle_tensor_with_seed(y_train, seed=1)
-            x_train = {k: _shuffle_tensor_with_seed(v, seed=1) for k, v in x_train.items()}
-
-        return inputs, output, x_train, y_train, x_val, y_val
+    if return_encoder:
+        return inputs, output, encoder
 
     return inputs, output
+
+
+def tokenize_bert_input(encoder_url, hidden_layer_size, tokenizer_class, x_train, y_train, x_val, y_val,
+                        x_test=None, y_test=None, shuffle=False, feed_overlap=50):
+    encoder = KerasLayer(encoder_url, trainable=False)
+
+    # Tokenize input
+    tokenizer = tokenizer_class(encoder, hidden_layer_size)
+    x_train = tokenizer.tokenize_input(x_train, overlap=feed_overlap)
+    y_train = tokenizer.tokenize_labels(y_train)
+    x_val = tokenizer.tokenize_input(x_val, overlap=feed_overlap)
+    y_val = tokenizer.tokenize_labels(y_val)
+
+    if shuffle:
+        y_train = _shuffle_tensor_with_seed(y_train, seed=1)
+        x_train = {k: _shuffle_tensor_with_seed(v, seed=1) for k, v in x_train.items()}
+
+    if x_test is not None:
+        x_test = tokenizer.tokenize_input(x_test, overlap=feed_overlap)
+        y_test = tokenizer.tokenize_labels(y_test)
+        return x_train, y_train, x_val, y_val, x_test, y_test
+
+    return x_train, y_train, x_val, y_val
 
 
 def _shuffle_tensor_with_seed(tensor, seed=1):
@@ -46,13 +54,9 @@ def _shuffle_tensor_with_seed(tensor, seed=1):
     return tf.random.shuffle(tensor, seed=seed)
 
 
-def build_base_bert(*args, **kwargs):
-    inputs, output, data = bert_layers(*args, **kwargs)
+def build_base_bert(encoder_url, trainable, hidden_layer_size, tokenizer_class):
+    inputs, output, encoder = bert_layers(encoder_url, trainable, hidden_layer_size, return_encoder=True)
+    tokenizer = tokenizer_class(encoder, hidden_layer_size)
     model = Model(inputs, output["pooled_output"])
 
-    if isinstance(data, List):
-        return (model, *data)
-    elif data is not None:
-        return model, data
-
-    return model
+    return model, tokenizer

@@ -3,12 +3,12 @@ from functools import partial
 import numpy as np
 import tensorflow as tf
 from tensorflow.keras import Model
-from tensorflow.keras.layers import Dense, BatchNormalization, Dropout, Input, GlobalMaxPool1D
+from tensorflow.keras.layers import Dense, BatchNormalization, Dropout, Input, GlobalMaxPooling1D, GlobalAveragePooling1D
 from tensorflow.keras.callbacks import EarlyStopping, TensorBoard, TerminateOnNaN
 from official.nlp import optimization
 from kerastuner import HyperParameters
 
-from bert import BertTweetFeedTokenizer, build_base_bert
+from bert import BertTweetFeedTokenizer, build_base_bert, bert_layers
 from bert_classifier import BayesianOptimizationTunerWithFitHyperParameters
 
 
@@ -24,12 +24,13 @@ def _build_nn_classifier(hp, hidden_layer_size, input_data_len):
     classification layer for user-level classification
     """
 
-    model = tf.keras.Sequential([
-        Input((None, hidden_layer_size)),
-        Dropout(hp.Float("dropout_rate", 0, 0.5)),
-        GlobalMaxPool1D(),
-        Dense(1, activation="sigmoid"),
-    ])
+    # Get BERT input and output
+    inputs = Input((None, hidden_layer_size))
+    dropout_1 = Dropout(hp.Float("dropout_rate", 0, 0.5))(inputs)
+    pooling = GlobalAveragePooling1D()(dropout_1)
+    # dense_clf = Dense(1, activation="sigmoid", kernel_regularizer=tf.keras.regularizers.l2())(pooling)
+    dense_clf = Dense(1, activation='linear', kernel_regularizer=tf.keras.regularizers.l2())(pooling)
+    model = Model(inputs, dense_clf)
 
     num_train_steps = hp.get("epochs") * input_data_len // hp.get("batch_size")
     optimizer = optimization.create_optimizer(
@@ -60,7 +61,6 @@ def tune_bert_nn_classifier(X_train, y_train, X_val, y_val, bert_encoder_url, be
             trainable=False,
             hidden_layer_size=bert_size,
             tokenizer_class=BertTweetFeedTokenizer,
-            return_tokenizer=True
         )
         bert_model.load_weights(bert_weights).expect_partial()
 

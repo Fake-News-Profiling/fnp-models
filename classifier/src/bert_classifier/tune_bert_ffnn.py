@@ -8,6 +8,7 @@ from official.nlp import optimization
 from kerastuner import HyperParameters
 
 from bert import BertTweetFeedTokenizer, bert_layers
+from bert.models import tokenize_bert_input
 from bert_classifier import BayesianOptimizationTunerWithFitHyperParameters
 
 
@@ -17,12 +18,73 @@ rates, and dropout rates of the model.
 """
 
 
+class BayesianOptimizationTunerWithDataTokenization(BayesianOptimizationTunerWithFitHyperParameters):
+    """ BayesianOptimization keras Tuner which uses data tokenization overlap as a hyper-parameter """
+
+    def run_trial(self, trial, *fit_args, **fit_kwargs):
+        # Tokenize data for BERT, and pass to fit kwargs
+        with tf.device("/cpu:0"):
+            x_train_bert, y_train_bert, x_val_bert, y_val_bert = tokenize_bert_input(
+                encoder_url=trial.hyperparameters.get("bert_encoder_url"),
+                hidden_layer_size=trial.hyperparameters.get("bert_size"),
+                tokenizer_class=BertTweetFeedTokenizer,
+                x_train=fit_kwargs["x"],
+                y_train=fit_kwargs["y"],
+                x_val=fit_kwargs["validation_data"][0],
+                y_val=fit_kwargs["validation_data"][1],
+                shuffle=True,
+                feed_overlap=trial.hyperparameters.get("feed_data_overlap"),
+            )
+
+        fit_kwargs["x"] = x_train_bert
+        fit_kwargs["y"] = y_train_bert
+        fit_kwargs["validation_data"] = (x_val_bert, y_val_bert)
+        super().run_trial(trial, *fit_args, **fit_kwargs)
+
+
+def _build_bert_single_dense(hp, input_data_len):
+    """ Build and compile a BERT+Dense Keras Model for hyper-parameter tuning """
+
+    # Get BERT input and output
+    bert_input, bert_output = bert_layers(
+        hp.get("bert_encoder_url"),
+        trainable=True,
+        hidden_layer_size=hp.get("bert_size")
+    )
+
+    dropout = Dropout(hp.Float("dropout_rate", 0.3, 0.5))(bert_output["pooled_output"])
+    batch = BatchNormalization()(dropout)
+    dense = Dense(
+        1, activation=hp.Fixed("dense_activation", "linear"),
+        kernel_regularizer=tf.keras.regularizers.l2(),
+    )(batch)
+
+    # Build model
+    model = Model(bert_input, dense)
+    bert_input_data_len = BertTweetFeedTokenizer.get_data_len(
+        input_data_len, hp.get("bert_size"), hp.get("feed_data_overlap"))
+    num_train_steps = hp.get("epochs") * bert_input_data_len // hp.get("batch_size")
+    optimizer = optimization.create_optimizer(
+        init_lr=hp.Fixed("learning_rate", 5e-5),
+        num_train_steps=num_train_steps,
+        num_warmup_steps=num_train_steps // 10,
+        optimizer_type='adamw',
+    )
+    model.compile(
+        optimizer=optimizer,
+        loss=tf.keras.losses.BinaryCrossentropy(from_logits=True),
+        metrics=tf.metrics.BinaryAccuracy(),
+    )
+    return model
+
+
 def _build_bert_ffnn(hp, hidden_layer_size, bert_input, bert_output, input_data_len):
     """ Build and compile a BERT+FFNN (3 layers) Keras Model for hyper-parameter tuning """
 
     # FFNN with num of layers and num neurons as hyper-parameters
-    # BERT -> (Drop -> BatchNorm -> Dense){2}
-    dropout_rate = hp.Float(f"dropout_rate", 0.2, 0.3, sampling="log")
+    # BERT -> (Drop -> BatchNorm -> Dense){num_layers}
+    dropout_rate = hp.Float("dropout_rate", 0.2, 0.3, sampling="log")
+    print(bert_output)
 
     def ff_layer(_prev_layer, dense_units, activation="relu"):
         drop = Dropout(dropout_rate)(_prev_layer)
@@ -33,7 +95,7 @@ def _build_bert_ffnn(hp, hidden_layer_size, bert_input, bert_output, input_data_
     prev_layer = bert_output["pooled_output"]
     dense_0_unit = hp.Choice("dense_0_unit", [hidden_layer_size // 2, 3 * hidden_layer_size // 4, hidden_layer_size])
 
-    for i in range(2):
+    for i in range(hp.Int("num_layers", 0, 3)):
         prev_layer = ff_layer(prev_layer, dense_0_unit // max(1, i * 2))
 
     last_layer = ff_layer(prev_layer, 1, activation="sigmoid")
@@ -55,38 +117,26 @@ def _build_bert_ffnn(hp, hidden_layer_size, bert_input, bert_output, input_data_
     return model
 
 
-def tune_bert_ffnn(X_train, y_train, X_val, y_val, bert_encoder_url, bert_size, project_name, tf_train_device="/gpu:0",
+def tune_bert_ffnn(x_train, y_train, x_val, y_val, bert_encoder_url, bert_size, project_name, tf_train_device="/gpu:0",
                    epochs=8, batch_sizes=None, max_trials=30):
     """ Tune a BERT+FFNN Keras Model """
     if batch_sizes is None:
         batch_sizes = [24, 32]
-
-    with tf.device("/cpu:0"):
-        # Create BERT Model
-        bert_input, bert_output, x_train_bert, y_train_bert, x_val_bert, y_val_bert = bert_layers(
-            encoder_url=bert_encoder_url,
-            trainable=True,
-            hidden_layer_size=bert_size,
-            tokenizer_class=BertTweetFeedTokenizer,
-            data_train=(X_train, y_train),
-            data_val=(X_val, y_val),
-            shuffle_data=True,
-        )
 
     # Create the keras Tuner and performs a search
     with tf.device(tf_train_device):
         hps = HyperParameters()
         hps.Choice("batch_size", batch_sizes)
         hps.Fixed("epochs", epochs)
+        hps.Fixed("bert_encoder_url", bert_encoder_url)
+        hps.Fixed("bert_size", bert_size)
+        hps.Choice("feed_data_overlap", [50])
 
-        tuner = BayesianOptimizationTunerWithFitHyperParameters(
+        tuner = BayesianOptimizationTunerWithDataTokenization(
             hyperparameters=hps,
             hypermodel=partial(
-                _build_bert_ffnn,
-                hidden_layer_size=bert_size,
-                bert_input=bert_input,
-                bert_output=bert_output,
-                input_data_len=len(x_train_bert["input_word_ids"]),
+                _build_bert_single_dense,
+                input_data_len=[[len(tweet) for tweet in tweet_feed] for tweet_feed in x_train]
             ),
             objective="val_loss",
             max_trials=max_trials,
@@ -94,9 +144,9 @@ def tune_bert_ffnn(X_train, y_train, X_val, y_val, bert_encoder_url, bert_size, 
             project_name=project_name,
         )
         tuner.search(
-            x=x_train_bert,
-            y=y_train_bert,
-            validation_data=(x_val_bert, y_val_bert),
+            x=x_train,
+            y=y_train,
+            validation_data=(x_val, y_val),
             callbacks=[
                 TerminateOnNaN(),
                 EarlyStopping("val_loss", patience=2),
@@ -124,4 +174,12 @@ Current best:
     * batch_size=24, dropout=0.22587, activation-relu
     * model: BERT (256 out) -> drop -> batch -> dense (256 unit) -> drop -> batch -> dense (128 unit) -> 
              drop -> batch -> dense (1 unit) -> 
+* bert_ffnn_10 - trial_df5e725b3223e721f73bbc25a06897b4 (reached 0.6 val_loss and 0.79 val_accuracy)
+    * batch_size=16, dropout=0.25470, activation=relu, lr=5e-5
+    * model: BERT (256 out) -> drop -> batch -> dense (128 unit) -> drop -> batch -> dense (64 unit) -> 
+             drop -> batch -> dense (1 unit) -> 
+
+All of the above have 'feed_data_overlap' = 50 (default)
+
+
 """
