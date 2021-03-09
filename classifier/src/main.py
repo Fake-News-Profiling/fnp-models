@@ -43,34 +43,34 @@ def main():
     #     batch_sizes=[24, 32, 48, 64]
     # )
 
-    # Tune BERT 128, final classifier
-    tuner_128 = tune_bert_nn_classifier(
-        tweet_train_processed, label_train, tweet_val_processed, label_val,
-        bert_encoder_url="https://tfhub.dev/tensorflow/small_bert/bert_en_uncased_L-12_H-128_A-2/1",
-        bert_size=128,
-        project_name="bert_combined_ffnn_8",
-        bert_weights="../training/bert_clf/initial_eval/bert_ffnn_6/trial_0b51ec0b3a25404c4fb4ee3bdeaa8d66/checkpoints/"
-                     "epoch_0/checkpoint",
-        max_trials=100,
-        epochs=20,
-        batch_sizes=[8, 16, 24, 32, 48, 64, 80, 96],
-    )
+    # # Tune BERT 128, final classifier
+    # tuner_128 = tune_bert_nn_classifier(
+    #     tweet_train_processed, label_train, tweet_val_processed, label_val, tweet_test_processed, label_test,
+    #     bert_encoder_url="https://tfhub.dev/tensorflow/small_bert/bert_en_uncased_L-12_H-128_A-2/1",
+    #     bert_size=128,
+    #     project_name="bert_combined_ffnn_12",
+    #     bert_weights="../training/bert_clf/initial_eval/bert_ffnn_6/trial_0b51ec0b3a25404c4fb4ee3bdeaa8d66/checkpoints/"
+    #                  "epoch_0/checkpoint",
+    #     max_trials=200,
+    #     epochs=20,
+    #     batch_sizes=[8, 16, 24, 32, 48, 64, 80, 96],
+    # )
 
     # Tune BERT 256, final classifier
     tuner_256 = tune_bert_nn_classifier(
-        tweet_train_processed, label_train, tweet_val_processed, label_val,
+        tweet_train_processed, label_train, tweet_val_processed, label_val, tweet_test_processed, label_test,
         bert_encoder_url="https://tfhub.dev/tensorflow/small_bert/bert_en_uncased_L-12_H-256_A-4/1",
         bert_size=256,
-        project_name="bert_combined_ffnn_9",
+        project_name="bert_combined_ffnn_13",
         bert_weights="../training/bert_clf/initial_eval/bert_ffnn_9/trial_2481cabc193f7083ddce8cf11025bc8d/checkpoints/"
                      "epoch_0/checkpoint",
-        max_trials=100,
+        max_trials=200,
         epochs=20,
         batch_sizes=[8, 16, 24, 32, 48, 64, 80, 96],
     )
 
-    print("Tuner 128:\n", tuner_128.results_summary(2))
-    print("Tuner 256:\n", tuner_256.results_summary(2))
+    # print("Tuner 128:\n", tuner_128.results_summary(1))
+    print("Tuner 256:\n", tuner_256.results_summary(1))
 
     # Run on test set
     # tuner.get_best_models(1).evaluate(test)
@@ -85,7 +85,6 @@ TODO:
 * Review tune_bert_ffnn's trials in bert_ffnn_10, find the best ones and continue finding the optimal FFNN hps
 * Pool BERT (already fine-tuned) pooled_outputs, and then push through a FFNN
 * Look at different BERT Feed tokenization overlaps - pass data to Optimizer, which passes to fit method?
-* bert_combined_ffnn Global Average pooling, but ignoring padding
-* bert_combined_ffnn using sigmoid with regularisation
+* Models using 5-fold cross validation
 """
 

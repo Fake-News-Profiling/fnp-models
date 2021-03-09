@@ -19,7 +19,7 @@ class AbstractBertTokenizer(ABC):
     @abstractmethod
     def tokenize_input(self, x):
         """ Tokenize input data """
-        return
+        pass
 
     def tokenize_labels(self, y, user_label_pattern=True):
         """ Tokenize input data labels """

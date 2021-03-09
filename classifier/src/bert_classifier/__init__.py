@@ -1,7 +1,7 @@
-from kerastuner.tuners import BayesianOptimization
+from bert_classifier.cv_bayesian_tuner import CVBayesianOptimization
 
 
-class BayesianOptimizationTunerWithFitHyperParameters(BayesianOptimization):
+class BayesianOptimizationTunerWithFitHyperParameters(CVBayesianOptimization):
     """
     BayesianOptimization keras Tuner which passes batch_size and epochs hyper-parameters to the fit method of the
     keras Model

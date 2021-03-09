@@ -112,3 +112,7 @@ def split_dataset(tweet_data, label_data, test_size=0.15, val_size=0.15):
 def load_data(filepath="../datasets/en_split_data.npy"):
     """ Load the saved dataset split """
     return np.load(filepath, allow_pickle=True)
+
+
+def parse_labels_to_floats(y):
+    return np.asarray([int(v) for v in y], dtype=np.float32)
