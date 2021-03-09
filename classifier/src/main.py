@@ -1,6 +1,6 @@
 import tensorflow as tf
 
-from data import load_data, BertTweetFeedDataPreprocessor
+from data import load_data, BertTweetFeedDataPreprocessor, parse_labels_to_floats
 from bert_classifier.tune_ffnn import tune_ffnn
 from bert_classifier.tune_bert_ffnn import tune_bert_ffnn
 from bert_classifier.tune_bert_combined_ffnn import tune_bert_nn_classifier
@@ -22,26 +22,29 @@ def main():
     tweet_train_processed = tweet_preprocessor.transform(tweet_train)
     tweet_val_processed = tweet_preprocessor.transform(tweet_val)
     tweet_test_processed = tweet_preprocessor.transform(tweet_test)
+    label_train = parse_labels_to_floats(label_train)
+    label_val = parse_labels_to_floats(label_val)
+    label_test = parse_labels_to_floats(label_test)
 
-    # # Tune BERT 128
-    # tuner_128 = tune_bert_ffnn(
-    #     tweet_train_processed, label_train, tweet_val_processed, label_val,
-    #     bert_encoder_url="https://tfhub.dev/tensorflow/small_bert/bert_en_uncased_L-12_H-128_A-2/1",
-    #     bert_size=128,
-    #     project_name="bert_ffnn_11",
-    #     batch_sizes=[24, 32, 48, 64]
-    # )
-    #
-    # # Tune BERT 256
-    # tuner_256 = tune_bert_ffnn(
-    #     tweet_train_processed, label_train, tweet_val_processed, label_val,
-    #     bert_encoder_url="https://tfhub.dev/tensorflow/small_bert/bert_en_uncased_L-12_H-256_A-4/1",
-    #     bert_size=256,
-    #     project_name="bert_ffnn_12",
-    #     tf_train_device="/cpu:0",
-    #     max_trials=10,
-    #     batch_sizes=[24, 32, 48, 64]
-    # )
+    # Tune BERT 128
+    tuner_128 = tune_bert_ffnn(
+        tweet_train_processed, label_train, tweet_val_processed, label_val,
+        bert_encoder_url="https://tfhub.dev/tensorflow/small_bert/bert_en_uncased_L-12_H-128_A-2/1",
+        bert_size=128,
+        project_name="bert_ffnn_11",
+        batch_sizes=[24, 32, 48, 64]
+    )
+
+    # Tune BERT 256
+    tuner_256 = tune_bert_ffnn(
+        tweet_train_processed, label_train, tweet_val_processed, label_val,
+        bert_encoder_url="https://tfhub.dev/tensorflow/small_bert/bert_en_uncased_L-12_H-256_A-4/1",
+        bert_size=256,
+        project_name="bert_ffnn_12",
+        tf_train_device="/cpu:0",
+        max_trials=10,
+        batch_sizes=[24, 32, 48, 64]
+    )
 
     # # Tune BERT 128, final classifier
     # tuner_128 = tune_bert_nn_classifier(
@@ -49,28 +52,29 @@ def main():
     #     bert_encoder_url="https://tfhub.dev/tensorflow/small_bert/bert_en_uncased_L-12_H-128_A-2/1",
     #     bert_size=128,
     #     project_name="bert_combined_ffnn_12",
-    #     bert_weights="../training/bert_clf/initial_eval/bert_ffnn_6/trial_0b51ec0b3a25404c4fb4ee3bdeaa8d66/checkpoints/"
-    #                  "epoch_0/checkpoint",
+    #     bert_model_trial_filepath="../training/bert_clf/initial_eval/bert_ffnn_6/trial_0b51ec0b3a25404c4fb4ee3bdeaa8d66"
+    #                               "/trial.json",
+    #     max_trials=200,
+    #     epochs=20,
+    #     batch_sizes=[8, 16, 24, 32, 48, 64, 80, 96],
+    # )
+    #
+    # # Tune BERT 256, final classifier
+    # tuner_256 = tune_bert_nn_classifier(
+    #     tweet_train_processed, label_train, tweet_val_processed, label_val, tweet_test_processed, label_test,
+    #     bert_encoder_url="https://tfhub.dev/tensorflow/small_bert/bert_en_uncased_L-12_H-256_A-4/1",
+    #     bert_size=256,
+    #     project_name="bert_combined_ffnn_13",
+    #     bert_model_trial_filepath="../training/bert_clf/initial_eval/bert_ffnn_10/"
+    #                               "trial_df5e725b3223e721f73bbc25a06897b4/trial.json",
     #     max_trials=200,
     #     epochs=20,
     #     batch_sizes=[8, 16, 24, 32, 48, 64, 80, 96],
     # )
 
-    # Tune BERT 256, final classifier
-    tuner_256 = tune_bert_nn_classifier(
-        tweet_train_processed, label_train, tweet_val_processed, label_val, tweet_test_processed, label_test,
-        bert_encoder_url="https://tfhub.dev/tensorflow/small_bert/bert_en_uncased_L-12_H-256_A-4/1",
-        bert_size=256,
-        project_name="bert_combined_ffnn_13",
-        bert_weights="../training/bert_clf/initial_eval/bert_ffnn_9/trial_2481cabc193f7083ddce8cf11025bc8d/checkpoints/"
-                     "epoch_0/checkpoint",
-        max_trials=200,
-        epochs=20,
-        batch_sizes=[8, 16, 24, 32, 48, 64, 80, 96],
-    )
-
     # print("Tuner 128:\n", tuner_128.results_summary(1))
     print("Tuner 256:\n", tuner_256.results_summary(1))
+    tuner_128.get_best_models()
 
     # Run on test set
     # tuner.get_best_models(1).evaluate(test)

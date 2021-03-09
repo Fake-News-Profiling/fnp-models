@@ -26,27 +26,30 @@ def bert_layers(encoder_url, trainable, hidden_layer_size, return_encoder=False)
     return inputs, output
 
 
-def tokenize_bert_input(encoder_url, hidden_layer_size, tokenizer_class, x_train, y_train, x_val, y_val,
-                        x_test=None, y_test=None, shuffle=False, feed_overlap=50):
+def tokenize_bert_input(encoder_url, hidden_layer_size, tokenizer_class, x_train, y_train, x_val=None, y_val=None,
+                        shuffle=False, feed_overlap=50, return_tokenizer=False):
     encoder = KerasLayer(encoder_url, trainable=False)
 
     # Tokenize input
     tokenizer = tokenizer_class(encoder, hidden_layer_size)
     x_train = tokenizer.tokenize_input(x_train, overlap=feed_overlap)
     y_train = tokenizer.tokenize_labels(y_train)
-    x_val = tokenizer.tokenize_input(x_val, overlap=feed_overlap)
-    y_val = tokenizer.tokenize_labels(y_val)
 
     if shuffle:
         y_train = _shuffle_tensor_with_seed(y_train, seed=1)
         x_train = {k: _shuffle_tensor_with_seed(v, seed=1) for k, v in x_train.items()}
 
-    if x_test is not None:
-        x_test = tokenizer.tokenize_input(x_test, overlap=feed_overlap)
-        y_test = tokenizer.tokenize_labels(y_test)
-        return x_train, y_train, x_val, y_val, x_test, y_test
+    result = [x_train, y_train]
 
-    return x_train, y_train, x_val, y_val
+    if x_val is not None:
+        x_val = tokenizer.tokenize_input(x_val, overlap=feed_overlap)
+        y_val = tokenizer.tokenize_labels(y_val) if y_val is not None else None
+        result += [x_val, y_val]
+
+    if return_tokenizer:
+        result.append(tokenizer)
+
+    return result
 
 
 def _shuffle_tensor_with_seed(tensor, seed=1):

@@ -1,5 +1,7 @@
+import json
 from functools import partial
 
+import numpy as np
 import tensorflow as tf
 from tensorflow.keras import Model
 from tensorflow.keras.layers import Dense, BatchNormalization, Dropout
@@ -24,22 +26,30 @@ class BayesianOptimizationTunerWithDataTokenization(BayesianOptimizationTunerWit
     def run_trial(self, trial, *fit_args, **fit_kwargs):
         # Tokenize data for BERT, and pass to fit kwargs
         with tf.device("/cpu:0"):
-            x_train_bert, y_train_bert, x_val_bert, y_val_bert = tokenize_bert_input(
+            x_train_bert, y_train_bert = tokenize_bert_input(
                 encoder_url=trial.hyperparameters.get("bert_encoder_url"),
                 hidden_layer_size=trial.hyperparameters.get("bert_size"),
                 tokenizer_class=BertTweetFeedTokenizer,
                 x_train=fit_kwargs["x"],
                 y_train=fit_kwargs["y"],
-                x_val=fit_kwargs["validation_data"][0],
-                y_val=fit_kwargs["validation_data"][1],
+                # x_val=fit_kwargs["validation_data"][0],
+                # y_val=fit_kwargs["validation_data"][1],
                 shuffle=True,
                 feed_overlap=trial.hyperparameters.get("feed_data_overlap"),
             )
 
         fit_kwargs["x"] = x_train_bert
         fit_kwargs["y"] = y_train_bert
-        fit_kwargs["validation_data"] = (x_val_bert, y_val_bert)
+        # fit_kwargs["validation_data"] = (x_val_bert, y_val_bert)
         super().run_trial(trial, *fit_args, **fit_kwargs)
+
+
+def load_hyperparameters(trial_filepath):
+    """ Load a trials hyperparameters from a JSON file """
+    with open(trial_filepath) as trial_file:
+        trial = json.load(trial_file)
+        hps = HyperParameters.from_config(trial["hyperparameters"])
+        return hps
 
 
 def _build_bert_single_dense(hp, input_data_len):
@@ -52,12 +62,15 @@ def _build_bert_single_dense(hp, input_data_len):
         hidden_layer_size=hp.get("bert_size")
     )
 
-    dropout = Dropout(hp.Float("dropout_rate", 0.3, 0.5))(bert_output["pooled_output"])
+    dropout = Dropout(hp.Float("dropout_rate", 0, 0.5))(bert_output["pooled_output"])
     batch = BatchNormalization()(dropout)
     dense = Dense(
-        1, activation=hp.Fixed("dense_activation", "linear"),
+        1, activation=hp.Choice("dense_activation", ["sigmoid", "linear"]),
         kernel_regularizer=tf.keras.regularizers.l2(),
+        bias_regularizer=tf.keras.regularizers.l2(),
     )(batch)
+    # if hp.get("dense_activation") == "linear":
+    #   dense = Dense(1, activation="sigmoid", trainable=hp.Boolean("final_sigmoid_trainable"))
 
     # Build model
     model = Model(bert_input, dense)
@@ -76,6 +89,11 @@ def _build_bert_single_dense(hp, input_data_len):
         metrics=tf.metrics.BinaryAccuracy(),
     )
     return model
+
+
+def load_bert_single_dense_model(trial_filepath, input_data_len):
+    hps = load_hyperparameters(trial_filepath)
+    return _build_bert_single_dense(hps, input_data_len), hps
 
 
 def _build_bert_ffnn(hp, hidden_layer_size, bert_input, bert_output, input_data_len):
@@ -143,9 +161,12 @@ def tune_bert_ffnn(x_train, y_train, x_val, y_val, bert_encoder_url, bert_size, 
             directory="../training/bert_clf/initial_eval",
             project_name=project_name,
         )
+
+        x_train_for_cv = np.concatenate([x_train, x_val])
+        y_train_for_cv = np.concatenate([y_train, y_val])
         tuner.search(
-            x=x_train,
-            y=y_train,
+            x=x_train_for_cv,
+            y=y_train_for_cv,
             validation_data=(x_val, y_val),
             callbacks=[
                 TerminateOnNaN(),

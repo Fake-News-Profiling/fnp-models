@@ -7,10 +7,12 @@ from tensorflow.keras.layers import Dense, Dropout, Input
 from tensorflow.keras.callbacks import EarlyStopping, TensorBoard, TerminateOnNaN
 from official.nlp import optimization
 from kerastuner import HyperParameters
+from tensorflow_hub import KerasLayer
 
 from bert import BertTweetFeedTokenizer, build_base_bert
+from bert.models import tokenize_bert_input
 from bert_classifier import BayesianOptimizationTunerWithFitHyperParameters
-
+from bert_classifier.tune_bert_ffnn import load_bert_single_dense_model
 
 """
 Tuning objective: Feed data into an already fine-tuned BERT model and extract the pooled outputs. Pool all of these 
@@ -24,35 +26,19 @@ class BayesianOptimizationTunerWithBertPredictionData(BayesianOptimizationTunerW
         super().__init__(*args, **kwargs)
         self.x_train = self.y_train = None
 
-    def fit_data(self, x_train, y_train):
-        """ Fit tuner with BERT data """
+    def fit_data(self, x_train, y_train, bert_model_wrapper):
+        """
+        Splits the data into n_splits folds, trains BERT on each training fold, and saves the data for cross-validation
+        """
         hps = self.oracle.get_space()
 
-        with tf.device("/cpu:0"):
-            # Load the saved BERT model
-            bert_model, bert_tokenizer = build_base_bert(
-                encoder_url=hps.get("bert_encoder_url"),
-                trainable=False,
-                hidden_layer_size=hps.get("bert_size"),
-                tokenizer_class=BertTweetFeedTokenizer,
-            )
-            bert_model.load_weights(hps.get("bert_weights_filepath")).expect_partial()
+        # Split data and train BERTs
+        data_splits = []
+        for x_train, y_train, x_test, y_test in self.kfold_split_wrapper(x_train, y_train):
+            x_train_bert, x_test_bert = bert_model_wrapper(x_train, y_train, x_test)
+            data_splits.append((x_train_bert, y_train, x_test_bert, y_test))
 
-            # Transform the input data and pass it through BERT
-            def _bert_tokenize_predict(data):
-                # Make predictions
-                predictions = []
-                for tweet_feed in data:
-                    tokenized_data = bert_tokenizer.tokenize_input(
-                        np.asarray([tweet_feed]), overlap=hps.get("feed_data_overlap"))
-                    predictions.append(bert_model.predict([tokenized_data]))
-
-                return predictions
-
-            self.x_train = _bert_tokenize_predict(x_train)
-            self.y_train = bert_tokenizer.tokenize_labels(y_train, user_label_pattern=False)
-            assert len(self.x_train) == len(x_train)
-            assert len(self.y_train) == len(y_train)
+        self.fit_cv_data(data_splits)
 
     def run_trial(self, trial, *fit_args, **fit_kwargs):
         # Pool predictions for each user (resulting shape is (num_users, bert_size))
@@ -66,6 +52,47 @@ class BayesianOptimizationTunerWithBertPredictionData(BayesianOptimizationTunerW
         fit_kwargs["x"] = x
         fit_kwargs["y"] = self.y_train
         super().run_trial(trial, *fit_args, **fit_kwargs)
+
+
+def _bert_model_wrapper(x_train, y_train, x_test, trial_filepath):
+    with tf.device("/cpu:0"):
+        bert_model, hps = load_bert_single_dense_model(
+            trial_filepath=trial_filepath,
+            input_data_len=[[len(tweet) for tweet in tweet_feed] for tweet_feed in x_train],
+        )
+
+        # Tokenize training data and train this BERT model
+        x_train_bert, y_train_bert, x_test_bert, _, tokenizer = tokenize_bert_input(
+            hps.get("bert_encoder_url"), hps.get("bert_size"), BertTweetFeedTokenizer, x_train, y_train,
+            x_test, None, shuffle=True, feed_overlap=hps.get("feed_data_overlap"), return_tokenizer=True)
+
+        bert_model.fit(
+            x=x_train_bert,
+            y=y_train_bert,
+            epochs=hps.get("epochs"),
+            batch_size=hps.get("batch_size"),
+            callbacks=[
+                TerminateOnNaN(),
+                EarlyStopping("val_loss", patience=1),
+            ],
+        )
+
+        # Transform the input data and pass it through BERT
+        def _bert_tokenize_predict(data):
+            # Make predictions
+            predictions = []
+            for tweet_feed in data:
+                tokenized_data = tokenizer.tokenize_input(
+                    np.asarray([tweet_feed]), overlap=hps.get("feed_data_overlap"))
+                predictions.append(bert_model.predict([tokenized_data]))
+
+            return predictions
+
+        x_train_out = _bert_tokenize_predict(x_train)
+        x_test_out = _bert_tokenize_predict(x_test)
+        assert len(x_train_out) == len(x_train)
+        assert len(x_test_out) == len(x_test)
+        return x_train_out, x_test_out
 
 
 def _build_nn_classifier(hp, input_data_len):
@@ -105,7 +132,8 @@ def _build_nn_classifier(hp, input_data_len):
 
 
 def tune_bert_nn_classifier(x_train, y_train, x_val, y_val, x_test, y_test, bert_encoder_url, bert_size, project_name,
-                            bert_weights, tf_train_device="/gpu:0", epochs=8, batch_sizes=None, max_trials=30):
+                            bert_model_trial_filepath, tf_train_device="/gpu:0", epochs=8, batch_sizes=None,
+                            max_trials=30):
     """ Tune a BERT final classifier """
     if batch_sizes is None:
         batch_sizes = [24, 32]
@@ -118,7 +146,6 @@ def tune_bert_nn_classifier(x_train, y_train, x_val, y_val, x_test, y_test, bert
         hps.Fixed("epochs", epochs)
         hps.Fixed("bert_encoder_url", bert_encoder_url)
         hps.Fixed("bert_size", bert_size)
-        hps.Fixed("bert_weights_filepath", bert_weights)
         hps.Fixed("feed_data_overlap", 50)
         hps.Choice("pooling_type", ["max", "average"])
 
@@ -137,7 +164,10 @@ def tune_bert_nn_classifier(x_train, y_train, x_val, y_val, x_test, y_test, bert
         print("Fitting tuner with training data")
         x_train_for_cv = np.concatenate([x_train, x_val])
         y_train_for_cv = np.concatenate([y_train, y_val])
-        tuner.fit_data(x_train_for_cv, y_train_for_cv)
+        tuner.fit_data(
+            x_train_for_cv, y_train_for_cv,
+            partial(_bert_model_wrapper, trial_filepath=bert_model_trial_filepath)
+        )
 
         print("Beginning tuning")
         tuner.search(
