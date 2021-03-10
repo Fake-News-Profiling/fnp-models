@@ -31,20 +31,22 @@ def main():
         tweet_train_processed, label_train, tweet_val_processed, label_val,
         bert_encoder_url="https://tfhub.dev/tensorflow/small_bert/bert_en_uncased_L-12_H-128_A-2/1",
         bert_size=128,
-        project_name="bert_ffnn_11",
-        batch_sizes=[24, 32, 48, 64]
+        project_name="bert_ffnn_12",
+        max_trials=30,
+        epochs=16,
+        batch_sizes=[32],
     )
 
-    # Tune BERT 256
-    tuner_256 = tune_bert_ffnn(
-        tweet_train_processed, label_train, tweet_val_processed, label_val,
-        bert_encoder_url="https://tfhub.dev/tensorflow/small_bert/bert_en_uncased_L-12_H-256_A-4/1",
-        bert_size=256,
-        project_name="bert_ffnn_12",
-        tf_train_device="/cpu:0",
-        max_trials=10,
-        batch_sizes=[24, 32, 48, 64]
-    )
+    # # Tune BERT 256
+    # tuner_256 = tune_bert_ffnn(
+    #     tweet_train_processed, label_train, tweet_val_processed, label_val,
+    #     bert_encoder_url="https://tfhub.dev/tensorflow/small_bert/bert_en_uncased_L-12_H-256_A-4/1",
+    #     bert_size=256,
+    #     project_name="bert_ffnn_13",
+    #     max_trials=10,
+    #     batch_sizes=[24, 32, 48, 64],
+    #     tf_train_device="/cpu:0",
+    # )
 
     # # Tune BERT 128, final classifier
     # tuner_128 = tune_bert_nn_classifier(
@@ -74,10 +76,6 @@ def main():
 
     # print("Tuner 128:\n", tuner_128.results_summary(1))
     print("Tuner 256:\n", tuner_256.results_summary(1))
-    tuner_128.get_best_models()
-
-    # Run on test set
-    # tuner.get_best_models(1).evaluate(test)
 
 
 if __name__ == "__main__":
@@ -86,9 +84,13 @@ if __name__ == "__main__":
 
 """
 TODO:
-* Review tune_bert_ffnn's trials in bert_ffnn_10, find the best ones and continue finding the optimal FFNN hps
-* Pool BERT (already fine-tuned) pooled_outputs, and then push through a FFNN
+* Review BERT+FFNN results and see if added layers with Dense linear layers improve
 * Look at different BERT Feed tokenization overlaps - pass data to Optimizer, which passes to fit method?
-* Models using 5-fold cross validation
+* Take the best BERT+FFNN model+hps and train a max pooling
+* Finish up the statistical model
+* Create a class for the statistical models
+* Create evaluation classes for the separate statistical models
+* Create evaluation class for the BERT model - option to choose from 2 different BERT models (128 or 256)
+* Create the ensemble model and create an evaluation class for it
 """
 

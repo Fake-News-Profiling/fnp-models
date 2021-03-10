@@ -32,15 +32,12 @@ class BayesianOptimizationTunerWithDataTokenization(BayesianOptimizationTunerWit
                 tokenizer_class=BertTweetFeedTokenizer,
                 x_train=fit_kwargs["x"],
                 y_train=fit_kwargs["y"],
-                # x_val=fit_kwargs["validation_data"][0],
-                # y_val=fit_kwargs["validation_data"][1],
                 shuffle=True,
                 feed_overlap=trial.hyperparameters.get("feed_data_overlap"),
             )
 
         fit_kwargs["x"] = x_train_bert
         fit_kwargs["y"] = y_train_bert
-        # fit_kwargs["validation_data"] = (x_val_bert, y_val_bert)
         super().run_trial(trial, *fit_args, **fit_kwargs)
 
 
@@ -62,15 +59,20 @@ def _build_bert_single_dense(hp, input_data_len):
         hidden_layer_size=hp.get("bert_size")
     )
 
-    dropout = Dropout(hp.Float("dropout_rate", 0, 0.5))(bert_output["pooled_output"])
+    dropout = Dropout(hp.Float("dropout_rate", 0.1, 0.4))(bert_output["pooled_output"])
     batch = BatchNormalization()(dropout)
+    if hp.Boolean("include_relu"):
+        batch = Dense(
+            hp.get("bert_size"),
+            activation="relu",
+            kernel_regularizer=tf.keras.regularizers.l2(hp.Choice("relu_kernel_reg", [0.0001, 0.001, 0.01, 0.05])),
+            bias_regularizer=tf.keras.regularizers.l2(hp.Choice("relu_bias_reg", [0.0001, 0.001, 0.01, 0.05])),
+        )(batch)
     dense = Dense(
-        1, activation=hp.Choice("dense_activation", ["sigmoid", "linear"]),
-        kernel_regularizer=tf.keras.regularizers.l2(),
-        bias_regularizer=tf.keras.regularizers.l2(),
+        1, activation=hp.Fixed("dense_activation", "linear"),
+        kernel_regularizer=tf.keras.regularizers.l2(hp.Choice("linear_kernel_reg", [0.0001, 0.001, 0.01, 0.05])),
+        bias_regularizer=tf.keras.regularizers.l2(hp.Choice("linear_bias_reg", [0.0001, 0.001, 0.01, 0.05])),
     )(batch)
-    # if hp.get("dense_activation") == "linear":
-    #   dense = Dense(1, activation="sigmoid", trainable=hp.Boolean("final_sigmoid_trainable"))
 
     # Build model
     model = Model(bert_input, dense)

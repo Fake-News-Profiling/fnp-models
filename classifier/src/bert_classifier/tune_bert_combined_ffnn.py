@@ -55,6 +55,11 @@ class BayesianOptimizationTunerWithBertPredictionData(BayesianOptimizationTunerW
 
 
 def _bert_model_wrapper(x_train, y_train, x_test, trial_filepath):
+    """
+    Fits a BERT model, based on hyper-parameters from a previous trial. Note that this uses the
+    `load_bert_single_dense_model` function from `tune_bert_ffnn.py`.
+    Once trained, the BERT layers are extracted and used to predict `x_train` and `x_test` (which are returned).
+    """
     with tf.device("/cpu:0"):
         bert_model, hps = load_bert_single_dense_model(
             trial_filepath=trial_filepath,
@@ -62,7 +67,7 @@ def _bert_model_wrapper(x_train, y_train, x_test, trial_filepath):
         )
 
         # Tokenize training data and train this BERT model
-        x_train_bert, y_train_bert, x_test_bert, _, tokenizer = tokenize_bert_input(
+        x_train_bert, y_train_bert, _, _, tokenizer = tokenize_bert_input(
             hps.get("bert_encoder_url"), hps.get("bert_size"), BertTweetFeedTokenizer, x_train, y_train,
             x_test, None, shuffle=True, feed_overlap=hps.get("feed_data_overlap"), return_tokenizer=True)
 
@@ -76,6 +81,10 @@ def _bert_model_wrapper(x_train, y_train, x_test, trial_filepath):
                 EarlyStopping("val_loss", patience=1),
             ],
         )
+        import tensorflow.keras.backend as backend
+
+        bert_layers_output = backend.function(bert_model.layers[:3], [bert_model.layers[3]])
+        print(bert_layers_output([x_train_bert]))
 
         # Transform the input data and pass it through BERT
         def _bert_tokenize_predict(data):
@@ -84,7 +93,7 @@ def _bert_model_wrapper(x_train, y_train, x_test, trial_filepath):
             for tweet_feed in data:
                 tokenized_data = tokenizer.tokenize_input(
                     np.asarray([tweet_feed]), overlap=hps.get("feed_data_overlap"))
-                predictions.append(bert_model.predict([tokenized_data]))
+                predictions.append(bert_layers_output([tokenized_data])[0])
 
             return predictions
 
