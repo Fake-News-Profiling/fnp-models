@@ -55,8 +55,8 @@ def parse_dataset(datasets_path, language, to_pandas=False):
     datasets_path -- path to the datasets directory
     language -- the language dataset to use, either "en" or "es"
 
-    If to_pandas=True then returns pandas DataFrame, where each row contains an author id, truth value, and tweets 1 to 100.
-    Else returns an array of tweet feeds
+    If to_pandas=True then returns pandas DataFrame, where each row contains an author id, truth value, and tweets
+    1 to 100. Else returns an array of tweet feeds
     """
     language_path = os.path.join(datasets_path, language)
 

@@ -24,15 +24,21 @@ def replace_xml_and_html(tweet):
     """ Replace XML encodings (&amp; &lt; &gt;) and HTML tags (<br>) """
     replace_xml = unescape(tweet)
     replace_html = BeautifulSoup(replace_xml, features="lxml").get_text()
+    replace_html = replace_html.replace("\xa0", " ")  # Remove non-breaking spaces '\xa0'
     return replace_html
 
 
 def remove_punctuation(tweet):
     """ Remove punctuation, except hashtags '#' """
-    punc = set(string.punctuation)
-    prin = set(string.printable)
-    punc.remove("#")
-    return "".join(c for c in tweet if c not in punc and c in prin)
+    punctuation = re.sub(r"[#:]", "", string.punctuation)
+    printable = re.sub(fr"[{punctuation}]", "", string.printable)
+    remove_quotes = tweet.replace("'", "")  # Replace quotes with an empty string, so "I've" -> "Ive
+    return re.sub(fr"[^{printable}]", " ", remove_quotes)
+
+
+def remove_colons(tweet):
+    """ Remove colons """
+    return tweet.replace(":", " ")
 
 
 def replace_emojis(tweet):
@@ -42,10 +48,11 @@ def replace_emojis(tweet):
 
 def replace_tags(tweet):
     """ Replace #HASHTAG# and #URL# #USER# with tags [tag] and [url], [user] """
-    tweet = tweet.replace("#HASHTAG#", "[hashtag]")
-    tweet = tweet.replace("#URL#", "[url]")
-    tweet = tweet.replace("#USER#", "[user]")
-    tweet = tweet.replace("RT", "[retweet]")
+    tweet = tweet.replace(r"#HASHTAG#", "[hashtag]")
+    tweet = tweet.replace(r"#URL#", "[url]")
+    tweet = tweet.replace(r"#USER#", "[user]")
+    tweet = re.sub(r"((?:^|\s)RT\s)", " [retweet] ", tweet)
+    tweet = re.sub(r"((?:^|\s)RT\s)", " [retweet] ", tweet)  # Repeated to handle multiple continuous retweets
     return tweet
 
 
@@ -76,7 +83,7 @@ def remove_stopwords(tweet):
 
 def remove_extra_spacing(tweet):
     """ Remove extra spaces """
-    return " ".join(tweet.split())
+    return re.sub(r"\s+", " ", tweet).strip()
 
 
 class BertTweetFeedDataPreprocessor:
@@ -87,8 +94,9 @@ class BertTweetFeedDataPreprocessor:
             transformers = [
                 tag_indicators,
                 replace_xml_and_html,
-                replace_emojis,
-                remove_punctuation,
+                remove_colons,  # Remove colons as they're used as emoji separators
+                replace_emojis,  # Replace emojis with ':<emoji_description>:'
+                remove_punctuation,  # Remove punctuation except : and #
                 replace_tags,
                 remove_hashtag_chars,
                 replace_accented_chars,
