@@ -34,7 +34,7 @@ def main():
         project_name="bert_ffnn_12",
         max_trials=30,
         epochs=16,
-        batch_sizes=[32],
+        batch_sizes=[16, 32, 64],
     )
 
     # # Tune BERT 256
@@ -74,8 +74,8 @@ def main():
     #     batch_sizes=[8, 16, 24, 32, 48, 64, 80, 96],
     # )
 
-    # print("Tuner 128:\n", tuner_128.results_summary(1))
-    print("Tuner 256:\n", tuner_256.results_summary(1))
+    print("Tuner 128:\n", tuner_128.results_summary(1))
+    # print("Tuner 256:\n", tuner_256.results_summary(1))
 
 
 if __name__ == "__main__":

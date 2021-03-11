@@ -51,7 +51,6 @@ def load_hyperparameters(trial_filepath):
 
 def _build_bert_single_dense(hp, input_data_len):
     """ Build and compile a BERT+Dense Keras Model for hyper-parameter tuning """
-
     # Get BERT input and output
     bert_input, bert_output = bert_layers(
         hp.get("bert_encoder_url"),
@@ -59,23 +58,17 @@ def _build_bert_single_dense(hp, input_data_len):
         hidden_layer_size=hp.get("bert_size")
     )
 
-    dropout = Dropout(hp.Float("dropout_rate", 0.1, 0.4))(bert_output["pooled_output"])
+    dropout = Dropout(hp.Float("dropout_rate", 0, 0.4))(bert_output["pooled_output"])
     batch = BatchNormalization()(dropout)
-    if hp.Boolean("include_relu"):
-        batch = Dense(
-            hp.get("bert_size"),
-            activation="relu",
-            kernel_regularizer=tf.keras.regularizers.l2(hp.Choice("relu_kernel_reg", [0.0001, 0.001, 0.01, 0.05])),
-            bias_regularizer=tf.keras.regularizers.l2(hp.Choice("relu_bias_reg", [0.0001, 0.001, 0.01, 0.05])),
-        )(batch)
-    dense = Dense(
+    linear = Dense(
         1, activation=hp.Fixed("dense_activation", "linear"),
-        kernel_regularizer=tf.keras.regularizers.l2(hp.Choice("linear_kernel_reg", [0.0001, 0.001, 0.01, 0.05])),
-        bias_regularizer=tf.keras.regularizers.l2(hp.Choice("linear_bias_reg", [0.0001, 0.001, 0.01, 0.05])),
+        kernel_regularizer=tf.keras.regularizers.l2(hp.Choice("linear_kernel_reg", [0.0001, 0.001, 0.01])),
+        bias_regularizer=tf.keras.regularizers.l2(hp.Choice("linear_bias_reg", [0.0001, 0.001, 0.01])),
+        activity_regularizer=tf.keras.regularizers.l2(hp.Choice("linear_activity_reg", [0.0001, 0.001, 0.01])),
     )(batch)
 
     # Build model
-    model = Model(bert_input, dense)
+    model = Model(bert_input, linear)
     bert_input_data_len = BertTweetFeedTokenizer.get_data_len(
         input_data_len, hp.get("bert_size"), hp.get("feed_data_overlap"))
     num_train_steps = hp.get("epochs") * bert_input_data_len // hp.get("batch_size")
