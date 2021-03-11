@@ -19,7 +19,7 @@ def get_best_trials(tuner, num_trials=5):
             results[score].append(trial.metrics.get_best_value(score))
 
         results["loss"].append(math.exp(
-            trial.metrics.get_best_value("score") * math.log(trial.metrics.get_best_value("score_accuracy") + 1)) - 1)
+            trial.metrics.get_best_value("score") * math.log(trial.metrics.get_best_value("accuracy_score") + 1)) - 1)
 
     return pd.DataFrame(results)
 
@@ -47,7 +47,7 @@ def main():
     y_train = np.concatenate([label_train, label_val])
 
     # Tune BERT 128
-    print("Tuning models")
+    # print("Tuning models")
     project = "2"
     max_trials = 10
     tuner_readability = tune.tune_readability_model(x_train, y_train, project, max_trials=max_trials)
@@ -55,10 +55,10 @@ def main():
     tuner_sentiment = tune.tune_sentiment_model(x_train, y_train, project, max_trials=max_trials)
     tuner_combined = tune.tune_combined_statistical_models(x_train, y_train, project, max_trials=max_trials)
 
-    print("\nReadability summary:\n", get_best_trials(tuner_readability).to_markdown(), sep="")
-    print("\nNER summary:\n", get_best_trials(tuner_ner).to_markdown(), sep="")
-    print("\nSentiment summary:\n", get_best_trials(tuner_sentiment).to_markdown(), sep="")
-    print("\nCombined summary:\n", get_best_trials(tuner_combined).to_markdown(), sep="")
+    print("\nReadability summary:\n", get_best_trials(tuner_readability, 10).to_markdown(), sep="")
+    print("\nNER summary:\n", get_best_trials(tuner_ner, 10).to_markdown(), sep="")
+    print("\nSentiment summary:\n", get_best_trials(tuner_sentiment, 10).to_markdown(), sep="")
+    print("\nCombined summary:\n", get_best_trials(tuner_combined, 10).to_markdown(), sep="")
 
 
 if __name__ == "__main__":
