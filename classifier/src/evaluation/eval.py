@@ -8,7 +8,6 @@ import tensorflow as tf
 
 from data import load_data, parse_labels_to_floats
 import evaluation.models as models
-from evaluation.models import Buda20NgramEnsembleModel
 
 
 def evaluate_models(x, y, x_test, y_test, eval_models, eval_metrics, cv_splits=5):
@@ -28,6 +27,8 @@ def evaluate_models(x, y, x_test, y_test, eval_models, eval_metrics, cv_splits=5
 
             for name, value in metrics.items():
                 cv_metrics[name].append(float(value))
+
+            # TODO - Write model CV results to file here
 
     # Compute metric averages
     cv_df = pd.DataFrame(cv_metrics)
@@ -54,6 +55,8 @@ def evaluate_models(x, y, x_test, y_test, eval_models, eval_metrics, cv_splits=5
 
         for name, value in metrics.items():
             test_metrics[name].append(float(value))
+
+        # TODO - Write model test results to file here
 
     print(f"\nFinal test set results:\n", pd.DataFrame(test_metrics).to_markdown(), sep="", end="\n")
 

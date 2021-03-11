@@ -82,7 +82,6 @@ def tag_counts(user_tweets, tags=None):
 def retweet_ratio(user_tweets):
     """ Returns the ratio of retweets to regular tweets """
     retweets = 0
-    second_retweets = 0
     for tweet in user_tweets:
         if tweet.startswith("RT"):
             retweets += 1
@@ -131,7 +130,7 @@ def truncated_tweets(user_tweets):
     """ Returns the number of truncated tweets """
     count = 0
     for tweet in user_tweets:
-        if re.match(r".*\.\.\.(?: #URL#)?$", tweet) is not None:
+        if re.match(r".*(?:\.\.\.|…)(?: #URL#)?$", tweet) is not None:
             count += 1
 
     return count

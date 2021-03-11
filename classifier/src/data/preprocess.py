@@ -12,11 +12,11 @@ from nltk.corpus import stopwords
 
 def tag_indicators(tweet):
     """ Replace URLs, hastags and user mentions with a tag (e.g. #HASHTAG#) """
-    hashtags_tagged = re.sub(r"#[^\s]*", "#HASHTAG#", tweet, flags=re.MULTILINE)
+    hashtags_tagged = re.sub(r"#[a-zA-Z\d]+\s", "#HASHTAG#", tweet, flags=re.MULTILINE)
     urls_tagged = re.sub(
-        r"https?\:\/\/[^\s]*", "#URL#", hashtags_tagged, flags=re.MULTILINE
+        r"https?://[a-zA-Z.\d_]*", "#URL#", hashtags_tagged, flags=re.MULTILINE
     )
-    users_tagged = re.sub(r"@[^\s]*", "#USER#", urls_tagged, flags=re.MULTILINE)
+    users_tagged = re.sub(r"@[a-zA-Z\d_]+", "#USER#", urls_tagged, flags=re.MULTILINE)
     return users_tagged
 
 
@@ -80,7 +80,7 @@ def remove_extra_spacing(tweet):
 
 
 class BertTweetFeedDataPreprocessor:
-    """ Preprocesses tweet feeds to be used in the BertIndividualTweetModel """
+    """ Pre-processes tweet feeds to be used in the BertIndividualTweetModel """
 
     def __init__(self, transformers=None):
         if transformers is None:
