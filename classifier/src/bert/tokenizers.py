@@ -17,7 +17,7 @@ class AbstractBertTokenizer(ABC):
         )
 
     @abstractmethod
-    def tokenize_input(self, x):
+    def tokenize_input(self, x, **kwargs):
         """ Tokenize input data """
         pass
 
@@ -56,12 +56,12 @@ class AbstractBertTokenizer(ABC):
 class BertIndividualTweetTokenizer(AbstractBertTokenizer):
     """ BERT tokenizer which tokenizes historical tweet data as individual tweets """
 
-    def tokenize_input(self, X):
+    def tokenize_input(self, x, **kwargs):
         """ Tokenize input data """
         tokenized_tweets = [
-            self._tokenize_single_tweet(tweet) for tweet_feed in X for tweet in tweet_feed
+            self._tokenize_single_tweet(tweet) for tweet_feed in x for tweet in tweet_feed
         ]
-        self.label_pattern = [len(tweet_feed) for tweet_feed in X]
+        self.label_pattern = [len(tweet_feed) for tweet_feed in x]
         word_ids = tf.ragged.constant(tokenized_tweets)
         return self._format_bert_tokens(word_ids)
 
@@ -74,10 +74,10 @@ class BertIndividualTweetTokenizer(AbstractBertTokenizer):
 class BertTweetFeedTokenizer(AbstractBertTokenizer):
     """ BERT tokenizer which tokenizes historical tweet data as tweet feed chunks """
 
-    def tokenize_input(self, X, overlap=50):
+    def tokenize_input(self, x, overlap=50):
         """ Tokenize input data """
         tokenized_tweet_feeds = [
-            self._tokenize_tweet_feed(" ".join(tweet_feed), overlap) for tweet_feed in X
+            self._tokenize_tweet_feed(" ".join(tweet_feed), overlap) for tweet_feed in x
         ]
         self.label_pattern = [len(tweet_feed) for tweet_feed in tokenized_tweet_feeds]
         flattened_feeds = [chunk for feed in tokenized_tweet_feeds for chunk in feed]

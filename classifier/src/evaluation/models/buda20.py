@@ -11,7 +11,7 @@ from sklearn.pipeline import Pipeline
 from sklearn.svm import SVC
 from xgboost import XGBClassifier
 
-from evaluation.models import AbstractEvaluationModel
+from evaluation.models import AbstractModel
 
 """
 Academic Integrity Statement:
@@ -22,7 +22,7 @@ Author Profiling task. This has been done purely for evaluation purposes, to com
 """
 
 
-class Buda20NgramEnsembleModel(AbstractEvaluationModel):
+class Buda20NgramEnsembleModel(AbstractModel):
     def __init__(self):
         # Ngram Models
         self.lr_ngram = Pipeline([

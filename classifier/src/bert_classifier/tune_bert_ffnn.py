@@ -162,7 +162,6 @@ def tune_bert_ffnn(x_train, y_train, x_val, y_val, bert_encoder_url, bert_size, 
         tuner.search(
             x=x_train_for_cv,
             y=y_train_for_cv,
-            validation_data=(x_val, y_val),
             callbacks=[
                 TerminateOnNaN(),
                 EarlyStopping("val_loss", patience=2),

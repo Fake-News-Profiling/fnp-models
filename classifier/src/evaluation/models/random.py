@@ -1,9 +1,9 @@
 import numpy as np
 
-from evaluation.models import AbstractEvaluationModel
+from evaluation.models import AbstractModel
 
 
-class RandomModel(AbstractEvaluationModel):
+class RandomModel(AbstractModel):
     """ A random model which uses `numpy.random.randint()` to pick a prediction value of 0 or 1 """
 
     def fit(self, x, y):
