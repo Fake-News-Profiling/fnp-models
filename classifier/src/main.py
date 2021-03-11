@@ -31,7 +31,7 @@ def main():
         tweet_train_processed, label_train, tweet_val_processed, label_val,
         bert_encoder_url="https://tfhub.dev/tensorflow/small_bert/bert_en_uncased_L-12_H-128_A-2/1",
         bert_size=128,
-        project_name="bert_ffnn_12",
+        project_name="bert_ffnn_13",
         max_trials=30,
         epochs=16,
         batch_sizes=[16, 32, 64],
