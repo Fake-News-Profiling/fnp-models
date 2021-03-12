@@ -18,8 +18,10 @@ from sklearn.model_selection import StratifiedKFold
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
 from sklearn.svm import SVC
+from tensorflow.python.keras.callbacks import TerminateOnNaN, EarlyStopping, TensorBoard
 from xgboost import XGBClassifier
 
+from bert_classifier import BayesianOptimizationTunerWithFitHyperParameters
 from statistical.data_extraction import readability_tweet_extractor, ner_tweet_extractor, sentiment_tweet_extractor
 
 
@@ -105,8 +107,11 @@ def build_nn_classifier_model(hps: HyperParameters) -> Model:
     )(inputs)
 
     model = Model(inputs, linear)
-    # TODO model.compile()
-    # TODO setup separate keras tuner for this for tune_combined_statistical_model
+    model.compile(
+        optimizer=tf.keras.optimizers.Adam(hps.Float("learning_rate", 1e-5, 0.1)),
+        loss=tf.keras.losses.BinaryCrossentropy(from_logits=True),
+        metrics=tf.metrics.BinaryAccuracy(),
+    )
     return model
 
 
@@ -122,14 +127,50 @@ def tune_sentiment_model(x_train, y_train, project_name, **kwargs):
     return tune_sklearn_model(x_train, y_train, "sentiment_" + project_name, sentiment_tweet_extractor(), **kwargs)
 
 
-def tune_combined_statistical_models(x_train, y_train, project_name, **kwargs):
+def tune_combined_statistical_models(x_train, y_train, project_name, tune_sklearn_models=True, **kwargs):
     x_train_readability = readability_tweet_extractor().transform(x_train)
     x_train_ner = ner_tweet_extractor().transform(x_train)
     x_train_sentiment = sentiment_tweet_extractor().transform(x_train)
     x_train = np.concatenate([x_train_readability, x_train_ner, x_train_sentiment], axis=1)
-    print(x_train.shape)
 
-    return tune_sklearn_model(x_train, y_train, "combined_" + project_name, **kwargs)
+    if tune_sklearn_models:
+        return tune_sklearn_model(x_train, y_train, "combined_" + project_name, **kwargs)
+    else:
+        return tune_nn_model(x_train, y_train, "combined_nn_" + project_name, **kwargs)
+
+
+def tune_nn_model(x_train, y_train, project_name, feature_extractor=None, tf_train_device="/gpu:0", **kwargs):
+    # Extract features
+    if feature_extractor is not None:
+        x_train = feature_extractor.transform(x_train)
+
+    # Setup Keras Tuner
+    with tf.device(tf_train_device):
+        hps = HyperParameters()
+        hps.Choice("batch_size", [16, 32, 64])
+        hps.Fixed("epochs", 20)
+        tuner = nn_tuner(project_name, hyperparameters=hps, **kwargs)
+        tuner.search(
+            x=x_train,
+            y=y_train,
+            callbacks=[
+                TerminateOnNaN(),
+                EarlyStopping("val_loss", patience=2),
+                TensorBoard(log_dir=tuner.directory + "/" + tuner.project_name + "/logs")
+            ]
+        )
+        return tuner
+
+
+def nn_tuner(project_name, hyperparameters=None, max_trials=30, directory="../../training/statistical"):
+    return BayesianOptimizationTunerWithFitHyperParameters(
+        hyperparameters=hyperparameters,
+        hypermodel=build_nn_classifier_model,
+        objective="val_loss",
+        max_trials=max_trials,
+        directory=directory,
+        project_name=project_name,
+    )
 
 
 def tune_sklearn_model(x_train, y_train, project_name, feature_extractor=None, **kwargs):
@@ -150,15 +191,9 @@ def sklearn_tuner(project_name, max_trials=30, directory="../../training/statist
             max_trials=max_trials,
         ),
         hypermodel=build_sklearn_classifier_model,
-        scoring=make_scorer(loss_accuracy_scorer, needs_proba=True),
+        scoring=make_scorer(log_loss, needs_proba=True),
         metrics=[accuracy_score, f1_score],
         cv=StratifiedKFold(n_splits=5, shuffle=True, random_state=3),
         directory=directory,
         project_name=project_name,
     )
-
-
-def loss_accuracy_scorer(y_true, y_pred, **kwargs):
-    loss = log_loss(y_true, y_pred, **kwargs)
-    accuracy = accuracy_score(y_true, np.round(y_pred), **kwargs)
-    return math.log(loss + 1) / math.log(accuracy + 1)

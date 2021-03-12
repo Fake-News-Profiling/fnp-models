@@ -16,12 +16,20 @@ def get_best_trials(tuner, num_trials=5):
         results["trial_id"].append(trial.trial_id)
         results["sklearn_model"].append(trial.hyperparameters.get("sklearn_model"))
         for score in trial.metrics.metrics.keys():
-            results[score].append(trial.metrics.get_best_value(score))
+            results["loss" if score == "score" else score].append(trial.metrics.get_best_value(score))
 
-        results["loss"].append(math.exp(
-            trial.metrics.get_best_value("score") * math.log(trial.metrics.get_best_value("accuracy_score") + 1)) - 1)
+        results["parameters"].append(trial.hyperparameters.values)
 
     return pd.DataFrame(results)
+
+
+def print_results(project_num, projects=None, num_trials=10):
+    if projects is None:
+        projects = ["readability", "ner", "sentiment", "combined", "combined_nn"]
+
+    for project in projects:
+        tuner = tune.sklearn_tuner(f"{project}_{project_num}")
+        print(f"\n{tuner.project_name} summary:\n", get_best_trials(tuner, num_trials=num_trials).to_markdown(), sep="")
 
 
 def main():
@@ -47,19 +55,18 @@ def main():
     y_train = np.concatenate([label_train, label_val])
 
     # Tune BERT 128
-    # print("Tuning models")
+    print("Tuning models")
     project = "2"
-    max_trials = 10
-    tuner_readability = tune.tune_readability_model(x_train, y_train, project, max_trials=max_trials)
-    tuner_ner = tune.tune_ner_model(x_train, y_train, project, max_trials=max_trials)
-    tuner_sentiment = tune.tune_sentiment_model(x_train, y_train, project, max_trials=max_trials)
-    tuner_combined = tune.tune_combined_statistical_models(x_train, y_train, project, max_trials=max_trials)
+    max_trials = 200
+    tune.tune_readability_model(x_train, y_train, project, max_trials=max_trials)
+    tune.tune_ner_model(x_train, y_train, project, max_trials=max_trials)
+    tune.tune_sentiment_model(x_train, y_train, project, max_trials=max_trials)
+    tune.tune_combined_statistical_models(x_train, y_train, project, max_trials=max_trials)
+    tune.tune_combined_statistical_models(x_train, y_train, project, tune_sklearn_models=False, max_trials=max_trials)
 
-    print("\nReadability summary:\n", get_best_trials(tuner_readability, 10).to_markdown(), sep="")
-    print("\nNER summary:\n", get_best_trials(tuner_ner, 10).to_markdown(), sep="")
-    print("\nSentiment summary:\n", get_best_trials(tuner_sentiment, 10).to_markdown(), sep="")
-    print("\nCombined summary:\n", get_best_trials(tuner_combined, 10).to_markdown(), sep="")
+    print_results(project)
 
 
 if __name__ == "__main__":
-    main()
+    print_results(2)
+    # main()
