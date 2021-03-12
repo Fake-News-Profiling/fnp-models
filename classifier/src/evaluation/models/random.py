@@ -1,6 +1,6 @@
 import numpy as np
 
-from evaluation.models import AbstractModel
+from base import AbstractModel
 
 
 class RandomModel(AbstractModel):

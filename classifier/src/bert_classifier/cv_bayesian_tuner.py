@@ -18,8 +18,9 @@ The 'CVBayesianOptimization.run_trial()' method uses code taken from:
 
 class CVBayesianOptimization(BayesianOptimization):
     """ BayesianOptimization keras Tuner which performs Cross Validation """
-    def __init__(self, n_splits=5, *args, **kwargs):
+    def __init__(self, data_preprocessing_func=None, n_splits=5, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self.data_preprocessing_func = data_preprocessing_func
         self.cv_data = None
         self.kfold = StratifiedKFold(n_splits=n_splits, shuffle=True, random_state=42)
 
@@ -42,6 +43,10 @@ class CVBayesianOptimization(BayesianOptimization):
         split_data = self.cv_data if self.cv_data is not None else self.kfold_split_wrapper(
             fit_kwargs["x"], fit_kwargs["y"])
         for split_num, (x_train, y_train, x_test, y_test) in enumerate(split_data):
+            if self.data_preprocessing_func is not None:
+                x_train, y_train, x_test, y_test = self.data_preprocessing_func(
+                    trial.hyperparameters, x_train, y_train, x_test, y_test)
+
             # Copy kwargs and add data to it
             copied_fit_kwargs = copy.copy(fit_kwargs)
             copied_fit_kwargs["x"] = x_train

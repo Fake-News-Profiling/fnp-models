@@ -1,4 +1,3 @@
-import json
 from functools import partial
 
 import numpy as np
@@ -9,6 +8,7 @@ from tensorflow.keras.callbacks import EarlyStopping, TensorBoard, TerminateOnNa
 from official.nlp import optimization
 from kerastuner import HyperParameters
 
+from base import load_hyperparameters
 from bert import BertTweetFeedTokenizer, bert_layers
 from bert.models import tokenize_bert_input
 from bert_classifier import BayesianOptimizationTunerWithFitHyperParameters
@@ -20,33 +20,18 @@ rates, and dropout rates of the model.
 """
 
 
-class BayesianOptimizationTunerWithDataTokenization(BayesianOptimizationTunerWithFitHyperParameters):
-    """ BayesianOptimization keras Tuner which uses data tokenization overlap as a hyper-parameter """
-
-    def run_trial(self, trial, *fit_args, **fit_kwargs):
-        # Tokenize data for BERT, and pass to fit kwargs
-        with tf.device("/cpu:0"):
-            x_train_bert, y_train_bert = tokenize_bert_input(
-                encoder_url=trial.hyperparameters.get("bert_encoder_url"),
-                hidden_layer_size=trial.hyperparameters.get("bert_size"),
-                tokenizer_class=BertTweetFeedTokenizer,
-                x_train=fit_kwargs["x"],
-                y_train=fit_kwargs["y"],
-                shuffle=True,
-                feed_overlap=trial.hyperparameters.get("feed_data_overlap"),
-            )
-
-        fit_kwargs["x"] = x_train_bert
-        fit_kwargs["y"] = y_train_bert
-        super().run_trial(trial, *fit_args, **fit_kwargs)
-
-
-def load_hyperparameters(trial_filepath):
-    """ Load a trials hyperparameters from a JSON file """
-    with open(trial_filepath) as trial_file:
-        trial = json.load(trial_file)
-        hps = HyperParameters.from_config(trial["hyperparameters"])
-        return hps
+def data_preprocessing_func(hps, x_train, y_train, x_test, y_test):
+    return tokenize_bert_input(
+        encoder_url=hps.get("bert_encoder_url"),
+        hidden_layer_size=hps.get("bert_size"),
+        tokenizer_class=BertTweetFeedTokenizer,
+        x_train=x_train,
+        y_train=y_train,
+        x_val=x_test,
+        y_val=y_test,
+        shuffle=True,
+        feed_overlap=hps.get("feed_data_overlap"),
+    )
 
 
 def _build_bert_single_dense(hp, input_data_len):
@@ -57,23 +42,30 @@ def _build_bert_single_dense(hp, input_data_len):
         trainable=True,
         hidden_layer_size=hp.get("bert_size")
     )
-
-    dropout = Dropout(hp.Float("dropout_rate", 0, 0.4))(bert_output["pooled_output"])
-    batch = BatchNormalization()(dropout)
-    linear = Dense(
+    dropout_1 = Dropout(hp.Float("dropout_rate_1"), 0, 0.5)(bert_output["pooled_output"])
+    batch_1 = BatchNormalization(dropout_1)
+    relu_1 = Dense(
+        hp.get("bert_size"), activation=hp.Fixed("dense_1_activation", "relu"),
+        kernel_regularizer=tf.keras.regularizers.l2(hp.Choice("dense_1_kernel_reg", [0.0001, 0.001, 0.01, 0.02])),
+        bias_regularizer=tf.keras.regularizers.l2(hp.Choice("dense_1_bias_reg", [0.0001, 0.001, 0.01, 0.02])),
+        activity_regularizer=tf.keras.regularizers.l2(hp.Choice("dense_1_activity_reg", [0.0001, 0.001, 0.01, 0.02])),
+    )(batch_1)
+    dropout_2 = Dropout(hp.Float("dropout_rate", 0, 0.5))(relu_1)
+    batch_2 = BatchNormalization()(dropout_2)
+    linear_2 = Dense(
         1, activation=hp.Fixed("dense_activation", "linear"),
-        kernel_regularizer=tf.keras.regularizers.l2(hp.Choice("linear_kernel_reg", [0.0001, 0.001, 0.01])),
-        bias_regularizer=tf.keras.regularizers.l2(hp.Choice("linear_bias_reg", [0.0001, 0.001, 0.01])),
-        activity_regularizer=tf.keras.regularizers.l2(hp.Choice("linear_activity_reg", [0.0001, 0.001, 0.01])),
-    )(batch)
+        kernel_regularizer=tf.keras.regularizers.l2(hp.Choice("linear_kernel_reg", [0.0001, 0.001, 0.01, 0.02])),
+        bias_regularizer=tf.keras.regularizers.l2(hp.Choice("linear_bias_reg", [0.0001, 0.001, 0.01, 0.02])),
+        activity_regularizer=tf.keras.regularizers.l2(hp.Choice("linear_activity_reg", [0.0001, 0.001, 0.01, 0.02])),
+    )(batch_2)
 
     # Build model
-    model = Model(bert_input, linear)
+    model = Model(bert_input, linear_2)
     bert_input_data_len = BertTweetFeedTokenizer.get_data_len(
         input_data_len, hp.get("bert_size"), hp.get("feed_data_overlap"))
     num_train_steps = hp.get("epochs") * bert_input_data_len // hp.get("batch_size")
     optimizer = optimization.create_optimizer(
-        init_lr=hp.Fixed("learning_rate", 5e-5),
+        init_lr=hp.Choice("learning_rate", [2e-5, 3e-5, 5e-5]),
         num_train_steps=num_train_steps,
         num_warmup_steps=num_train_steps // 10,
         optimizer_type='adamw',
@@ -143,9 +135,10 @@ def tune_bert_ffnn(x_train, y_train, x_val, y_val, bert_encoder_url, bert_size, 
         hps.Fixed("epochs", epochs)
         hps.Fixed("bert_encoder_url", bert_encoder_url)
         hps.Fixed("bert_size", bert_size)
-        hps.Choice("feed_data_overlap", [50])
+        hps.Choice("feed_data_overlap", [0, 50])
 
-        tuner = BayesianOptimizationTunerWithDataTokenization(
+        tuner = BayesianOptimizationTunerWithFitHyperParameters(
+            data_preprocessing_func=data_preprocessing_func,
             hyperparameters=hps,
             hypermodel=partial(
                 _build_bert_single_dense,

@@ -36,7 +36,7 @@ def load_data():
 
 # Preprocess dataset
 print("Preprocessing data")
-tweet_preprocessor = processing.BertTweetFeedDataPreprocessor(
+tweet_preprocessor = processing.BertTweetPreprocessor(
     transformers = [
         processing.tag_indicators,
         processing.replace_xml_and_html,

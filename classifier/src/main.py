@@ -1,14 +1,12 @@
 import tensorflow as tf
 
-from data import load_data, BertTweetFeedDataPreprocessor, parse_labels_to_floats
+from base.training import allow_gpu_memory_growth
+from data import load_data, BertTweetPreprocessor, parse_labels_to_floats
 from bert_classifier.tune_ffnn import tune_ffnn
 from bert_classifier.tune_bert_ffnn import tune_bert_ffnn
 from bert_classifier.tune_bert_combined_ffnn import tune_bert_nn_classifier
 
-# Allow GPU memory growth
-gpus = tf.config.list_physical_devices('GPU')
-if len(gpus) > 0:
-    tf.config.experimental.set_memory_growth(gpus[0], True)
+allow_gpu_memory_growth()
 
 
 def main():
@@ -17,8 +15,12 @@ def main():
     print("Loading data")
     tweet_train, label_train, tweet_val, label_val, tweet_test, label_test = load_data()
 
+    tweet_train = [[tweet.text for tweet in tweet_feed] for tweet_feed in tweet_train]
+    tweet_val = [[tweet.text for tweet in tweet_feed] for tweet_feed in tweet_val]
+    tweet_test = [[tweet.text for tweet in tweet_feed] for tweet_feed in tweet_test]
+
     print("Preprocessing data")
-    tweet_preprocessor = BertTweetFeedDataPreprocessor()
+    tweet_preprocessor = BertTweetPreprocessor()
     tweet_train_processed = tweet_preprocessor.transform(tweet_train)
     tweet_val_processed = tweet_preprocessor.transform(tweet_val)
     tweet_test_processed = tweet_preprocessor.transform(tweet_test)
@@ -31,10 +33,10 @@ def main():
         tweet_train_processed, label_train, tweet_val_processed, label_val,
         bert_encoder_url="https://tfhub.dev/tensorflow/small_bert/bert_en_uncased_L-12_H-128_A-2/1",
         bert_size=128,
-        project_name="bert_ffnn_13",
+        project_name="bert_ffnn_14",
         max_trials=30,
-        epochs=16,
-        batch_sizes=[16, 32, 64],
+        epochs=8,
+        batch_sizes=[8, 16, 32, 64],
     )
 
     # # Tune BERT 256

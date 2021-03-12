@@ -86,8 +86,8 @@ def remove_extra_spacing(tweet):
     return re.sub(r"\s+", " ", tweet).strip()
 
 
-class BertTweetFeedDataPreprocessor:
-    """ Pre-processes tweet feeds to be used in the BertIndividualTweetModel """
+class BertTweetPreprocessor:
+    """ Pre-processes tweet feeds to be used in a BERT-based tweet embedding model """
 
     def __init__(self, transformers=None):
         if transformers is None:
@@ -108,7 +108,7 @@ class BertTweetFeedDataPreprocessor:
     def transform(self, X):
         """ Preprocess a list of user tweets """
         return np.asarray([
-            np.asarray([self._transform_single_tweet(tweet.text) for tweet in tweet_feed])
+            np.asarray([self._transform_single_tweet(tweet) for tweet in tweet_feed])
             for tweet_feed in X
         ])
 

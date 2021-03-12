@@ -4,7 +4,7 @@ import math
 import pandas as pd
 import numpy as np
 
-from data import load_data, parse_labels_to_floats, BertTweetFeedDataPreprocessor
+from data import load_data, parse_labels_to_floats, BertTweetPreprocessor
 from data.preprocess import tag_indicators, replace_xml_and_html
 import statistical.tune_statistical as tune
 
@@ -33,7 +33,7 @@ def main():
 
     print("Preprocessing data")
     # Remove HTML/XML tags
-    preprocessor = BertTweetFeedDataPreprocessor([tag_indicators, replace_xml_and_html])
+    preprocessor = BertTweetPreprocessor([tag_indicators, replace_xml_and_html])
     tweet_train = preprocessor.transform(tweet_train)
     tweet_val = preprocessor.transform(tweet_val)
     tweet_test = preprocessor.transform(tweet_test)

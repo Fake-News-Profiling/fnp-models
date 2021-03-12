@@ -3,6 +3,7 @@ from statistics import pstdev
 
 import numpy as np
 from emoji import EMOJI_UNICODE_ENGLISH
+from kerastuner import HyperParameters
 from lexical_diversity import lex_div as ld
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.feature_extraction.text import TfidfVectorizer
@@ -11,7 +12,7 @@ from sklearn.pipeline import Pipeline
 from sklearn.svm import SVC
 from xgboost import XGBClassifier
 
-from evaluation.models import AbstractModel
+from base import AbstractModel
 
 """
 Academic Integrity Statement:
@@ -23,8 +24,11 @@ Author Profiling task. This has been done purely for evaluation purposes, to com
 
 
 class Buda20NgramEnsembleModel(AbstractModel):
-    def __init__(self):
+    def __init__(self, hyperparameters: HyperParameters):
         # Ngram Models
+        super().__init__(hyperparameters)
+
+        # N-gram models (expect concatenated tweets as input)
         self.lr_ngram = Pipeline([
             ('vect', TfidfVectorizer(min_df=6, ngram_range=(1, 2), use_idf=True, smooth_idf=True, sublinear_tf=True)),
             ('lr', LogisticRegression(C=1000, penalty='l2', solver='liblinear', fit_intercept=False, verbose=0))
@@ -42,7 +46,7 @@ class Buda20NgramEnsembleModel(AbstractModel):
             ('xgb', XGBClassifier(colsample_bytree=0.6, eta=0.01, max_depth=6, n_estimators=300, subsample=0.8))
         ])
 
-        # Descriptive Statistical Model
+        # Descriptive Statistical Model (expect individual tweets as input)
         self.xgb_stats = XGBClassifier(
             colsample_bynode=1,
             colsample_bytree=0.9,
@@ -62,38 +66,42 @@ class Buda20NgramEnsembleModel(AbstractModel):
             l1_ratio=0.5,
         )
 
-    def fit(self, x_train, y_train):
-        x_train_clean_v1, x_train_clean_v2, x_train_stats = self._clean_data(x_train)
+    def fit(self, x, y):
+        x = x
+        x_clean_v1, x_clean_v2, x_stats = self._clean_data(x)
 
         # Train models
-        self.lr_ngram.fit(x_train_clean_v1, y_train)
-        self.rf_ngram.fit(x_train_clean_v2, y_train)
-        self.svm_ngram.fit(x_train_clean_v1, y_train)
-        self.xgb_ngram.fit(x_train_clean_v1, y_train)
-        self.xgb_stats.fit(x_train_stats, y_train)
+        self.lr_ngram.fit(x_clean_v1, y)
+        self.rf_ngram.fit(x_clean_v2, y)
+        self.svm_ngram.fit(x_clean_v1, y)
+        self.xgb_ngram.fit(x_clean_v1, y)
+        self.xgb_stats.fit(x_stats, y)
 
         # Train final model
-        model_preds = self._model_predictions(x_train_clean_v1, x_train_clean_v2, x_train_stats)
-        self.lr_ensemble.fit(model_preds, y_train)
+        model_preds = self._model_predictions(x_clean_v1, x_clean_v2, x_stats)
+        self.lr_ensemble.fit(model_preds, y)
 
     def predict(self, x):
         model_preds = self._model_predictions(*self._clean_data(x))
         return self.lr_ensemble.predict(model_preds)
 
-    def _model_predictions(self, x_train_clean_v1, x_train_clean_v2, x_train_stats):
+    def _model_predictions(self, x_clean_v1, x_clean_v2, x_stats):
         # Predict probabilities, for final model
-        pred_lr_ngram = self.lr_ngram.predict_proba(x_train_clean_v1)[:, 1]
-        pred_rf_ngram = self.rf_ngram.predict_proba(x_train_clean_v2)[:, 1]
-        pred_svm_ngram = self.svm_ngram.predict_proba(x_train_clean_v1)[:, 1]
-        pred_xgb_ngram = self.xgb_ngram.predict_proba(x_train_clean_v1)[:, 1]
-        pred_xgb_stats = self.xgb_stats.predict_proba(x_train_stats)[:, 1]
-        return np.concatenate([pred_lr_ngram, pred_rf_ngram, pred_svm_ngram, pred_xgb_ngram, pred_xgb_stats])
+        pred_lr_ngram = self.lr_ngram.predict_proba(x_clean_v1)[:, 1].reshape(-1, 1)
+        pred_rf_ngram = self.rf_ngram.predict_proba(x_clean_v2)[:, 1].reshape(-1, 1)
+        pred_svm_ngram = self.svm_ngram.predict_proba(x_clean_v1)[:, 1].reshape(-1, 1)
+        pred_xgb_ngram = self.xgb_ngram.predict_proba(x_clean_v1)[:, 1].reshape(-1, 1)
+        pred_xgb_stats = self.xgb_stats.predict_proba(x_stats)[:, 1].reshape(-1, 1)
+        return np.concatenate([pred_lr_ngram, pred_rf_ngram, pred_svm_ngram, pred_xgb_ngram, pred_xgb_stats], axis=1)
 
     @staticmethod
-    def _clean_data(x_train):
-        x_train_clean_v1 = cleaning_v1(x_train)
-        x_train_clean_v2 = cleaning_v2(x_train)
-        x_train_stats = extract_features(flatten_tweet_feeds(x_train))
+    def _clean_data(x):
+        x_joined = join_tweet_feeds(x)
+        x_flattened = flatten_tweet_feeds(x)
+
+        x_train_clean_v1 = cleaning_v1(x_joined)
+        x_train_clean_v2 = cleaning_v2(x_joined)
+        x_train_stats = extract_features(x_flattened)
         return x_train_clean_v1, x_train_clean_v2, x_train_stats
 
 
@@ -122,9 +130,12 @@ def cleaning_v2(tweet_lists):
     return cleaned_feed_v2
 
 
-# Feature engineering (methods expect flattened tweet feeds)
 def flatten_tweet_feeds(tweet_feeds):
     return np.asarray([tweet for user_feed in tweet_feeds for tweet in user_feed])
+
+
+def join_tweet_feeds(tweet_feeds):
+    return np.asarray([" ".join(user_feed) for user_feed in tweet_feeds])
 
 
 def extract_features(tweet_feeds):
@@ -188,4 +199,4 @@ def extract_features(tweet_feeds):
         p_szerz,
         emoj_szerz,
         ttr_szerz,
-    ])
+    ]).T
