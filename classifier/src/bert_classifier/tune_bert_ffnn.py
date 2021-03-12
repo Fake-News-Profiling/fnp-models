@@ -34,7 +34,7 @@ def data_preprocessing_func(hps, x_train, y_train, x_test, y_test):
     )
 
 
-def _build_bert_single_dense(hp, input_data_len):
+def _build_bert_single_dense(hp):
     """ Build and compile a BERT+Dense Keras Model for hyper-parameter tuning """
     # Get BERT input and output
     bert_input, bert_output = bert_layers(
@@ -61,9 +61,7 @@ def _build_bert_single_dense(hp, input_data_len):
 
     # Build model
     model = Model(bert_input, linear_2)
-    bert_input_data_len = BertTweetFeedTokenizer.get_data_len(
-        input_data_len, hp.get("bert_size"), hp.get("feed_data_overlap"))
-    num_train_steps = hp.get("epochs") * bert_input_data_len // hp.get("batch_size")
+    num_train_steps = hp.get("epochs") * hp.get("input_data_len") // hp.get("batch_size")
     optimizer = optimization.create_optimizer(
         init_lr=hp.Choice("learning_rate", [2e-5, 3e-5, 5e-5]),
         num_train_steps=num_train_steps,
@@ -78,9 +76,9 @@ def _build_bert_single_dense(hp, input_data_len):
     return model
 
 
-def load_bert_single_dense_model(trial_filepath, input_data_len):
+def load_bert_single_dense_model(trial_filepath):
     hps = load_hyperparameters(trial_filepath)
-    return _build_bert_single_dense(hps, input_data_len), hps
+    return _build_bert_single_dense(hps), hps
 
 
 def _build_bert_ffnn(hp, hidden_layer_size, bert_input, bert_output, input_data_len):
@@ -140,10 +138,7 @@ def tune_bert_ffnn(x_train, y_train, x_val, y_val, bert_encoder_url, bert_size, 
         tuner = BayesianOptimizationTunerWithFitHyperParameters(
             data_preprocessing_func=data_preprocessing_func,
             hyperparameters=hps,
-            hypermodel=partial(
-                _build_bert_single_dense,
-                input_data_len=[[len(tweet) for tweet in tweet_feed] for tweet_feed in x_train]
-            ),
+            hypermodel=_build_bert_single_dense,
             objective="val_loss",
             max_trials=max_trials,
             directory="../training/bert_clf/initial_eval",

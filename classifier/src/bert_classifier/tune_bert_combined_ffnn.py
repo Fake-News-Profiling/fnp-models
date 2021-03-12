@@ -61,10 +61,7 @@ def _bert_model_wrapper(x_train, y_train, x_test, trial_filepath):
     Once trained, the BERT layers are extracted and used to predict `x_train` and `x_test` (which are returned).
     """
     with tf.device("/cpu:0"):
-        bert_model, hps = load_bert_single_dense_model(
-            trial_filepath=trial_filepath,
-            input_data_len=[[len(tweet) for tweet in tweet_feed] for tweet_feed in x_train],
-        )
+        bert_model, hps = load_bert_single_dense_model(trial_filepath)
 
         # Tokenize training data and train this BERT model
         x_train_bert, y_train_bert, _, _, tokenizer = tokenize_bert_input(
@@ -104,7 +101,7 @@ def _bert_model_wrapper(x_train, y_train, x_test, trial_filepath):
         return x_train_out, x_test_out
 
 
-def _build_nn_classifier(hp, input_data_len):
+def _build_nn_classifier(hp):
     """
     Build a neural network classifier that takes in BERT pooled_outputs, pools them, and passes them to a
     classification layer for user-level classification
@@ -125,7 +122,7 @@ def _build_nn_classifier(hp, input_data_len):
 
     model = Model(inputs, dense_clf)
 
-    num_train_steps = hp.get("epochs") * input_data_len // hp.get("batch_size")
+    num_train_steps = hp.get("epochs") * hp.get("input_data_len") // hp.get("batch_size")
     optimizer = optimization.create_optimizer(
         init_lr=hp.Float("learning_rate", 1e-6, 1e-3, sampling="log"),
         num_train_steps=num_train_steps,
@@ -160,10 +157,7 @@ def tune_bert_nn_classifier(x_train, y_train, x_val, y_val, x_test, y_test, bert
 
         tuner = BayesianOptimizationTunerWithBertPredictionData(
             hyperparameters=hps,
-            hypermodel=partial(
-                _build_nn_classifier,
-                input_data_len=len(x_train),
-            ),
+            hypermodel=_build_nn_classifier,
             objective="val_loss",
             max_trials=max_trials,
             directory="../training/bert_clf/initial_eval",

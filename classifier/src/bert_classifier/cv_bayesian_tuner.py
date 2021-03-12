@@ -52,6 +52,7 @@ class CVBayesianOptimization(BayesianOptimization):
             copied_fit_kwargs["x"] = x_train
             copied_fit_kwargs["y"] = y_train
             copied_fit_kwargs["validation_data"] = (x_test, y_test)
+            trial.hyperparameters.Fixed("input_data_len", len(x_train))
 
             callbacks = self._deepcopy_callbacks(original_callbacks)
             self._configure_tensorboard_dir(callbacks, trial, split_num)
