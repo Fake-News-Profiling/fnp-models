@@ -39,6 +39,10 @@ def main():
     tweet_train, label_train, tweet_val, label_val, tweet_test, label_test = load_data(
         "../../datasets/en_split_data.npy")
 
+    tweet_train = [[tweet.text for tweet in tweet_feed] for tweet_feed in tweet_train]
+    tweet_val = [[tweet.text for tweet in tweet_feed] for tweet_feed in tweet_val]
+    tweet_test = [[tweet.text for tweet in tweet_feed] for tweet_feed in tweet_test]
+
     print("Preprocessing data")
     # Remove HTML/XML tags
     preprocessor = BertTweetPreprocessor([tag_indicators, replace_xml_and_html])
@@ -57,16 +61,16 @@ def main():
     # Tune BERT 128
     print("Tuning models")
     project = "2"
-    max_trials = 200
-    tune.tune_readability_model(x_train, y_train, project, max_trials=max_trials)
-    tune.tune_ner_model(x_train, y_train, project, max_trials=max_trials)
-    tune.tune_sentiment_model(x_train, y_train, project, max_trials=max_trials)
-    tune.tune_combined_statistical_models(x_train, y_train, project, max_trials=max_trials)
+    max_trials = 100
+    # tune.tune_readability_model(x_train, y_train, project, max_trials=max_trials)
+    # tune.tune_ner_model(x_train, y_train, project, max_trials=max_trials)
+    # tune.tune_sentiment_model(x_train, y_train, project, max_trials=max_trials)
+    # tune.tune_combined_statistical_models(x_train, y_train, project, max_trials=max_trials)
     tune.tune_combined_statistical_models(x_train, y_train, project, tune_sklearn_models=False, max_trials=max_trials)
 
     print_results(project)
 
 
 if __name__ == "__main__":
-    print_results(2)
-    # main()
+    # print_results(2)
+    main()

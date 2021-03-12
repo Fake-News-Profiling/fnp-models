@@ -50,33 +50,37 @@ def build_sklearn_classifier_model(hps: HyperParameters) -> BaseEstimator:
         with hps.conditional_scope("sklearn_model", LogisticRegression.__name__):
             estimator = LogisticRegression(
                 C=hps.Float("LogisticRegression_C", 0.0001, 1000),
+                solver=hps.Choice("LogisticRegression_solver", ["lbfgs", "liblinear", "sag", "saga", "newton-cg"])
             )
     elif sklearn_model == SVC.__name__:
         with hps.conditional_scope("sklearn_model", SVC.__name__):
             estimator = SVC(
                 C=hps.Float("SVC_C", 0.0001, 1000),
+                kernel=hps.Choice("SVC_kernel", ["poly", "rbf", "sigmoid"]),
                 probability=True,
             )
     elif sklearn_model == RandomForestClassifier.__name__:
         with hps.conditional_scope("sklearn_model", RandomForestClassifier.__name__):
             estimator = RandomForestClassifier(
-                n_estimators=hps.Choice("RandomForestClassifier_n_estimators", [100, 200, 300, 400, 500, 600]),
-                min_samples_split=hps.Int("RandomForestClassifier_min_samples_split", 2, 10),
-                min_samples_leaf=hps.Int("RandomForestClassifier_min_samples_leaf", 1, 10),
+                n_estimators=hps.Choice("RandomForestClassifier_n_estimators", [50, 100, 200, 300, 400]),
+                criterion=hps.Choice("RandomForestClassifier_criterion", ["gini", "entropy"]),
+                min_samples_split=hps.Int("RandomForestClassifier_min_samples_split", 2, 8),
+                min_samples_leaf=hps.Int("RandomForestClassifier_min_samples_leaf", 2, 6),
+                min_impurity_decrease=hps.Float("RandomForestClassifier_min_impurity_decrease", 0, 1),
             )
     elif sklearn_model == XGBClassifier.__name__:
         with hps.conditional_scope("sklearn_model", XGBClassifier.__name__):
             estimator = XGBClassifier(
-                learning_rate=hps.Float("XGBClassifier_learning_rate", 0.0001, 0.3),
-                gamma=hps.Int("XGBClassifier_gamma", 0, 10),
-                max_depth=hps.Int("XGBClassifier_max_depth", 1, 8),
-                min_child_weight=hps.Int("XGBClassifier_min_child_weight", 0, 10),
-                subsample=hps.Float("XGBClassifier_subsample", 0, 1),
-                colsample_bytree=hps.Float("XGBClassifier_colsample_bytree", 0.2, 1),
-                colsample_bylevel=hps.Float("XGBClassifier_colsample_bylevel", 0.2, 1),
-                colsample_bynode=hps.Float("XGBClassifier_colsample_bynode", 0.2, 1),
-                reg_lambda=hps.Float("XGBClassifier_reg_lambda", 0.001, 0.5),
-                reg_alpha=hps.Float("XGBClassifier_reg_alpha", 0.001, 0.5),
+                learning_rate=hps.Float("XGBClassifier_learning_rate", 0.01, 0.1),
+                gamma=hps.Float("XGBClassifier_gamma", 3, 7),
+                max_depth=hps.Int("XGBClassifier_max_depth", 3, 6),
+                min_child_weight=hps.Int("XGBClassifier_min_child_weight", 3, 6),
+                subsample=hps.Float("XGBClassifier_subsample", 0.6, 1),
+                colsample_bytree=hps.Float("XGBClassifier_colsample_bytree", 0.4, 0.7),
+                colsample_bylevel=hps.Float("XGBClassifier_colsample_bylevel", 0.8, 1),
+                colsample_bynode=hps.Float("XGBClassifier_colsample_bynode", 0.2, 0.5),
+                reg_lambda=hps.Float("XGBClassifier_reg_lambda", 0.2, 1),
+                reg_alpha=hps.Float("XGBClassifier_reg_alpha", 0.1, 0.5),
             )
     else:
         raise RuntimeError("Invalid SkLearn model name")
@@ -149,6 +153,7 @@ def tune_nn_model(x_train, y_train, project_name, feature_extractor=None, tf_tra
         hps = HyperParameters()
         hps.Choice("batch_size", [16, 32, 64])
         hps.Fixed("epochs", 20)
+        hps.get("input_data_len")
         tuner = nn_tuner(project_name, hyperparameters=hps, **kwargs)
         tuner.search(
             x=x_train,
