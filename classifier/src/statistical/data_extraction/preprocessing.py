@@ -85,6 +85,6 @@ class TweetStatsExtractor:
     def _apply_extractor(extractor, data):
         result = extractor(data)
         if isinstance(result, Iterable):
-            return result
+            return np.asarray(result)
         else:
             return np.asarray([result])

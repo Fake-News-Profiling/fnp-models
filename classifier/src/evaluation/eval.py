@@ -32,8 +32,8 @@ def evaluate_models(x, y, x_test, y_test, eval_models, eval_metrics, cv_splits=5
 
         for model_class, hyperparameters in eval_models:
             cv_metrics["CV split"].append(i + 1)
-            cv_metrics["Model"].append(model_class.__name__)
             model = model_class(hyperparameters)
+            cv_metrics["Model"].append(model.name)
 
             if model_class.__name__ == models.BertPooledModel.__name__:
                 model.fit(x[train_indices], y[train_indices], x[val_indices], y[val_indices])
@@ -50,13 +50,13 @@ def evaluate_models(x, y, x_test, y_test, eval_models, eval_metrics, cv_splits=5
 
     # Compute metric averages
     cv_df = pd.DataFrame(cv_metrics)
-    for model_class, _ in eval_models:
+    for model_name in cv_df["Model"].unique():
         def reduce_col(col_data):
             if col_data.dtype == object:
                 return col_data.iloc[0]
             return np.mean(col_data)
 
-        row = cv_df[cv_df["Model"] == model_class.__name__].apply(reduce_col)
+        row = cv_df[cv_df["Model"] == model_name].apply(reduce_col)
         row.loc["CV split"] = "Average"
         cv_df = cv_df.append(row, ignore_index=True)
 
@@ -66,10 +66,10 @@ def evaluate_models(x, y, x_test, y_test, eval_models, eval_metrics, cv_splits=5
     # Fit the models on the entire training set and evaluate them on the test set
     test_metrics = defaultdict(list)
     for model_class, hyperparameters in eval_models:
-        test_metrics["Model"].append(model_class.__name__)
         model = model_class(hyperparameters)
         model.fit(x, y)
         metrics = evaluate(model, x_test, y_test, eval_metrics)
+        test_metrics["Model"].append(model.name)
 
         for name, value in metrics.items():
             test_metrics[name].append(float(value))
@@ -93,7 +93,11 @@ def main():
     print("Beginning model evaluation")
     eval_models = [
         (models.RandomModel, None),
-        (models.BertPooledModel, load_hyperparameters("models/hyperparameters/bert_model.json")),
+        (models.StatisticalModel, load_hyperparameters("models/hyperparameters/readability_model.json")),
+        (models.StatisticalModel, load_hyperparameters("models/hyperparameters/ner_model.json")),
+        (models.StatisticalModel, load_hyperparameters("models/hyperparameters/sentiment_model.json")),
+        (models.StatisticalModel, load_hyperparameters("models/hyperparameters/combined_statistical_model.json")),
+        # (models.BertPooledModel, load_hyperparameters("models/hyperparameters/bert_model.json")),
         (models.Buda20NgramEnsembleModel, None),
     ]
     metrics = [

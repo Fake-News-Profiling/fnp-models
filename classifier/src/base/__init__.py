@@ -6,6 +6,7 @@ from kerastuner import HyperParameters
 
 class AbstractModel(ABC):
     """ An abstract base class for evaluating a fake news profiling model """
+
     def __init__(self, hyperparameters: HyperParameters):
         self.hyperparameters = hyperparameters
 

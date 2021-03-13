@@ -45,6 +45,7 @@ def build_sklearn_classifier_model(hps: HyperParameters) -> BaseEstimator:
         "sklearn_model",
         [LogisticRegression.__name__, SVC.__name__, RandomForestClassifier.__name__, XGBClassifier.__name__]
     )
+    steps = [("scaler", StandardScaler())]
 
     if sklearn_model == LogisticRegression.__name__:
         with hps.conditional_scope("sklearn_model", LogisticRegression.__name__):
@@ -85,32 +86,38 @@ def build_sklearn_classifier_model(hps: HyperParameters) -> BaseEstimator:
     else:
         raise RuntimeError("Invalid SkLearn model name")
 
-    return SklearnTunerPipeline([("PCA", PCA()), ("scaler", StandardScaler()), ("estimator", estimator)])
+    steps.append(("estimator", estimator))
+    if sklearn_model != XGBClassifier.__name__:  # Gradient Boosting Classifier doesn't have multi-collinearity issues
+        steps.insert(0, ("PCA", PCA()))
+
+    return SklearnTunerPipeline(steps)
 
 
 def build_nn_classifier_model(hps: HyperParameters) -> Model:
     """ Build a neural network classifier """
-    data_len = hps.get("input_data_len")
+    data_len = hps.get("input_datapoint_len")
 
     inputs = Input((data_len,))
-    if hps.Boolean("use_relu"):
-        with hps.conditional_scope("use_relu", True):
-            inputs = Dense(
-                data_len,
-                activation="relu",
-                kernel_regularizer=tf.keras.regularizers.l2(hps.Float("relu_kernel_reg", 0.0001, 0.1)),
-                bias_regularizer=tf.keras.regularizers.l2(hps.Float("relu_bias_reg", 0.0001, 0.1)),
-            )(inputs)
-            batch = BatchNormalization()(inputs)
-            inputs = Dropout(hps.Float("dropout_rate", 0, 0.5))(batch)
-    linear = Dense(
+    prev_layer = inputs
+    for i in range(hps.Int("num_relu_layers", 1, 4)):
+        relu = Dense(
+            hps.Choice("layer_1_size", [data_len // 2, data_len, data_len * 2]) // max(1, i * 2),
+            activation="relu",
+            kernel_regularizer=tf.keras.regularizers.l2(hps.Float("relu_kernel_reg", 0.0001, 0.1)),
+            bias_regularizer=tf.keras.regularizers.l2(hps.Float("relu_bias_reg", 0.0001, 0.1)),
+            activity_regularizer=tf.keras.regularizers.l2(hps.Float("relu_activity_reg", 0.0001, 0.1)),
+        )(prev_layer)
+        batch = BatchNormalization()(relu)
+        prev_layer = Dropout(hps.Float("dropout_rate", 0.2, 0.5))(batch)
+    linear_last = Dense(
         1,
-        activation="relu",
+        activation="linear",
         kernel_regularizer=tf.keras.regularizers.l2(hps.Float("linear_kernel_reg", 0.0001, 0.1)),
         bias_regularizer=tf.keras.regularizers.l2(hps.Float("linear_bias_reg", 0.0001, 0.1)),
-    )(inputs)
+        activity_regularizer=tf.keras.regularizers.l2(hps.Float("linear_activity_reg", 0.0001, 0.1)),
+    )(prev_layer)
 
-    model = Model(inputs, linear)
+    model = Model(inputs, linear_last)
     model.compile(
         optimizer=tf.keras.optimizers.Adam(hps.Float("learning_rate", 1e-5, 0.1)),
         loss=tf.keras.losses.BinaryCrossentropy(from_logits=True),
@@ -151,9 +158,10 @@ def tune_nn_model(x_train, y_train, project_name, feature_extractor=None, tf_tra
     # Setup Keras Tuner
     with tf.device(tf_train_device):
         hps = HyperParameters()
-        hps.Choice("batch_size", [16, 32, 64])
+        hps.Choice("batch_size", [64, 96, 128, 160])
         hps.Fixed("epochs", 20)
-        hps.get("input_data_len")
+        hps.Fixed("input_datapoint_len", x_train.shape[1])
+        hps.Fixed("sklearn_model", "KerasFFNN")
         tuner = nn_tuner(project_name, hyperparameters=hps, **kwargs)
         tuner.search(
             x=x_train,

@@ -19,7 +19,7 @@ class StatisticalModel(AbstractModel):
 
     def __init__(self, hyperparameters: HyperParameters):
         super().__init__(hyperparameters)
-        self.__name__ = self.hyperparameters.get("StatisticalModel_name")
+        self.name = self.hyperparameters.get("StatisticalModel_name")
 
         # Pick underlying model
         model_type = self.hyperparameters.get("StatisticalModel_model_type")
@@ -30,6 +30,7 @@ class StatisticalModel(AbstractModel):
         elif model_type == "SVC":
             self.model = SVC(
                 C=self.hyperparameters.get("StatisticalModel_C"),
+                kernel=self.hyperparameters.get("StatisticalModel_kernel"),
                 probability=True,
             )
         elif model_type == "RandomForestClassifier":

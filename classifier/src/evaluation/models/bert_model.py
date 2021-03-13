@@ -15,6 +15,7 @@ class BertPooledModel(AbstractModel):
 
     def __init__(self, hyperparameters: HyperParameters):
         super().__init__(hyperparameters)
+        self.name = self.__class__.__name__
         self.preprocessor = BertTweetPreprocessor()
         self.bert_model = BertModel(self.hyperparameters)
         self.pooling_model = PoolingModel(self.hyperparameters)

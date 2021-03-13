@@ -24,9 +24,10 @@ Author Profiling task. This has been done purely for evaluation purposes, to com
 
 
 class Buda20NgramEnsembleModel(AbstractModel):
+
     def __init__(self, hyperparameters: HyperParameters):
-        # Ngram Models
         super().__init__(hyperparameters)
+        self.name = self.__class__.__name__
 
         # N-gram models (expect concatenated tweets as input)
         self.lr_ngram = Pipeline([

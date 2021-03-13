@@ -1,4 +1,3 @@
-import numpy as np
 import spacy
 
 import statistical.data_extraction.preprocessing as pre
@@ -13,18 +12,27 @@ spacy_ner_labels = ["PERSON", "NORP", "FAC", "ORG", "GPE", "LOC", "PRODUCT", "EV
 
 def ner_tweet_extractor():
     """ Create a TweetStatsExtractor for named entity recognition features """
-    extractor = pre.TweetStatsExtractor(extractors=[named_entities_count_array])
+    extractor = pre.TweetStatsExtractor(extractors=[named_entities_counts])
     extractor.feature_names = spacy_ner_labels
     return extractor
 
 
-def named_entities_count_array(user_tweets):
-    """ Extract the named entities from a users tweets, and return an array of counts for each entity """
+def named_entities_counts(user_tweets):
+    """
+    Extract the named entities from a users tweets, and return an array of counts for each entity
+    """
     freq = dict.fromkeys(spacy_ner_labels, 0)
-    for tweet in user_tweets:
-        cleaned_tweet = pre.clean_text(tweet, remove_digits=False, remove_tags=True)
+    norp_counts = []
+
+    for i, tweet in enumerate(user_tweets):
+        cleaned_tweet = pre.clean_text(tweet, remove_punc=False, remove_digits=False, remove_tags=True)
         tweet_ne = spacy_nlp(cleaned_tweet).ents
+        norp_count = 0
         for entity in tweet_ne:
             freq[entity.label_] += 1
+            if entity.label_ == "NORP":
+                norp_count += 1
 
-    return np.asarray(list(freq.values()))
+        norp_counts.append(norp_count)
+
+    return list(freq.values())
