@@ -92,13 +92,19 @@ def main():
     # Evaluate models
     print("Beginning model evaluation")
     eval_models = [
-        (models.RandomModel, None),
-        (models.StatisticalModel, load_hyperparameters("models/hyperparameters/readability_model.json")),
-        (models.StatisticalModel, load_hyperparameters("models/hyperparameters/ner_model.json")),
-        (models.StatisticalModel, load_hyperparameters("models/hyperparameters/sentiment_model.json")),
-        (models.StatisticalModel, load_hyperparameters("models/hyperparameters/combined_statistical_model.json")),
+        # Baselines
+        # (models.RandomModel, None),
+        (models.TfIdfModel, None),
+        # (models.Buda20NgramEnsembleModel, None),
+
+        # My models
+        # (models.StatisticalModel, load_hyperparameters("models/hyperparameters/readability_model.json")),
+        # (models.StatisticalModel, load_hyperparameters("models/hyperparameters/ner_model.json")),
+        # (models.StatisticalModel, load_hyperparameters("models/hyperparameters/sentiment_model.json")),
+        # (models.StatisticalModel, load_hyperparameters("models/hyperparameters/combined_statistical_model.json")),
+        # (models.EnsembleModel, load_hyperparameters(
+        #     "models/hyperparameters/ensemble_combined_statistical_model.json")),
         # (models.BertPooledModel, load_hyperparameters("models/hyperparameters/bert_model.json")),
-        (models.Buda20NgramEnsembleModel, None),
     ]
     metrics = [
         ("Loss", tf.keras.losses.binary_crossentropy),

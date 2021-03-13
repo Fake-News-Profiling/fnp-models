@@ -8,6 +8,7 @@ from sklearn.svm import SVC
 from xgboost import XGBClassifier
 
 from base import AbstractModel
+import data.preprocess as pre
 from statistical.data_extraction import readability_tweet_extractor, ner_tweet_extractor, sentiment_tweet_extractor
 
 
@@ -25,7 +26,8 @@ class StatisticalModel(AbstractModel):
         model_type = self.hyperparameters.get("StatisticalModel_model_type")
         if model_type == "LogisticRegression":
             self.model = LogisticRegression(
-                C=self.hyperparameters.get("StatisticalModel_C")
+                C=self.hyperparameters.get("StatisticalModel_C"),
+                solver=self.hyperparameters.get("StatisticalModel_solver"),
             )
         elif model_type == "SVC":
             self.model = SVC(
@@ -36,8 +38,10 @@ class StatisticalModel(AbstractModel):
         elif model_type == "RandomForestClassifier":
             self.model = RandomForestClassifier(
                 n_estimators=self.hyperparameters.get("StatisticalModel_n_estimators"),
+                criterion=self.hyperparameters.get("StatisticalModel_criterion"),
                 min_samples_split=self.hyperparameters.get("StatisticalModel_min_samples_split"),
                 min_samples_leaf=self.hyperparameters.get("StatisticalModel_min_samples_leaf"),
+                min_impurity_decrease=self.hyperparameters.get("StatisticalModel_min_impurity_decrease"),
             )
         elif model_type == "XGBClassifier":
             self.model = XGBClassifier(
@@ -69,9 +73,11 @@ class StatisticalModel(AbstractModel):
             raise RuntimeError("Invalid data type extractor")
         self.pca = PCA()
         self.scaler = StandardScaler()
+        self.preprocessor = pre.BertTweetPreprocessor([pre.tag_indicators, pre.replace_xml_and_html])
 
     def _extract(self, x):
-        x_extracted = [ex.transform(x) for ex in self.extractors]
+        x_processed = self.preprocessor.transform(x)
+        x_extracted = [ex.transform(x_processed) for ex in self.extractors]
         return np.concatenate(x_extracted, axis=1) if len(x_extracted) > 1 else x_extracted[0]
 
     def fit(self, x, y):

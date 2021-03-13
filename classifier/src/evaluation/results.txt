@@ -24,6 +24,7 @@ First proper evaluation results 12/03/2021
 
 
 Statistical models evaluation results 12/03/2021
+* Trained using model hyperparameters from statistical-2 projects
 -------------------------------------------
 5-fold Cross-Validation results:
 |    | CV split   | Model                       |    Loss |   Accuracy |   Precision |   Recall |       F1 |
@@ -75,3 +76,57 @@ Final test set results:
 |  4 | CombinedStatisticalModel    | 4.10109 |   0.733333 |    0.733333 | 0.733333 | 0.733333 |
 |  5 | Buda20NgramEnsembleModel    | 3.07582 |   0.8      |    0.8      | 0.8      | 0.8      |
 
+
+Statistical models evaluation results 13/03/2021
+* Trained using model hyperparameters from statistical-4 projects (all using XGBoostClassifier)
+* Models performed better in hyperparameter cross-validation, but worse on evaluation
+-------------------------------------------
+5-fold Cross-Validation results:
+|    | CV split   | Model                       |    Loss |   Accuracy |   Precision |   Recall |       F1 |
+|---:|:-----------|:----------------------------|--------:|-----------:|------------:|---------:|---------:|
+|  5 | 1          | Buda20NgramEnsembleModel    | 4.55337 |   0.703704 |    0.677419 | 0.777778 | 0.724138 |
+| 11 | 2          | Buda20NgramEnsembleModel    | 3.99227 |   0.740741 |    0.809524 | 0.62963  | 0.708333 |
+| 17 | 3          | Buda20NgramEnsembleModel    | 5.41031 |   0.648148 |    0.642857 | 0.666667 | 0.654545 |
+| 23 | 4          | Buda20NgramEnsembleModel    | 3.13363 |   0.796296 |    0.807692 | 0.777778 | 0.792453 |
+| 29 | 5          | Buda20NgramEnsembleModel    | 3.70322 |   0.759259 |    0.769231 | 0.740741 | 0.754717 |
+| 35 | Average    | Buda20NgramEnsembleModel    | 4.15856 |   0.72963  |    0.741345 | 0.718519 | 0.726837 |
+|  4 | 1          | CombinedStatisticalModel    | 5.41201 |   0.648148 |    0.653846 | 0.62963  | 0.641509 |
+| 10 | 2          | CombinedStatisticalModel    | 5.985   |   0.611111 |    0.636364 | 0.518519 | 0.571429 |
+| 16 | 3          | CombinedStatisticalModel    | 7.1157  |   0.537037 |    0.53125  | 0.62963  | 0.576271 |
+| 22 | 4          | CombinedStatisticalModel    | 4.27452 |   0.722222 |    0.75     | 0.666667 | 0.705882 |
+| 28 | 5          | CombinedStatisticalModel    | 5.41541 |   0.648148 |    0.681818 | 0.555556 | 0.612245 |
+| 34 | Average    | CombinedStatisticalModel    | 5.64053 |   0.633333 |    0.650656 | 0.6      | 0.621467 |
+|  2 | 1          | NerStatisticalModel         | 5.40522 |   0.648148 |    0.617647 | 0.777778 | 0.688525 |
+|  8 | 2          | NerStatisticalModel         | 7.1208  |   0.537037 |    0.538462 | 0.518519 | 0.528302 |
+| 14 | 3          | NerStatisticalModel         | 4.26942 |   0.722222 |    0.7      | 0.777778 | 0.736842 |
+| 20 | 4          | NerStatisticalModel         | 5.12976 |   0.666667 |    0.695652 | 0.592593 | 0.64     |
+| 26 | 5          | NerStatisticalModel         | 5.69426 |   0.62963  |    0.62069  | 0.666667 | 0.642857 |
+| 32 | Average    | NerStatisticalModel         | 5.52389 |   0.640741 |    0.63449  | 0.666667 | 0.647305 |
+|  0 | 1          | RandomModel                 | 6.5563  |   0.574074 |    0.6      | 0.444444 | 0.510638 |
+|  6 | 2          | RandomModel                 | 7.40135 |   0.518519 |    0.516129 | 0.592593 | 0.551724 |
+| 12 | 3          | RandomModel                 | 8.54224 |   0.444444 |    0.448276 | 0.481481 | 0.464286 |
+| 18 | 4          | RandomModel                 | 8.26509 |   0.462963 |    0.45     | 0.333333 | 0.382979 |
+| 24 | 5          | RandomModel                 | 7.40135 |   0.518519 |    0.516129 | 0.592593 | 0.551724 |
+| 30 | Average    | RandomModel                 | 7.63327 |   0.503704 |    0.506107 | 0.488889 | 0.49227  |
+|  1 | 1          | ReadabilityStatisticalModel | 6.27065 |   0.592593 |    0.619048 | 0.481481 | 0.541667 |
+|  7 | 2          | ReadabilityStatisticalModel | 6.5529  |   0.574074 |    0.583333 | 0.518519 | 0.54902  |
+| 13 | 3          | ReadabilityStatisticalModel | 5.97481 |   0.611111 |    0.588235 | 0.740741 | 0.655738 |
+| 19 | 4          | ReadabilityStatisticalModel | 5.12127 |   0.666667 |    0.636364 | 0.777778 | 0.7      |
+| 25 | 5          | ReadabilityStatisticalModel | 4.55847 |   0.703704 |    0.72     | 0.666667 | 0.692308 |
+| 31 | Average    | ReadabilityStatisticalModel | 5.69562 |   0.62963  |    0.629396 | 0.637037 | 0.627746 |
+|  3 | 1          | SentimentStatisticalModel   | 6.83345 |   0.555556 |    0.551724 | 0.592593 | 0.571429 |
+|  9 | 2          | SentimentStatisticalModel   | 5.69936 |   0.62963  |    0.652174 | 0.555556 | 0.6      |
+| 15 | 3          | SentimentStatisticalModel   | 6.26556 |   0.592593 |    0.592593 | 0.592593 | 0.592593 |
+| 21 | 4          | SentimentStatisticalModel   | 5.97821 |   0.611111 |    0.6      | 0.666667 | 0.631579 |
+| 27 | 5          | SentimentStatisticalModel   | 4.27622 |   0.722222 |    0.772727 | 0.62963  | 0.693878 |
+| 33 | Average    | SentimentStatisticalModel   | 5.81056 |   0.622222 |    0.633844 | 0.607407 | 0.617896 |
+
+Final test set results:
+|    | Model                       |     Loss |   Accuracy |   Precision |   Recall |       F1 |
+|---:|:----------------------------|---------:|-----------:|------------:|---------:|---------:|
+|  0 | RandomModel                 | 10.2558  |   0.333333 |    0.307692 | 0.266667 | 0.285714 |
+|  1 | ReadabilityStatisticalModel |  4.60914 |   0.7      |    0.666667 | 0.8      | 0.727273 |
+|  2 | NerStatisticalModel         |  4.60914 |   0.7      |    0.666667 | 0.8      | 0.727273 |
+|  3 | SentimentStatisticalModel   |  6.14858 |   0.6      |    0.588235 | 0.666667 | 0.625    |
+|  4 | CombinedStatisticalModel    |  5.63747 |   0.633333 |    0.625    | 0.666667 | 0.645161 |
+|  5 | Buda20NgramEnsembleModel    |  3.07582 |   0.8      |    0.8      | 0.8      | 0.8      |
