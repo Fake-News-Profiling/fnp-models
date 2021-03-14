@@ -17,7 +17,7 @@ from bert.models import tokenize_bert_input
 from bert_classifier import BayesianOptimizationCVTunerWithFitHyperParameters
 from bert_classifier.cv_tuners import SklearnCV
 from bert_classifier.tune_bert_ffnn import load_bert_single_dense_model, preprocess_data
-from statistical.data_extraction import combined_tweet_extractor
+from statistical.data_extraction import combined_tweet_extractor, tweet_level_extractor
 from statistical.tune_statistical import build_sklearn_classifier_model
 
 """
@@ -38,7 +38,7 @@ def data_preprocessing_func(hp, x_train, y_train, x_test, y_test):
         elif hp.get("pooling_type") == "concatenate":
             return tf.convert_to_tensor([np.concatenate(tweet_feed) for tweet_feed in x])
         else:
-            raise RuntimeError("Invalid 'pooling_type', should be 'average' or 'max'")
+            raise RuntimeError("Invalid 'pooling_type', should be one of ['max', 'min', 'average', 'concatenate']")
 
     x_train_pooled = pool(x_train)
     x_test_pooled = pool(x_test)
@@ -213,14 +213,14 @@ def tune_bert_tweet_level_stats_sklearn_classifier(x_train, y_train, project_nam
     information
     """
     print("Building tuner")
-    tuner = sklearn_classifier(project_name, max_trials=max_trials, pooling_types=["concatenate", "mean", "max"])
+    tuner = sklearn_classifier(project_name, max_trials=max_trials, pooling_types=["concatenate", "average", "max"])
 
     print("Fitting tuner with training data")
     tuner.fit_data(
         x_train, y_train,
         partial(_bert_tweet_level_stats_wrapper,
                 trial_filepath=bert_model_trial_filepath,
-                encoder_output=True)
+                encoder_output=False)
     )
 
     print("Beginning tuning")

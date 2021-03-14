@@ -16,10 +16,10 @@ from base import AbstractModel
 
 """
 Academic Integrity Statement:
-All of the code in this file has been adapted from (Buda & Bolonyai, 2020)'s submission to the PAN 2020 Fake News 
+All of the code in this file has been adapted from Buda & Bolonyai (2020)'s submission to the PAN 2020 Fake News 
 Author Profiling task. This has been done purely for evaluation purposes, to compare my work to theirs.
 * The original code: https://github.com/pan-webis-de/buda20
-* Buda & Bolonyai, 2020, paper: https://pan.webis.de/downloads/publications/papers/buda_2020.pdf
+* Buda & Bolonyai (2020) paper: https://pan.webis.de/downloads/publications/papers/buda_2020.pdf
 """
 
 
@@ -67,6 +67,16 @@ class Buda20NgramEnsembleModel(AbstractModel):
             l1_ratio=0.5,
         )
 
+    @staticmethod
+    def _clean_data(x):
+        x_joined = join_tweet_feeds(x)
+        x_flattened = flatten_tweet_feeds(x)
+
+        x_train_clean_v1 = cleaning_v1(x_joined)
+        x_train_clean_v2 = cleaning_v2(x_joined)
+        x_train_stats = extract_features(x_flattened)
+        return x_train_clean_v1, x_train_clean_v2, x_train_stats
+
     def fit(self, x, y):
         x_clean_v1, x_clean_v2, x_stats = self._clean_data(x)
         print(len(x_clean_v1), len(y))
@@ -95,15 +105,8 @@ class Buda20NgramEnsembleModel(AbstractModel):
         pred_xgb_stats = self.xgb_stats.predict_proba(x_stats)[:, 1].reshape(-1, 1)
         return np.concatenate([pred_lr_ngram, pred_rf_ngram, pred_svm_ngram, pred_xgb_ngram, pred_xgb_stats], axis=1)
 
-    @staticmethod
-    def _clean_data(x):
-        x_joined = join_tweet_feeds(x)
-        x_flattened = flatten_tweet_feeds(x)
-
-        x_train_clean_v1 = cleaning_v1(x_joined)
-        x_train_clean_v2 = cleaning_v2(x_joined)
-        x_train_stats = extract_features(x_flattened)
-        return x_train_clean_v1, x_train_clean_v2, x_train_stats
+    def predict_proba(self, x):
+        pass
 
 
 # Data cleaning

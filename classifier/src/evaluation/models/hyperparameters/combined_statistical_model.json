@@ -3,19 +3,18 @@
   "hyperparameters": {
     "space": [],
     "values": {
-      "StatisticalModel_name": "CombinedStatisticalModel",
-      "StatisticalModel_data_type": "combined",
-      "StatisticalModel_model_type": "XGBClassifier",
-      "StatisticalModel_learning_rate": 0.07949069727003319,
-      "StatisticalModel_gamma": 4.395641715244935,
-      "StatisticalModel_max_depth": 6,
-      "StatisticalModel_min_child_weight": 4,
-      "StatisticalModel_subsample": 0.6615878958436403,
-      "StatisticalModel_colsample_bytree": 0.4209818850235332,
-      "StatisticalModel_colsample_bylevel": 0.8894426876696929,
-      "StatisticalModel_colsample_bynode": 0.4707029110985691,
-      "StatisticalModel_reg_lambda": 0.683603638207871,
-      "StatisticalModel_reg_alpha": 0.1627703640399873
+      "data_type": "combined",
+      "SklearnModel.model_type": "XGBClassifier",
+      "SklearnModel.learning_rate": 0.07949069727003319,
+      "SklearnModel.gamma": 4.395641715244935,
+      "SklearnModel.max_depth": 6,
+      "SklearnModel.min_child_weight": 4,
+      "SklearnModel.subsample": 0.6615878958436403,
+      "SklearnModel.colsample_bytree": 0.4209818850235332,
+      "SklearnModel.colsample_bylevel": 0.8894426876696929,
+      "SklearnModel.colsample_bynode": 0.4707029110985691,
+      "SklearnModel.reg_lambda": 0.683603638207871,
+      "SklearnModel.reg_alpha": 0.1627703640399873
     }
   },
   "metrics": {

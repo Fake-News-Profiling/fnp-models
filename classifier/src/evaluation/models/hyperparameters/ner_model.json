@@ -1,21 +1,15 @@
 {
   "trial_id": "10eee99d8938e76b4b7fb3df2d63f1ab",
   "hyperparameters": {
-    "space":[],
+    "space": [],
     "values": {
-      "StatisticalModel_name": "NerStatisticalModel",
-      "StatisticalModel_data_type": "ner",
-      "StatisticalModel_model_type": "XGBClassifier",
-      "StatisticalModel_learning_rate": 0.09093536320755419,
-      "StatisticalModel_gamma": 3.565402589336902,
-      "StatisticalModel_max_depth": 4,
-      "StatisticalModel_min_child_weight": 4,
-      "StatisticalModel_subsample": 0.8222248572988236,
-      "StatisticalModel_colsample_bytree": 0.5200254791444142,
-      "StatisticalModel_colsample_bylevel": 0.8476443615067254,
-      "StatisticalModel_colsample_bynode": 0.2991201656165821,
-      "StatisticalModel_reg_lambda": 0.8678008849543024,
-      "StatisticalModel_reg_alpha": 0.37259426505856263
+      "data_type": "ner",
+      "SklearnModel.model_type": "RandomForestClassifier",
+      "SklearnModel.n_estimators": 50,
+      "SklearnModel.criterion": "gini",
+      "SklearnModel.min_samples_split": 2,
+      "SklearnModel.min_samples_leaf": 2,
+      "SklearnModel.min_impurity_decrease": 0
     }
   },
   "metrics": {

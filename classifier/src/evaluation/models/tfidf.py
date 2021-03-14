@@ -36,3 +36,6 @@ class TfIdfModel(AbstractModel):
     def predict(self, x):
         x_tfidf = self._transform(x)
         return self.model.predict(x_tfidf)
+
+    def predict_proba(self, x):
+        pass

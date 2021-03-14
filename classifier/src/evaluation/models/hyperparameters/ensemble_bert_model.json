@@ -1,0 +1,136 @@
+{
+  "trial_id": "149931940c1c4fb50fec9ad1d0221ffa",
+  "hyperparameters": {
+    "space": [],
+    "values": {
+      "SklearnModel.model_type": "XGBClassifier",
+      "SklearnModel.learning_rate": 0.011702896501195097,
+      "SklearnModel.gamma": 4.294190542078004,
+      "SklearnModel.max_depth": 4,
+      "SklearnModel.min_child_weight": 6,
+      "SklearnModel.subsample": 0.6569096985267074,
+      "SklearnModel.colsample_bytree": 0.528681360073379,
+      "SklearnModel.colsample_bylevel": 0.9808139550617081,
+      "SklearnModel.colsample_bynode": 0.3559930345465102,
+      "SklearnModel.reg_lambda": 0.8580033263383593,
+      "SklearnModel.reg_alpha": 0.1585557542309413,
+
+      "BertPooledModel.BertModel.encoder_url": "https://tfhub.dev/tensorflow/small_bert/bert_en_uncased_L-12_H-128_A-2/1",
+      "BertPooledModel.BertModel.size": 128,
+      "BertPooledModel.BertModel.dropout_rate": 0.3753050943143874,
+      "BertPooledModel.BertModel.dense_activation": "linear",
+      "BertPooledModel.BertModel.dense_kernel_reg": 0,
+      "BertPooledModel.BertModel.dense_bias_reg": 0.01,
+      "BertPooledModel.BertModel.dense_activity_reg": 0,
+      "BertPooledModel.BertModel.encoder_output": true,
+      "BertPooledModel.BertModel.learning_rate": 0.00002,
+      "BertPooledModel.BertModel.batch_size": 64,
+      "BertPooledModel.BertModel.epochs": 2,
+      "BertPooledModel.BertModel.feed_data_overlap": 0,
+      "BertPooledModel.BertModel.preprocessing": "[remove_emojis, remove_tags]",
+
+      "BertPooledModel.PoolingModel.pooling_type": "concatenate",
+      "BertPooledModel.PoolingModel.SklearnModel.": "XGBClassifier",
+      "BertPooledModel.PoolingModel.SklearnModel.learning_rate": 0.03635572236910212,
+      "BertPooledModel.PoolingModel.SklearnModel.gamma": 6.78156022079664,
+      "BertPooledModel.PoolingModel.SklearnModel.max_depth": 3,
+      "BertPooledModel.PoolingModel.SklearnModel.min_child_weight": 4,
+      "BertPooledModel.PoolingModel.SklearnModel.subsample": 0.6807828579462443,
+      "BertPooledModel.PoolingModel.SklearnModel.colsample_bytree": 0.5060216329435505,
+      "BertPooledModel.PoolingModel.SklearnModel.colsample_bylevel": 0.9125482370930075,
+      "BertPooledModel.PoolingModel.SklearnModel.colsample_bynode": 0.4525081399645974,
+      "BertPooledModel.PoolingModel.SklearnModel.reg_lambda": 0.7532819326797098,
+      "BertPooledModel.PoolingModel.SklearnModel.reg_alpha": 0.1201490229846292,
+
+      "ReadabilityModel.data_type": "readability",
+      "ReadabilityModel.SklearnModel.model_type": "XGBClassifier",
+      "ReadabilityModel.SklearnModel.learning_rate": 0.08669363953177207,
+      "ReadabilityModel.SklearnModel.gamma": 5.955678079702624,
+      "ReadabilityModel.SklearnModel.max_depth": 5,
+      "ReadabilityModel.SklearnModel.min_child_weight": 4,
+      "ReadabilityModel.SklearnModel.subsample": 0.6089071380397063,
+      "ReadabilityModel.SklearnModel.colsample_bytree": 0.5205555493166993,
+      "ReadabilityModel.SklearnModel.colsample_bylevel": 0.8931299666342941,
+      "ReadabilityModel.SklearnModel.colsample_bynode": 0.3665620451438264,
+      "ReadabilityModel.SklearnModel.reg_lambda": 0.4924234211006915,
+      "ReadabilityModel.SklearnModel.reg_alpha": 0.19265879372624045,
+
+      "NerModel.data_type": "ner",
+      "NerModel.SklearnModel.model_type": "XGBClassifier",
+      "NerModel.SklearnModel.learning_rate": 0.09093536320755419,
+      "NerModel.SklearnModel.gamma": 3.565402589336902,
+      "NerModel.SklearnModel.max_depth": 4,
+      "NerModel.SklearnModel.min_child_weight": 4,
+      "NerModel.SklearnModel.subsample": 0.8222248572988236,
+      "NerModel.SklearnModel.colsample_bytree": 0.5200254791444142,
+      "NerModel.SklearnModel.colsample_bylevel": 0.8476443615067254,
+      "NerModel.SklearnModel.colsample_bynode": 0.2991201656165821,
+      "NerModel.SklearnModel.reg_lambda": 0.8678008849543024,
+      "NerModel.SklearnModel.reg_alpha": 0.37259426505856263,
+
+      "SentimentModel.data_type": "sentiment",
+      "SentimentModel.SklearnModel.model_type": "XGBClassifier",
+      "SentimentModel.SklearnModel.learning_rate": 0.08281490694154658,
+      "SentimentModel.SklearnModel.gamma": 5.33342875724734,
+      "SentimentModel.SklearnModel.max_depth": 3,
+      "SentimentModel.SklearnModel.min_child_weight": 5,
+      "SentimentModel.SklearnModel.subsample": 0.6012636685827967,
+      "SentimentModel.SklearnModel.colsample_bytree": 0.6856786279458772,
+      "SentimentModel.SklearnModel.colsample_bylevel": 0.8889056357774469,
+      "SentimentModel.SklearnModel.colsample_bynode": 0.238765307044096,
+      "SentimentModel.SklearnModel.reg_lambda": 0.4578715873994581,
+      "SentimentModel.SklearnModel.reg_alpha": 0.14395547238532985
+    }
+  },
+  "metrics": {
+    "metrics": {
+      "loss": {
+        "direction": "min",
+        "observations": [
+          {
+            "value": [
+              0.096875911206007
+            ],
+            "step": 0
+          }
+        ]
+      },
+      "binary_accuracy": {
+        "direction": "max",
+        "observations": [
+          {
+            "value": [
+              0.5346829473972321
+            ],
+            "step": 0
+          }
+        ]
+      },
+      "val_loss": {
+        "direction": "min",
+        "observations": [
+          {
+            "value": [
+              0.33142070174217225
+            ],
+            "step": 0
+          }
+        ]
+      },
+      "val_binary_accuracy": {
+        "direction": "max",
+        "observations": [
+          {
+            "value": [
+              0.5688690066337585
+            ],
+            "step": 0
+          }
+        ]
+      }
+    }
+  },
+  "score": 0.33142070174217225,
+  "best_step": 0,
+  "status": "COMPLETED"
+}

@@ -79,7 +79,7 @@ def main():
     # )
     tuner_128_stats_sklearn = tune_bert_tweet_level_stats_sklearn_classifier(
         x_train, y_train,
-        project_name="bert_combined_ffnn_18",
+        project_name="bert_combined_ffnn_19",
         bert_model_trial_filepath="../training/bert_clf/initial_eval/bert_combined_ffnn_12/bert_model.json",
         max_trials=100,
     )
@@ -98,7 +98,7 @@ def main():
 
     # print("Tuner 128:\n", tuner_128.results_summary(1))
     # print("Tuner 256:\n", tuner_256.results_summary(1))
-    print("\nReadability summary:\n", get_best_trials(tuner_128_sklearn).to_markdown(), sep="")
+    print("\nReadability summary:\n", get_best_trials(tuner_128_stats_sklearn).to_markdown(), sep="")
 
 
 if __name__ == "__main__":

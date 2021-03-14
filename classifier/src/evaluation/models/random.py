@@ -15,3 +15,6 @@ class RandomModel(AbstractModel):
 
     def predict(self, x):
         return np.random.randint(2, size=(len(x),)).astype(np.float32)
+
+    def predict_proba(self, x):
+        pass

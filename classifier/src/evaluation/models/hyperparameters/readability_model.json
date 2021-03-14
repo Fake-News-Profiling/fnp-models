@@ -3,19 +3,18 @@
   "hyperparameters": {
     "space":[],
     "values": {
-      "StatisticalModel_name": "ReadabilityStatisticalModel",
-      "StatisticalModel_data_type": "readability",
-      "StatisticalModel_model_type": "XGBClassifier",
-      "StatisticalModel_learning_rate": 0.08669363953177207,
-      "StatisticalModel_gamma": 5.955678079702624,
-      "StatisticalModel_max_depth": 5,
-      "StatisticalModel_min_child_weight": 4,
-      "StatisticalModel_subsample": 0.6089071380397063,
-      "StatisticalModel_colsample_bytree": 0.5205555493166993,
-      "StatisticalModel_colsample_bylevel": 0.8931299666342941,
-      "StatisticalModel_colsample_bynode": 0.3665620451438264,
-      "StatisticalModel_reg_lambda": 0.4924234211006915,
-      "StatisticalModel_reg_alpha": 0.19265879372624045
+      "data_type": "readability",
+      "SklearnModel.model_type": "XGBClassifier",
+      "SklearnModel.learning_rate": 0.08669363953177207,
+      "SklearnModel.gamma": 5.955678079702624,
+      "SklearnModel.max_depth": 5,
+      "SklearnModel.min_child_weight": 4,
+      "SklearnModel.subsample": 0.6089071380397063,
+      "SklearnModel.colsample_bytree": 0.5205555493166993,
+      "SklearnModel.colsample_bylevel": 0.8931299666342941,
+      "SklearnModel.colsample_bynode": 0.3665620451438264,
+      "SklearnModel.reg_lambda": 0.4924234211006915,
+      "SklearnModel.reg_alpha": 0.19265879372624045
     }
   },
   "metrics": {

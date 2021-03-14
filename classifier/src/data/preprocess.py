@@ -1,4 +1,4 @@
-from functools import reduce
+from functools import reduce, partial
 import re
 import string
 
@@ -124,3 +124,31 @@ class BertTweetPreprocessor:
     def _transform_single_tweet(self, tweet):
         """ Preprocess a single tweet """
         return reduce(lambda data, transformer: transformer(data), self.transformers, tweet)
+
+
+def select_preprocess_option(choice):
+    return {
+        "[remove_emojis]": [remove_emojis, replace_unicode, replace_tags],
+        "[remove_emojis, remove_punctuation]": [remove_emojis, replace_unicode, remove_colons,
+                                                remove_punctuation_and_non_printables, replace_tags,
+                                                remove_hashtags],
+        "[remove_emojis, remove_tags]": [remove_emojis, replace_unicode,
+                                         partial(replace_tags, remove=True)],
+        "[remove_emojis, remove_tags, remove_punctuation]": [remove_emojis, replace_unicode, remove_colons,
+                                                             remove_punctuation_and_non_printables,
+                                                             partial(replace_tags, remove=True),
+                                                             remove_hashtags],
+        "[tag_emojis]": [partial(replace_emojis, with_desc=False), replace_unicode, replace_tags],
+        "[tag_emojis, remove_punctuation]": [partial(replace_emojis, with_desc=False), replace_unicode,
+                                             remove_colons, remove_punctuation_and_non_printables,
+                                             replace_tags, remove_hashtags],
+        "[replace_emojis]": [replace_emojis, replace_unicode, replace_tags],
+        "[replace_emojis_no_sep]": [partial(replace_emojis, sep=""), replace_unicode, replace_tags],
+        "[replace_emojis_no_sep, remove_tags]": [partial(replace_emojis, sep=""), replace_unicode,
+                                                 partial(replace_tags, remove=True)],
+        "[replace_emojis_no_sep, remove_tags, remove_punctuation]": [partial(replace_emojis, sep=""),
+                                                                     replace_unicode, remove_colons,
+                                                                     remove_punctuation_and_non_printables,
+                                                                     partial(replace_tags, remove=True),
+                                                                     remove_hashtags],
+    }[choice]

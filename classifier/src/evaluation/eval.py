@@ -34,15 +34,11 @@ def evaluate_models(x, y, x_test, y_test, eval_models, eval_metrics, cv_splits=5
             cv_metrics["CV split"].append(i + 1)
             model = model_class(hyperparameters)
             cv_metrics["Model"].append(name)
-
-            if model_class.__name__ == models.BertPooledModel.__name__:
-                model.fit(x[train_indices], y[train_indices], x[val_indices], y[val_indices])
-            else:
-                model.fit(x[train_indices], y[train_indices])
+            model.fit(x[train_indices], y[train_indices])
             metrics = evaluate(model, x[val_indices], y[val_indices], eval_metrics)
 
-            for name, value in metrics.items():
-                cv_metrics[name].append(float(value))
+            for metric_name, value in metrics.items():
+                cv_metrics[metric_name].append(float(value))
 
             print(pd.DataFrame(cv_metrics).to_markdown())
 
@@ -60,8 +56,8 @@ def evaluate_models(x, y, x_test, y_test, eval_models, eval_metrics, cv_splits=5
         row.loc["CV split"] = "Average"
         cv_df = cv_df.append(row, ignore_index=True)
 
-    print(f"\n{cv_splits}-fold Cross-Validation results:\n", cv_df.sort_values(["Model", "CV split"]).to_markdown(),
-          sep="", end="\n")
+    cv_df = cv_df.sort_values(["Model", "CV split"])
+    print(f"\n{cv_splits}-fold Cross-Validation results:\n", cv_df.to_markdown(), sep="", end="\n")
 
     # Fit the models on the entire training set and evaluate them on the test set
     test_metrics = defaultdict(list)
@@ -74,9 +70,13 @@ def evaluate_models(x, y, x_test, y_test, eval_models, eval_metrics, cv_splits=5
         for metric_name, value in metrics.items():
             test_metrics[metric_name].append(float(value))
 
-        # TODO - Write model test results to file here
+    test_df = pd.DataFrame(test_metrics)
+    print(f"\nFinal test set results:\n", test_df.to_markdown(), sep="", end="\n")
 
-    print(f"\nFinal test set results:\n", pd.DataFrame(test_metrics).to_markdown(), sep="", end="\n")
+    with open("src/evaluation/eval_results.txt", "a") as file:
+        cv_df.to_markdown(file)
+        file.write("\n")
+        test_df.to_markdown(file)
 
 
 def main():
@@ -94,22 +94,27 @@ def main():
     eval_models = [
         # Baselines
         # ("RandomModel", models.RandomModel, None),
-        ("TfIdfModel", models.TfIdfModel, None),
+        # ("TfIdfModel", models.TfIdfModel, None),
         # ("Buda20NgramEnsembleModel", models.Buda20NgramEnsembleModel, None),
 
-        # My models
+        # Statistical models
         # ("ReadabilityStatisticalModel", models.StatisticalModel,
-        # load_hyperparameters("models/hyperparameters/readability_model.json")),
+        #  load_hyperparameters("models/hyperparameters/readability_model.json", to_scoped_hyperparameters=True)),
         # ("NerStatisticalModel", models.StatisticalModel,
-        # load_hyperparameters("models/hyperparameters/ner_model.json")),
+        #  load_hyperparameters("models/hyperparameters/ner_model.json", to_scoped_hyperparameters=True)),
         # ("SentimentStatisticalModel", models.StatisticalModel,
-        # load_hyperparameters("models/hyperparameters/sentiment_model.json")),
+        #  load_hyperparameters("models/hyperparameters/sentiment_model.json", to_scoped_hyperparameters=True)),
         # ("CombinedStatisticalModel", models.StatisticalModel,
-        # load_hyperparameters("models/hyperparameters/combined_statistical_model.json")),
-        # ("EnsembleCombinedStatisticalModel", models.EnsembleModel, load_hyperparameters(
-        #     "models/hyperparameters/ensemble_combined_statistical_model.json")),
-        # ("BertPooledModel", models.BertPooledModel,
-        # load_hyperparameters("models/hyperparameters/bert_model.json")),
+        #  load_hyperparameters("models/hyperparameters/combined_statistical_model.json",
+        #                       to_scoped_hyperparameters=True)),
+        # ("EnsembleStatisticalModel", models.ensemble_statistical_model, load_hyperparameters(
+        #     "models/hyperparameters/ensemble_statistical_model.json", to_scoped_hyperparameters=True)),
+
+        # BERT-based models
+        ("BertPooledModel", models.BertPooledModel,
+         load_hyperparameters("models/hyperparameters/bert_model.json", to_scoped_hyperparameters=True)),
+        ("EnsembleBertPooledModel", models.ensemble_bert_pooled_model,
+         load_hyperparameters("models/hyperparameters/ensemble_bert_model.json", to_scoped_hyperparameters=True)),
     ]
     metrics = [
         ("Loss", tf.keras.losses.binary_crossentropy),

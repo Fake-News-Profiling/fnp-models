@@ -3,19 +3,18 @@
   "hyperparameters": {
     "space":[],
     "values": {
-      "StatisticalModel_name": "SentimentStatisticalModel",
-      "StatisticalModel_data_type": "sentiment",
-      "StatisticalModel_model_type": "XGBClassifier",
-      "StatisticalModel_learning_rate": 0.08281490694154658,
-      "StatisticalModel_gamma": 5.33342875724734,
-      "StatisticalModel_max_depth": 3,
-      "StatisticalModel_min_child_weight": 5,
-      "StatisticalModel_subsample": 0.6012636685827967,
-      "StatisticalModel_colsample_bytree": 0.6856786279458772,
-      "StatisticalModel_colsample_bylevel": 0.8889056357774469,
-      "StatisticalModel_colsample_bynode": 0.238765307044096,
-      "StatisticalModel_reg_lambda": 0.4578715873994581,
-      "StatisticalModel_reg_alpha": 0.14395547238532985
+      "data_type": "sentiment",
+      "SklearnModel.model_type": "XGBClassifier",
+      "SklearnModel.learning_rate": 0.08281490694154658,
+      "SklearnModel.gamma": 5.33342875724734,
+      "SklearnModel.max_depth": 3,
+      "SklearnModel.min_child_weight": 5,
+      "SklearnModel.subsample": 0.6012636685827967,
+      "SklearnModel.colsample_bytree": 0.6856786279458772,
+      "SklearnModel.colsample_bylevel": 0.8889056357774469,
+      "SklearnModel.colsample_bynode": 0.238765307044096,
+      "SklearnModel.reg_lambda": 0.4578715873994581,
+      "SklearnModel.reg_alpha": 0.14395547238532985
     }
   },
   "metrics": {

@@ -1,26 +1,32 @@
-from typing import List
-
 import numpy as np
-from kerastuner import HyperParameters
 
-from base import AbstractModel
+from base import ScopedHyperParameters, AbstractModel
+from evaluation.models.sklearn import SklearnModel
 
 
 class EnsembleModel(AbstractModel):
-    """ A random model which uses `numpy.random.randint()` to pick a prediction value of 0 or 1 """
-    def __init__(self, hyperparameters: HyperParameters, models: List[AbstractModel]):
+    """ Combines multiple model predictions into one user classification """
+
+    def __init__(self, hyperparameters: ScopedHyperParameters, models):
         super().__init__(hyperparameters)
-        self.models = models
-        self.ensemble_model = None
+        self.models = [model(hyperparameters.get_scope(scope)) for model, scope in models]
+        self.sklearn_model = SklearnModel(hyperparameters.get_scope("SklearnModel"))
+
+    def _get_predict_probas(self, x):
+        xt = [model.predict_proba(x) for model in self.models]
+        return np.concatenate(xt, axis=-1)
 
     def fit(self, x, y):
-        x_preds = []
         for model in self.models:
             model.fit(x, y)
 
-            x_preds += model.predict(x)  # TODO - fix me
-
-        self.ensemble_model.fit(x_preds, y)
+        xt = self._get_predict_probas(x)
+        self.sklearn_model.fit(xt, y)
 
     def predict(self, x):
-        return np.random.randint(2, size=(len(x),)).astype(np.float32)
+        xt = self._get_predict_probas(x)
+        return self.sklearn_model.predict(xt)
+
+    def predict_proba(self, x):
+        xt = self._get_predict_probas(x)
+        return self.sklearn_model.predict_proba(xt)

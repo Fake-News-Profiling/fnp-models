@@ -1,0 +1,93 @@
+{
+  "trial_id": "558b2620bd04caf02f07c1d332b28062",
+  "hyperparameters": {
+    "space":[],
+    "values": {
+      "SklearnModel.model_type": "XGBClassifier",
+      "SklearnModel.learning_rate": 0.011702896501195097,
+      "SklearnModel.gamma": 4.294190542078004,
+      "SklearnModel.max_depth": 4,
+      "SklearnModel.min_child_weight": 6,
+      "SklearnModel.subsample": 0.6569096985267074,
+      "SklearnModel.colsample_bytree": 0.528681360073379,
+      "SklearnModel.colsample_bylevel": 0.9808139550617081,
+      "SklearnModel.colsample_bynode": 0.3559930345465102,
+      "SklearnModel.reg_lambda": 0.8580033263383593,
+      "SklearnModel.reg_alpha": 0.1585557542309413,
+
+      "ReadabilityModel.data_type": "readability",
+      "ReadabilityModel.SklearnModel.model_type": "XGBClassifier",
+      "ReadabilityModel.SklearnModel.learning_rate": 0.08669363953177207,
+      "ReadabilityModel.SklearnModel.gamma": 5.955678079702624,
+      "ReadabilityModel.SklearnModel.max_depth": 5,
+      "ReadabilityModel.SklearnModel.min_child_weight": 4,
+      "ReadabilityModel.SklearnModel.subsample": 0.6089071380397063,
+      "ReadabilityModel.SklearnModel.colsample_bytree": 0.5205555493166993,
+      "ReadabilityModel.SklearnModel.colsample_bylevel": 0.8931299666342941,
+      "ReadabilityModel.SklearnModel.colsample_bynode": 0.3665620451438264,
+      "ReadabilityModel.SklearnModel.reg_lambda": 0.4924234211006915,
+      "ReadabilityModel.SklearnModel.reg_alpha": 0.19265879372624045,
+
+      "NerModel.data_type": "ner",
+      "NerModel.SklearnModel.model_type": "RandomForestClassifier",
+      "NerModel.SklearnModel.n_estimators": 50,
+      "NerModel.SklearnModel.criterion": "gini",
+      "NerModel.SklearnModel.min_samples_split": 2,
+      "NerModel.SklearnModel.min_samples_leaf": 2,
+      "NerModel.SklearnModel.min_impurity_decrease": 0,
+
+      "SentimentModel.data_type": "sentiment",
+      "SentimentModel.SklearnModel.model_type": "XGBClassifier",
+      "SentimentModel.SklearnModel.learning_rate": 0.08281490694154658,
+      "SentimentModel.SklearnModel.gamma": 5.33342875724734,
+      "SentimentModel.SklearnModel.max_depth": 3,
+      "SentimentModel.SklearnModel.min_child_weight": 5,
+      "SentimentModel.SklearnModel.subsample": 0.6012636685827967,
+      "SentimentModel.SklearnModel.colsample_bytree": 0.6856786279458772,
+      "SentimentModel.SklearnModel.colsample_bylevel": 0.8889056357774469,
+      "SentimentModel.SklearnModel.colsample_bynode": 0.238765307044096,
+      "SentimentModel.SklearnModel.reg_lambda": 0.4578715873994581,
+      "SentimentModel.SklearnModel.reg_alpha": 0.14395547238532985
+    }
+  },
+  "metrics": {
+    "metrics": {
+      "score": {
+        "direction": "min",
+        "observations": [
+          {
+            "value": [
+              1.018448111488603
+            ],
+            "step": 0
+          }
+        ]
+      },
+      "accuracy_score": {
+        "direction": "min",
+        "observations": [
+          {
+            "value": [
+              0.6407407407407406
+            ],
+            "step": 0
+          }
+        ]
+      },
+      "f1_score": {
+        "direction": "min",
+        "observations": [
+          {
+            "value": [
+              0.628389239384953
+            ],
+            "step": 0
+          }
+        ]
+      }
+    }
+  },
+  "score": 1.018448111488603,
+  "best_step": 0,
+  "status": "COMPLETED"
+}

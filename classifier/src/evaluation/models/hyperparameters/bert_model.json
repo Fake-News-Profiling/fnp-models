@@ -1,256 +1,34 @@
 {
   "trial_id": "149931940c1c4fb50fec9ad1d0221ffa",
   "hyperparameters": {
-    "space": [
-      {
-        "class_name": "Choice",
-        "config": {
-          "name": "BertModel_batch_size",
-          "default": 32,
-          "conditions": [],
-          "values": [
-            32
-          ],
-          "ordered": true
-        }
-      },
-      {
-        "class_name": "Fixed",
-        "config": {
-          "name": "BertModel_epochs",
-          "conditions": [],
-          "value": 16
-        }
-      },
-      {
-        "class_name": "Fixed",
-        "config": {
-          "name": "BertModel_encoder_url",
-          "conditions": [],
-          "value": "https://tfhub.dev/tensorflow/small_bert/bert_en_uncased_L-12_H-128_A-2/1"
-        }
-      },
-      {
-        "class_name": "Fixed",
-        "config": {
-          "name": "BertModel_size",
-          "conditions": [],
-          "value": 128
-        }
-      },
-      {
-        "class_name": "Choice",
-        "config": {
-          "name": "BertModel_feed_data_overlap",
-          "default": 50,
-          "conditions": [],
-          "values": [
-            50
-          ],
-          "ordered": true
-        }
-      },
-      {
-        "class_name": "Float",
-        "config": {
-          "name": "BertModel_dropout_rate",
-          "default": 0.1,
-          "conditions": [],
-          "min_value": 0.1,
-          "max_value": 0.4,
-          "step": null,
-          "sampling": null
-        }
-      },
-      {
-        "class_name": "Fixed",
-        "config": {
-          "name": "BertModel_dense_activation",
-          "conditions": [],
-          "value": "linear"
-        }
-      },
-      {
-        "class_name": "Choice",
-        "config": {
-          "name": "BertModel_dense_kernel_reg",
-          "default": 0.0001,
-          "conditions": [],
-          "values": [
-            0.0001,
-            0.001,
-            0.01,
-            0.05
-          ],
-          "ordered": true
-        }
-      },
-      {
-        "class_name": "Choice",
-        "config": {
-          "name": "BertModel_dense_bias_reg",
-          "default": 0.0001,
-          "conditions": [],
-          "values": [
-            0.0001,
-            0.001,
-            0.01,
-            0.05
-          ],
-          "ordered": true
-        }
-      },
-      {
-        "class_name": "Choice",
-        "config": {
-          "name": "BertModel_dense_activity_reg",
-          "default": 0.0001,
-          "conditions": [],
-          "values": [
-            0.0001,
-            0.001,
-            0.01,
-            0.05
-          ],
-          "ordered": true
-        }
-      },
-      {
-        "class_name": "Fixed",
-        "config": {
-          "name": "BertModel_learning_rate",
-          "conditions": [],
-          "value": 0.00005
-        }
-      },
-      {
-        "class_name": "Choice",
-        "config": {
-          "name": "PoolingModel_batch_size",
-          "default": 8,
-          "conditions": [],
-          "values": [
-            8
-          ],
-          "ordered": true
-        }
-      },
-      {
-        "class_name": "Fixed",
-        "config": {
-          "name": "PoolingModel_epochs",
-          "conditions": [],
-          "value": 3
-        }
-      },
-      {
-        "class_name": "Float",
-        "config": {
-          "name": "PoolingModel_dropout_rate",
-          "default": 0.1,
-          "conditions": [],
-          "min_value": 0.0,
-          "max_value": 0.4,
-          "step": null,
-          "sampling": null
-        }
-      },
-      {
-        "class_name": "Fixed",
-        "config": {
-          "name": "PoolingModel_dense_activation",
-          "conditions": [],
-          "value": "linear"
-        }
-      },
-      {
-        "class_name": "Choice",
-        "config": {
-          "name": "PoolingModel_dense_kernel_reg",
-          "default": 0.0001,
-          "conditions": [],
-          "values": [
-            0.0001,
-            0.001,
-            0.01,
-            0.05
-          ],
-          "ordered": true
-        }
-      },
-      {
-        "class_name": "Choice",
-        "config": {
-          "name": "PoolingModel_dense_bias_reg",
-          "default": 0.0001,
-          "conditions": [],
-          "values": [
-            0.0001,
-            0.001,
-            0.01,
-            0.05
-          ],
-          "ordered": true
-        }
-      },
-      {
-        "class_name": "Choice",
-        "config": {
-          "name": "PoolingModel_dense_activity_reg",
-          "default": 0.0001,
-          "conditions": [],
-          "values": [
-            0.0001,
-            0.001,
-            0.01,
-            0.05
-          ],
-          "ordered": true
-        }
-      },
-      {
-        "class_name": "Fixed",
-        "config": {
-          "name": "PoolingModel_learning_rate",
-          "conditions": [],
-          "value": 0.001
-        }
-      },
-      {
-        "class_name": "Choice",
-        "config": {
-          "name": "PoolingModel_pooling_type",
-          "default": "max",
-          "conditions": [],
-          "values": [
-            "max",
-            "average"
-          ],
-          "ordered": false
-        }
-      }
-    ],
+    "space": [],
     "values": {
-      "BertModel_batch_size": 32,
-      "BertModel_epochs": 8,
-      "BertModel_encoder_url": "https://tfhub.dev/tensorflow/small_bert/bert_en_uncased_L-12_H-128_A-2/1",
-      "BertModel_size": 128,
-      "BertModel_feed_data_overlap": 50,
-      "BertModel_dropout_rate": 0.1,
-      "BertModel_dense_activation": "linear",
-      "BertModel_dense_kernel_reg": 0.001,
-      "BertModel_dense_bias_reg": 0.0001,
-      "BertModel_dense_activity_reg": 0.0001,
-      "BertModel_learning_rate": 0.00005,
-      "PoolingModel_batch_size": 8,
-      "PoolingModel_epochs": 3,
-      "PoolingModel_dropout_rate": 0.0,
-      "PoolingModel_dense_activation": "linear",
-      "PoolingModel_dense_kernel_reg": 0.001,
-      "PoolingModel_dense_bias_reg": 0.0001,
-      "PoolingModel_dense_activity_reg": 0.0001,
-      "PoolingModel_learning_rate": 0.001,
-      "PoolingModel_pooling_type": "average"
+      "BertModel.encoder_url": "https://tfhub.dev/tensorflow/small_bert/bert_en_uncased_L-12_H-128_A-2/1",
+      "BertModel.size": 128,
+      "BertModel.dropout_rate": 0.3753050943143874,
+      "BertModel.dense_activation": "linear",
+      "BertModel.dense_kernel_reg": 0,
+      "BertModel.dense_bias_reg": 0.01,
+      "BertModel.dense_activity_reg": 0,
+      "BertModel.encoder_output": true,
+      "BertModel.learning_rate": 0.00002,
+      "BertModel.batch_size": 64,
+      "BertModel.epochs": 2,
+      "BertModel.feed_data_overlap": 0,
+      "BertModel.preprocessing": "[remove_emojis, remove_tags]",
+
+      "PoolingModel.pooling_type": "concatenate",
+      "PoolingModel.SklearnModel.model_type": "XGBClassifier",
+      "PoolingModel.SklearnModel.learning_rate": 0.03635572236910212,
+      "PoolingModel.SklearnModel.gamma": 6.78156022079664,
+      "PoolingModel.SklearnModel.max_depth": 3,
+      "PoolingModel.SklearnModel.min_child_weight": 4,
+      "PoolingModel.SklearnModel.subsample": 0.6807828579462443,
+      "PoolingModel.SklearnModel.colsample_bytree": 0.5060216329435505,
+      "PoolingModel.SklearnModel.colsample_bylevel": 0.9125482370930075,
+      "PoolingModel.SklearnModel.colsample_bynode": 0.4525081399645974,
+      "PoolingModel.SklearnModel.reg_lambda": 0.7532819326797098,
+      "PoolingModel.SklearnModel.reg_alpha": 0.1201490229846292
     }
   },
   "metrics": {
