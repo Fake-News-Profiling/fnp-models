@@ -19,7 +19,10 @@ class TfIdfModel(AbstractModel):
         self.model = LogisticRegression()
 
     def _transform(self, x):
-        return [np.asarray(np.mean(self.tfidf.transform(tweet_feed), axis=0)).reshape(-1,) for tweet_feed in x]
+        return np.asarray([
+            np.asarray(np.mean(self.tfidf.transform(tweet_feed), axis=0)).reshape(-1,)
+            for tweet_feed in x
+        ])
 
     def fit(self, x, y):
         # Flatten data to tweet-level classification

@@ -16,7 +16,7 @@ def readability_tweet_extractor():
     extractor = pre.TweetStatsExtractor(extractors=[
         tag_counts,
         retweet_ratio,
-        emojis_count,
+        emojis_counts,
         syllables_to_words_ratios,
         average_tweet_lengths,
         word_type_to_token_ratio,
@@ -55,6 +55,7 @@ def readability_tweet_extractor():
         "Average number of ?",
         "Average number of ,",
         "Average number of :",
+        "Average number of .",
         "Total punctuation type-token ratio",
         # number_counts
         "Total number of numerical values",
@@ -89,7 +90,7 @@ def retweet_ratio(user_tweets):
     return retweets / len(user_tweets)
 
 
-def emojis_count(user_tweets):
+def emojis_counts(user_tweets):
     """ Returns the following emoji counts for this user: total number of emojis used, average number of emojis used
     per tweet, type-token ratio of emojis (uniqueness of emojis used) """
     tweet_emojis = pre.emoji_chars(user_tweets)
@@ -136,7 +137,7 @@ def truncated_tweets(user_tweets):
     return count
 
 
-def punctuation_counts(user_tweets, punctuation_marks="!?,:"):
+def punctuation_counts(user_tweets, punctuation_marks="!?,:."):
     """ Returns the average number of each punctuation character in the users tweets, for each punctuation character
     in punctuation_marks. Also returns the punctuation type-to-token ratio of all of the users tweets """
     all_punc = [c for tweet in user_tweets

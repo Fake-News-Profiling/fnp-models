@@ -31,7 +31,7 @@ def get_tuner(project_num, project):
 
 def print_results(project_num, projects=None, num_trials=10):
     if projects is None:
-        projects = ["readability", "ner", "sentiment", "combined"]
+        projects = ["readability", "ner", "sentiment", "combined", "tweet_level", "tweet_level_ensemble"]
 
     for project in projects:
         tuner = get_tuner(project_num, project)
@@ -95,17 +95,18 @@ def main():
     print("Tuning models")
     project = "5"
     max_trials = 100
-    tune.tune_readability_model(x_train, y_train, project, max_trials=max_trials)
-    tune.tune_ner_model(x_train, y_train, project, max_trials=max_trials)
-    tune.tune_sentiment_model(x_train, y_train, project, max_trials=max_trials)
-    tune.tune_combined_statistical_models(x_train, y_train, project, max_trials=max_trials)
+    # tune.tune_readability_model(x_train, y_train, project, max_trials=max_trials)
+    # tune.tune_ner_model(x_train, y_train, project, max_trials=max_trials)
+    # tune.tune_sentiment_model(x_train, y_train, project, max_trials=max_trials)
+    # tune.tune_combined_statistical_models(x_train, y_train, project, max_trials=max_trials)
     # tune.tune_combined_statistical_models(x_train, y_train, project, tune_sklearn_models=False, max_trials=max_trials)
+    tune.tune_tweet_level_model(x_train, y_train, project, max_trials=max_trials)
 
     print_results(project)
     print_feature_importance(project)
 
 
 if __name__ == "__main__":
-    print_results(4)
-    print_feature_importance(4)
-    # main()
+    # print_results(4)
+    # print_feature_importance(4)
+    main()
