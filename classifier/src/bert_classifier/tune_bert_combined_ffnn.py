@@ -164,10 +164,26 @@ def tune_bert_sklearn_classifier(x_train, y_train, project_name, bert_model_tria
     """ Tune a BERT final classifier """
     # Generate user-level data from BERT
     print("Building tuner")
+    tuner = sklearn_classifier(project_name, max_trials=max_trials)
+
+    print("Fitting tuner with training data")
+    tuner.fit_data(
+        x_train, y_train,
+        partial(_bert_model_wrapper,
+                trial_filepath=bert_model_trial_filepath,
+                tokenizer_class=BertTweetFeedTokenizer if bert_model_type == "feed" else BertIndividualTweetTokenizer)
+    )
+
+    print("Beginning tuning")
+    tuner.search(x_train, y_train)
+    return tuner
+
+
+def sklearn_classifier(project_name, max_trials=30):
     hp = HyperParameters()
     hp.Choice("pooling_type", ["max", "min", "average"])
 
-    tuner = SklearnCV(
+    return SklearnCV(
         preprocess=data_preprocessing_func,
         oracle=BayesianOptimizationOracle(
             objective=Objective("score", "min"),  # minimise log loss
@@ -181,15 +197,3 @@ def tune_bert_sklearn_classifier(x_train, y_train, project_name, bert_model_tria
         directory="../training/bert_clf/initial_eval",
         project_name=project_name,
     )
-
-    print("Fitting tuner with training data")
-    tuner.fit_data(
-        x_train, y_train,
-        partial(_bert_model_wrapper,
-                trial_filepath=bert_model_trial_filepath,
-                tokenizer_class=BertTweetFeedTokenizer if bert_model_type == "feed" else BertIndividualTweetTokenizer)
-    )
-
-    print("Beginning tuning")
-    tuner.search(x_train, y_train)
-    return tuner
