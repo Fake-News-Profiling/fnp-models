@@ -9,10 +9,10 @@ from official.nlp import optimization
 from kerastuner import HyperParameters
 
 from base import load_hyperparameters
-from bert import BertTweetFeedTokenizer, bert_layers
+from bert import BertTweetFeedTokenizer, bert_layers, BertIndividualTweetTokenizer
 from bert.models import tokenize_bert_input
-from bert_classifier import BayesianOptimizationTunerWithFitHyperParameters
-
+from bert_classifier import BayesianOptimizationCVTunerWithFitHyperParameters
+import data.preprocess as pre
 
 """
 Tuning objective: Train BERT by combining it with a FFNN, and evaluate the optimal batch sizes, learning
@@ -20,17 +20,54 @@ rates, and dropout rates of the model.
 """
 
 
-def data_preprocessing_func(hps, x_train, y_train, x_test, y_test):
+def comp(f, g):
+    return lambda *args, **kwargs: f(*g(*args, **kwargs))
+
+
+def preprocess_data(hp, x_train, y_train, x_test, y_test):
+    transformers = {
+        "[remove_emojis]": [pre.remove_emojis, pre.replace_unicode, pre.replace_tags],
+        "[remove_emojis, remove_punctuation]": [pre.remove_emojis, pre.replace_unicode, pre.remove_colons,
+                                                pre.remove_punctuation_and_non_printables, pre.replace_tags,
+                                                pre.remove_hashtags],
+        "[remove_emojis, remove_tags]": [pre.remove_emojis, pre.replace_unicode,
+                                         partial(pre.replace_tags, remove=True)],
+        "[remove_emojis, remove_tags, remove_punctuation]": [pre.remove_emojis, pre.replace_unicode, pre.remove_colons,
+                                                             pre.remove_punctuation_and_non_printables,
+                                                             partial(pre.replace_tags, remove=True),
+                                                             pre.remove_hashtags],
+        "[tag_emojis]": [partial(pre.replace_emojis, with_desc=False), pre.replace_unicode, pre.replace_tags],
+        "[tag_emojis, remove_punctuation]": [partial(pre.replace_emojis, with_desc=False), pre.replace_unicode,
+                                             pre.remove_colons, pre.remove_punctuation_and_non_printables,
+                                             pre.replace_tags, pre.remove_hashtags],
+        "[replace_emojis]": [pre.replace_emojis, pre.replace_unicode, pre.replace_tags],
+        "[replace_emojis_no_sep]": [partial(pre.replace_emojis, sep=""), pre.replace_unicode, pre.replace_tags],
+        "[replace_emojis_no_sep, remove_tags]": [partial(pre.replace_emojis, sep=""), pre.replace_unicode,
+                                                 partial(pre.replace_tags, remove=True)],
+        "[replace_emojis_no_sep, remove_tags, remove_punctuation]": [partial(pre.replace_emojis, sep=""),
+                                                                     pre.replace_unicode, pre.remove_colons,
+                                                                     pre.remove_punctuation_and_non_printables,
+                                                                     partial(pre.replace_tags, remove=True),
+                                                                     pre.remove_hashtags],
+    }[hp.get("preprocessing")]  # TODO - tag numbers?
+    preprocessor = pre.BertTweetPreprocessor(
+        [pre.tag_indicators, pre.replace_xml_and_html] + transformers + [pre.remove_extra_spacing])
+    x_train_processed = preprocessor.transform(x_train)
+    x_test_processed = preprocessor.transform(x_test)
+    return hp, x_train_processed, y_train, x_test_processed, y_test
+
+
+def tokenize_data(hp, x_train, y_train, x_test, y_test, tokenizer_class=BertTweetFeedTokenizer):
     return tokenize_bert_input(
-        encoder_url=hps.get("bert_encoder_url"),
-        hidden_layer_size=hps.get("bert_size"),
-        tokenizer_class=BertTweetFeedTokenizer,
+        encoder_url=hp.get("bert_encoder_url"),
+        hidden_layer_size=hp.get("bert_size"),
+        tokenizer_class=tokenizer_class,
         x_train=x_train,
         y_train=y_train,
         x_val=x_test,
         y_val=y_test,
         shuffle=True,
-        feed_overlap=hps.get("feed_data_overlap"),
+        feed_overlap=hp.get("feed_data_overlap"),
     )
 
 
@@ -42,34 +79,29 @@ def _build_bert_single_dense(hp):
         trainable=True,
         hidden_layer_size=hp.get("bert_size")
     )
-    dropout_1 = Dropout(hp.Float("dropout_rate_1"), 0, 0.5)(bert_output["pooled_output"])
-    batch_1 = BatchNormalization(dropout_1)
-    relu_1 = Dense(
-        hp.get("bert_size"), activation=hp.Fixed("dense_1_activation", "relu"),
-        kernel_regularizer=tf.keras.regularizers.l2(hp.Choice("dense_1_kernel_reg", [0.0001, 0.001, 0.01, 0.02])),
-        bias_regularizer=tf.keras.regularizers.l2(hp.Choice("dense_1_bias_reg", [0.0001, 0.001, 0.01, 0.02])),
-        activity_regularizer=tf.keras.regularizers.l2(hp.Choice("dense_1_activity_reg", [0.0001, 0.001, 0.01, 0.02])),
-    )(batch_1)
-    dropout_2 = Dropout(hp.Float("dropout_rate", 0, 0.5))(relu_1)
+    # dropout_1 = Dropout(hp.Float("dropout_rate_1", 0, 0.5))(bert_output["pooled_output"])
+    # batch_1 = BatchNormalization()(dropout_1)
+    # relu_1 = Dense(
+    #     hp.get("bert_size"), activation=hp.Fixed("dense_1_activation", "relu"),
+    #     kernel_regularizer=tf.keras.regularizers.l2(hp.Choice("dense_1_kernel_reg", [0.0001, 0.001, 0.01, 0.02])),
+    #     bias_regularizer=tf.keras.regularizers.l2(hp.Choice("dense_1_bias_reg", [0.0001, 0.001, 0.01, 0.02])),
+    #     activity_regularizer=tf.keras.regularizers.l2(hp.Choice("dense_1_activity_reg", [0.0001, 0.001, 0.01, 0.02])),
+    # )(batch_1)
+    dropout_2 = Dropout(hp.Float("dropout_rate", 0, 0.4))(bert_output["pooled_output"])
     batch_2 = BatchNormalization()(dropout_2)
     linear_2 = Dense(
         1, activation=hp.Fixed("dense_activation", "linear"),
-        kernel_regularizer=tf.keras.regularizers.l2(hp.Choice("linear_kernel_reg", [0.0001, 0.001, 0.01, 0.02])),
-        bias_regularizer=tf.keras.regularizers.l2(hp.Choice("linear_bias_reg", [0.0001, 0.001, 0.01, 0.02])),
-        activity_regularizer=tf.keras.regularizers.l2(hp.Choice("linear_activity_reg", [0.0001, 0.001, 0.01, 0.02])),
+        kernel_regularizer=tf.keras.regularizers.l2(hp.Choice("linear_kernel_reg", [0., 0.0001, 0.001, 0.01])),
+        bias_regularizer=tf.keras.regularizers.l2(hp.Choice("linear_bias_reg", [0., 0.0001, 0.001, 0.01])),
+        activity_regularizer=tf.keras.regularizers.l2(hp.Choice("linear_activity_reg", [0., 0.0001, 0.001, 0.01])),
     )(batch_2)
 
     # Build model
     model = Model(bert_input, linear_2)
-    num_train_steps = hp.get("epochs") * hp.get("input_data_len") // hp.get("batch_size")
-    optimizer = optimization.create_optimizer(
-        init_lr=hp.Choice("learning_rate", [2e-5, 3e-5, 5e-5]),
-        num_train_steps=num_train_steps,
-        num_warmup_steps=num_train_steps // 10,
-        optimizer_type='adamw',
-    )
     model.compile(
-        optimizer=optimizer,
+        optimizer=optimization.AdamWeightDecay(
+            learning_rate=hp.Choice("learning_rate", [2e-5, 3e-5, 5e-5]),
+        ),
         loss=tf.keras.losses.BinaryCrossentropy(from_logits=True),
         metrics=tf.metrics.BinaryAccuracy(),
     )
@@ -120,24 +152,37 @@ def _build_bert_ffnn(hp, hidden_layer_size, bert_input, bert_output, input_data_
     return model
 
 
-def tune_bert_ffnn(x_train, y_train, x_val, y_val, bert_encoder_url, bert_size, project_name, tf_train_device="/gpu:0",
-                   epochs=8, batch_sizes=None, max_trials=30):
+def tune_bert_ffnn(x_train, y_train, bert_encoder_url, bert_size, project_name, tf_train_device="/gpu:0",
+                   epochs=8, batch_sizes=None, max_trials=30, preprocess_data_in_training=False,
+                   model_type="feed"):
     """ Tune a BERT+FFNN Keras Model """
     if batch_sizes is None:
         batch_sizes = [24, 32]
 
     # Create the keras Tuner and performs a search
     with tf.device(tf_train_device):
-        hps = HyperParameters()
-        hps.Choice("batch_size", batch_sizes)
-        hps.Fixed("epochs", epochs)
-        hps.Fixed("bert_encoder_url", bert_encoder_url)
-        hps.Fixed("bert_size", bert_size)
-        hps.Choice("feed_data_overlap", [0, 50])
+        hp = HyperParameters()
+        hp.Choice("batch_size", batch_sizes)
+        hp.Fixed("epochs", epochs)
+        hp.Fixed("bert_encoder_url", bert_encoder_url)
+        hp.Fixed("bert_size", bert_size)
+        hp.Fixed("feed_data_overlap", 0)
 
-        tuner = BayesianOptimizationTunerWithFitHyperParameters(
+        tokenizer_func = tokenize_data if model_type == "feed" else partial(
+            tokenize_data, tokenizer_class=BertIndividualTweetTokenizer)
+        data_preprocessing_func = tokenizer_func
+        if preprocess_data_in_training:
+            hp.Choice("preprocessing", ["[remove_emojis]", "[remove_emojis, remove_punctuation]",
+                                        "[remove_emojis, remove_tags]",
+                                        "[remove_emojis, remove_tags, remove_punctuation]", "[tag_emojis]",
+                                        "[tag_emojis, remove_punctuation]", "[replace_emojis]",
+                                        "[replace_emojis_no_sep]", "[replace_emojis_no_sep, remove_tags]",
+                                        "[replace_emojis_no_sep, remove_tags, remove_punctuation]"])
+            data_preprocessing_func = comp(tokenizer_func, preprocess_data)
+
+        tuner = BayesianOptimizationCVTunerWithFitHyperParameters(
             data_preprocessing_func=data_preprocessing_func,
-            hyperparameters=hps,
+            hyperparameters=hp,
             hypermodel=_build_bert_single_dense,
             objective="val_loss",
             max_trials=max_trials,
@@ -145,11 +190,9 @@ def tune_bert_ffnn(x_train, y_train, x_val, y_val, bert_encoder_url, bert_size, 
             project_name=project_name,
         )
 
-        x_train_for_cv = np.concatenate([x_train, x_val])
-        y_train_for_cv = np.concatenate([y_train, y_val])
         tuner.search(
-            x=x_train_for_cv,
-            y=y_train_for_cv,
+            x=x_train,
+            y=y_train,
             callbacks=[
                 TerminateOnNaN(),
                 EarlyStopping("val_loss", patience=2),

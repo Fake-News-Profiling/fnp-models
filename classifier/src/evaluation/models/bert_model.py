@@ -109,7 +109,6 @@ class BertModel(AbstractModel):
         )
 
     def predict(self, x, encoder_output=False):
-        x_tokenized = self._tokenize(x)
         if encoder_output:
             return np.asarray([
                 self.encoder_model.predict(
@@ -117,6 +116,7 @@ class BertModel(AbstractModel):
                 ) for tweet_feed in x
             ])
 
+        x_tokenized = self._tokenize(x)
         return self.model.predict(x_tokenized)
 
 

@@ -28,7 +28,7 @@ def replace_xml_and_html(tweet):
     return replace_html
 
 
-def remove_punctuation(tweet):
+def remove_punctuation_and_non_printables(tweet):
     """ Remove punctuation, except hashtags '#' """
     punctuation = re.sub(r"[#:]", "", string.punctuation)
     printable = re.sub(fr"[{punctuation}]", "", string.printable)
@@ -41,27 +41,36 @@ def remove_colons(tweet):
     return tweet.replace(":", " ")
 
 
-def replace_emojis(tweet):
-    """ Replace emojis with their meaning ':smiling_face:' """
-    return demoji.replace_with_desc(tweet, ":")
+def replace_emojis(tweet, with_desc=True, sep=":"):
+    """ Replace emojis with their descriptions ':smiling face:', or with an emoji tag '[emoji]' """
+    if with_desc:
+        return demoji.replace_with_desc(tweet, sep)
+    else:
+        return demoji.replace(tweet, "[emoji]")
 
 
-def replace_tags(tweet):
+def remove_emojis(tweet):
+    """ Remove emojis """
+    return demoji.replace(tweet, " ")
+
+
+def replace_tags(tweet, remove=False):
     """ Replace #HASHTAG# and #URL# #USER# with tags [tag] and [url], [user] """
-    tweet = tweet.replace(r"#HASHTAG#", "[hashtag]")
-    tweet = tweet.replace(r"#URL#", "[url]")
-    tweet = tweet.replace(r"#USER#", "[user]")
-    tweet = re.sub(r"((?:^|\s)RT\s)", " [retweet] ", tweet)
-    tweet = re.sub(r"((?:^|\s)RT\s)", " [retweet] ", tweet)  # Repeated to handle multiple continuous retweets
+    tweet = tweet.replace(r"#HASHTAG#", " " if remove else "[hashtag]")
+    tweet = tweet.replace(r"#URL#", " " if remove else "[url]")
+    tweet = tweet.replace(r"#USER#", " " if remove else "[user]")
+    # Repeated sub for 'RT' to handle multiple continuous retweets
+    tweet = re.sub(r"((?:^|\s)RT\s)", " " if remove else " [retweet] ", tweet)
+    tweet = re.sub(r"((?:^|\s)RT\s)", " " if remove else " [retweet] ", tweet)
     return tweet
 
 
-def remove_hashtag_chars(tweet):
+def remove_hashtags(tweet):
     """ Remove hashtags '#' """
     return "".join(c for c in tweet if c != "#")
 
 
-def replace_accented_chars(tweet):
+def replace_unicode(tweet):
     """ Replace accented characters with their ASCII equivalent """
     return unidecode(tweet)
 
@@ -96,10 +105,10 @@ class BertTweetPreprocessor:
                 replace_xml_and_html,
                 remove_colons,  # Remove colons as they're used as emoji separators
                 replace_emojis,  # Replace emojis with ':<emoji_description>:'
-                remove_punctuation,  # Remove punctuation except : and #
+                replace_unicode,
+                remove_punctuation_and_non_printables,  # Remove punctuation except : and #
                 replace_tags,
-                remove_hashtag_chars,
-                replace_accented_chars,
+                remove_hashtags,
                 tag_numbers,
                 remove_extra_spacing,
             ]

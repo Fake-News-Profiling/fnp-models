@@ -22,7 +22,8 @@ from tensorflow.python.keras.callbacks import TerminateOnNaN, EarlyStopping, Ten
 from xgboost import XGBClassifier
 
 from bert_classifier import BayesianOptimizationTunerWithFitHyperParameters
-from statistical.data_extraction import readability_tweet_extractor, ner_tweet_extractor, sentiment_tweet_extractor
+from statistical.data_extraction import readability_tweet_extractor, ner_tweet_extractor, sentiment_tweet_extractor, \
+    combined_tweet_extractor
 
 
 class SklearnTunerPipeline(Pipeline):
@@ -145,9 +146,9 @@ def tune_combined_statistical_models(x_train, y_train, project_name, tune_sklear
     x_train = np.concatenate([x_train_readability, x_train_ner, x_train_sentiment], axis=1)
 
     if tune_sklearn_models:
-        return tune_sklearn_model(x_train, y_train, "combined_" + project_name, **kwargs)
+        return tune_sklearn_model(x_train, y_train, "combined_" + project_name, combined_tweet_extractor(), **kwargs)
     else:
-        return tune_nn_model(x_train, y_train, "combined_nn_" + project_name, **kwargs)
+        return tune_nn_model(x_train, y_train, "combined_nn_" + project_name, combined_tweet_extractor(), **kwargs)
 
 
 def tune_nn_model(x_train, y_train, project_name, feature_extractor=None, tf_train_device="/gpu:0", **kwargs):
@@ -197,7 +198,8 @@ def tune_sklearn_model(x_train, y_train, project_name, feature_extractor=None, *
     return tuner
 
 
-def sklearn_tuner(project_name, max_trials=30, directory="../../training/statistical"):
+def sklearn_tuner(project_name, max_trials=30, directory="../../training/statistical",
+                  kfold=StratifiedKFold(n_splits=5, shuffle=True, random_state=3)):
     return Sklearn(
         oracle=BayesianOptimization(
             objective=Objective("score", "min"),  # minimise log loss
@@ -206,7 +208,7 @@ def sklearn_tuner(project_name, max_trials=30, directory="../../training/statist
         hypermodel=build_sklearn_classifier_model,
         scoring=make_scorer(log_loss, needs_proba=True),
         metrics=[accuracy_score, f1_score],
-        cv=StratifiedKFold(n_splits=5, shuffle=True, random_state=3),
+        cv=kfold,
         directory=directory,
         project_name=project_name,
     )
