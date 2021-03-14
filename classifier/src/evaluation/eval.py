@@ -28,8 +28,6 @@ def evaluate_models(x, y, x_test, y_test, eval_models, eval_metrics, cv_splits=5
     # Fit and evaluate models using Cross-Validation on the training set
     cv_metrics = defaultdict(list)
     for i, (train_indices, val_indices) in enumerate(kfold.split(x, y)):
-        print("y_true", y[val_indices])
-
         for name, model_class, hyperparameters in eval_models:
             cv_metrics["CV split"].append(i + 1)
             model = model_class(hyperparameters)
@@ -41,8 +39,6 @@ def evaluate_models(x, y, x_test, y_test, eval_models, eval_metrics, cv_splits=5
                 cv_metrics[metric_name].append(float(value))
 
             print(pd.DataFrame(cv_metrics).to_markdown())
-
-            # TODO - Write model CV results to file here
 
     # Compute metric averages
     cv_df = pd.DataFrame(cv_metrics)
@@ -74,6 +70,7 @@ def evaluate_models(x, y, x_test, y_test, eval_models, eval_metrics, cv_splits=5
     print(f"\nFinal test set results:\n", test_df.to_markdown(), sep="", end="\n")
 
     with open("src/evaluation/eval_results.txt", "a") as file:
+        file.write("\n")
         cv_df.to_markdown(file)
         file.write("\n")
         test_df.to_markdown(file)
@@ -93,28 +90,32 @@ def main():
     print("Beginning model evaluation")
     eval_models = [
         # Baselines
-        # ("RandomModel", models.RandomModel, None),
-        # ("TfIdfModel", models.TfIdfModel, None),
-        # ("Buda20NgramEnsembleModel", models.Buda20NgramEnsembleModel, None),
+        ("RandomModel", models.RandomModel, None),
+        ("TfIdfModel", models.TfIdfModel, None),
+        ("Buda20NgramEnsembleModel", models.Buda20NgramEnsembleModel, None),
 
         # Statistical models
-        # ("ReadabilityStatisticalModel", models.StatisticalModel,
-        #  load_hyperparameters("models/hyperparameters/readability_model.json", to_scoped_hyperparameters=True)),
-        # ("NerStatisticalModel", models.StatisticalModel,
-        #  load_hyperparameters("models/hyperparameters/ner_model.json", to_scoped_hyperparameters=True)),
-        # ("SentimentStatisticalModel", models.StatisticalModel,
-        #  load_hyperparameters("models/hyperparameters/sentiment_model.json", to_scoped_hyperparameters=True)),
-        # ("CombinedStatisticalModel", models.StatisticalModel,
-        #  load_hyperparameters("models/hyperparameters/combined_statistical_model.json",
-        #                       to_scoped_hyperparameters=True)),
-        # ("EnsembleStatisticalModel", models.ensemble_statistical_model, load_hyperparameters(
-        #     "models/hyperparameters/ensemble_statistical_model.json", to_scoped_hyperparameters=True)),
+        ("ReadabilityStatisticalModel", models.StatisticalModel,
+         load_hyperparameters("models/hyperparameters/readability_model.json", to_scoped_hyperparameters=True)),
+        ("NerStatisticalModel", models.StatisticalModel,
+         load_hyperparameters("models/hyperparameters/ner_model.json", to_scoped_hyperparameters=True)),
+        ("SentimentStatisticalModel", models.StatisticalModel,
+         load_hyperparameters("models/hyperparameters/sentiment_model.json", to_scoped_hyperparameters=True)),
+        ("CombinedStatisticalModel", models.StatisticalModel,
+         load_hyperparameters("models/hyperparameters/combined_statistical_model.json",
+                              to_scoped_hyperparameters=True)),
+        ("EnsembleStatisticalModel", models.ensemble_statistical_model, load_hyperparameters(
+            "models/hyperparameters/ensemble_statistical_model.json", to_scoped_hyperparameters=True)),
 
         # BERT-based models
         ("BertPooledModel", models.BertPooledModel,
          load_hyperparameters("models/hyperparameters/bert_model.json", to_scoped_hyperparameters=True)),
         ("EnsembleBertPooledModel", models.ensemble_bert_pooled_model,
          load_hyperparameters("models/hyperparameters/ensemble_bert_model.json", to_scoped_hyperparameters=True)),
+        ("Bert256PooledModel", models.BertPooledModel,
+         load_hyperparameters("models/hyperparameters/bert_model_256.json", to_scoped_hyperparameters=True)),
+        ("EnsembleBert256PooledModel", models.ensemble_bert_pooled_model,
+         load_hyperparameters("models/hyperparameters/ensemble_bert_model_256.json", to_scoped_hyperparameters=True)),
     ]
     metrics = [
         ("Loss", tf.keras.losses.binary_crossentropy),
@@ -126,6 +127,28 @@ def main():
     with tf.device("/gpu:0"):
         evaluate_models(x, y, x_test, y_test, eval_models, metrics)
 
+    # With encoder_output=False
+    eval_models = [
+        ("BertPooledModelFfnnOut", models.BertPooledModel,
+         load_hyperparameters("models/hyperparameters/bert_model_ffnn_out.json", to_scoped_hyperparameters=True)),
+        ("EnsembleBertPooledModelFfnnOut", models.ensemble_bert_pooled_model,
+         load_hyperparameters("models/hyperparameters/ensemble_bert_model__ffnn_out.json",
+                              to_scoped_hyperparameters=True)),
+        ("Bert256PooledModelFfnnOut", models.BertPooledModel,
+         load_hyperparameters("models/hyperparameters/bert_model_256_ffnn_out.json", to_scoped_hyperparameters=True)),
+        ("EnsembleBert256PooledModelFfnnOut", models.ensemble_bert_pooled_model,
+         load_hyperparameters("models/hyperparameters/ensemble_bert_model_256_ffnn_out.json",
+                              to_scoped_hyperparameters=True)),
+    ]
+    metrics = [
+        ("Loss", tf.keras.losses.binary_crossentropy),
+        ("Accuracy", tf.metrics.binary_accuracy),
+        ("Precision", precision_score),
+        ("Recall", recall_score),
+        ("F1", f1_score),
+    ]
+    with tf.device("/gpu:0"):
+        evaluate_models(x, y, x_test, y_test, eval_models, metrics)
 
 if __name__ == "__main__":
     main()

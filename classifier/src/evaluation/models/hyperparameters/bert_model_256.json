@@ -1,0 +1,85 @@
+{
+  "trial_id": "149931940c1c4fb50fec9ad1d0221ffa",
+  "hyperparameters": {
+    "space": [],
+    "values": {
+      "BertModel.encoder_url": "https://tfhub.dev/tensorflow/small_bert/bert_en_uncased_L-12_H-256_A-4/1",
+      "BertModel.size": 256,
+      "BertModel.dropout_rate": 0.3753050943143874,
+      "BertModel.dense_activation": "linear",
+      "BertModel.dense_kernel_reg": 0,
+      "BertModel.dense_bias_reg": 0.01,
+      "BertModel.dense_activity_reg": 0,
+      "BertModel.encoder_output": true,
+      "BertModel.learning_rate": 0.00002,
+      "BertModel.batch_size": 8,
+      "BertModel.epochs": 2,
+      "BertModel.feed_data_overlap": 0,
+      "BertModel.preprocessing": "[remove_emojis, remove_tags]",
+
+      "PoolingModel.pooling_type": "concatenate",
+      "PoolingModel.SklearnModel.model_type": "XGBClassifier",
+      "PoolingModel.SklearnModel.learning_rate": 0.03635572236910212,
+      "PoolingModel.SklearnModel.gamma": 6.78156022079664,
+      "PoolingModel.SklearnModel.max_depth": 3,
+      "PoolingModel.SklearnModel.min_child_weight": 4,
+      "PoolingModel.SklearnModel.subsample": 0.6807828579462443,
+      "PoolingModel.SklearnModel.colsample_bytree": 0.5060216329435505,
+      "PoolingModel.SklearnModel.colsample_bylevel": 0.9125482370930075,
+      "PoolingModel.SklearnModel.colsample_bynode": 0.4525081399645974,
+      "PoolingModel.SklearnModel.reg_lambda": 0.7532819326797098,
+      "PoolingModel.SklearnModel.reg_alpha": 0.1201490229846292
+    }
+  },
+  "metrics": {
+    "metrics": {
+      "loss": {
+        "direction": "min",
+        "observations": [
+          {
+            "value": [
+              0.096875911206007
+            ],
+            "step": 0
+          }
+        ]
+      },
+      "binary_accuracy": {
+        "direction": "max",
+        "observations": [
+          {
+            "value": [
+              0.5346829473972321
+            ],
+            "step": 0
+          }
+        ]
+      },
+      "val_loss": {
+        "direction": "min",
+        "observations": [
+          {
+            "value": [
+              0.33142070174217225
+            ],
+            "step": 0
+          }
+        ]
+      },
+      "val_binary_accuracy": {
+        "direction": "max",
+        "observations": [
+          {
+            "value": [
+              0.5688690066337585
+            ],
+            "step": 0
+          }
+        ]
+      }
+    }
+  },
+  "score": 0.33142070174217225,
+  "best_step": 0,
+  "status": "COMPLETED"
+}

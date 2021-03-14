@@ -140,7 +140,7 @@ class PoolingModel(AbstractModel):
 
     def __init__(self, hyperparameters: ScopedHyperParameters):
         super().__init__(hyperparameters)
-        self.sklearn_model = SklearnModel(hyperparameters.get("SklearnModel"))
+        self.sklearn_model = SklearnModel(self.hyperparameters.get_scope("SklearnModel"))
 
     def pool_embeddings(self, x):
         return list({
