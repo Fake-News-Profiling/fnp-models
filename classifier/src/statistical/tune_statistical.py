@@ -1,4 +1,5 @@
-import math
+from functools import partial
+
 import numpy as np
 
 import tensorflow as tf
@@ -10,7 +11,7 @@ from kerastuner import HyperParameters, Objective
 from kerastuner.oracles import BayesianOptimization
 from kerastuner.tuners import Sklearn
 
-from sklearn.base import BaseEstimator
+from sklearn.base import BaseEstimator, TransformerMixin
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import f1_score, accuracy_score, log_loss, make_scorer
@@ -21,12 +22,29 @@ from sklearn.svm import SVC
 from tensorflow.python.keras.callbacks import TerminateOnNaN, EarlyStopping, TensorBoard
 from xgboost import XGBClassifier
 
+from base import load_hyperparameters
 from bert_classifier import BayesianOptimizationTunerWithFitHyperParameters
 from statistical.data_extraction import readability_tweet_extractor, ner_tweet_extractor, sentiment_tweet_extractor, \
-    combined_tweet_extractor
+    combined_tweet_extractor, tweet_level_extractor
 
 
 class SklearnTunerPipeline(Pipeline):
+    def __init__(self, steps, tweet_level):
+        super().__init__(steps)
+        self.tweet_level = tweet_level
+
+    def _to_tweet_level(self, X, y):
+        if self.tweet_level:
+            if y is not None:
+                y = np.asarray([v for v in y for _ in range(len(X[0]))])
+            X = np.asarray([tweet for tweet_feed in X for tweet in tweet_feed])
+
+        return X, y
+
+    def fit_transform(self, X, y=None, **fit_params):
+        X_tl, y_tl = self._to_tweet_level(X, y)
+        return super().fit_transform(X_tl, y_tl, **fit_params)
+
     def fit(self, X, y=None, **fit_params):
         step_names = set(name for name, _ in self.steps)
         updated_fit_params = {}
@@ -37,10 +55,54 @@ class SklearnTunerPipeline(Pipeline):
             else:
                 updated_fit_params[self.steps[-1][0] + "__" + name] = param
 
-        super().fit(X, y, **updated_fit_params)
+        X_tl, y_tl = self._to_tweet_level(X, y)
+        return super().fit(X_tl, y_tl, **updated_fit_params)
+
+    def predict(self, X, **predict_params):
+        X_tl, _ = self._to_tweet_level(X, None)
+        return super().predict(X_tl, **predict_params)
+
+    def _transform(self, X):
+        X_tl, _ = self._to_tweet_level(X, None)
+        return super()._transform(X_tl)
 
 
-def build_sklearn_classifier_model(hps: HyperParameters) -> BaseEstimator:
+class PipelineEstimatorWrapper(TransformerMixin, BaseEstimator):
+    """ Wrapper for an Sklearn estimator which can be used as an intermediate step in an Sklearn Pipeline """
+    def __init__(self, estimator):
+        super().__init__()
+        self.estimator = estimator
+
+    def fit(self, X, y):
+        self.estimator.fit(X, y)
+        return self
+
+    def transform(self, X):
+        Xt = np.asarray(self.estimator.predict(X)).reshape((-1, 100))
+        return Xt
+
+    def predict(self, X):
+        return self.estimator.predict(X)
+
+
+def _stats_wrapper(x_train, y_train, x_test, model_extractors_and_paths):
+    x_train_out = []
+    x_test_out = []
+    for extractor, path in model_extractors_and_paths:
+        x_train_model = extractor.transform(x_train)
+        x_test_model = extractor.transform(x_test)
+        hp = load_hyperparameters(path)
+        model = build_sklearn_classifier_model(hp)
+        model.fit(x_train, y_train)
+        x_train_out.append(model.predict_proba(x_train))
+        x_train_out.append(model.predict_proba(x_test))
+
+    x_train_out = np.concatenate(x_train_out, axis=-1)
+    x_test_out = np.concatenate(x_test_out, axis=-1)
+    return x_train_out, x_test_out
+
+
+def build_sklearn_classifier_model(hps: HyperParameters, preprocessing=True, tweet_level=False):
     """ Build an SkLearn classifier """
     sklearn_model = hps.Choice(
         "sklearn_model",
@@ -91,7 +153,7 @@ def build_sklearn_classifier_model(hps: HyperParameters) -> BaseEstimator:
     if sklearn_model != XGBClassifier.__name__:  # Gradient Boosting Classifier doesn't have multi-collinearity issues
         steps.insert(0, ("PCA", PCA()))
 
-    return SklearnTunerPipeline(steps)
+    return SklearnTunerPipeline(steps, tweet_level=tweet_level) if preprocessing else estimator
 
 
 def build_nn_classifier_model(hps: HyperParameters) -> Model:
@@ -151,6 +213,44 @@ def tune_combined_statistical_models(x_train, y_train, project_name, tune_sklear
         return tune_nn_model(x_train, y_train, "combined_nn_" + project_name, combined_tweet_extractor(), **kwargs)
 
 
+# def tune_combined_ensemble_model(x_train, y_train, project_name, model_trial_paths, **kwargs):
+#     extractors = [readability_tweet_extractor(), ner_tweet_extractor(), sentiment_tweet_extractor()]
+#
+#     tuner = sklearn_classifier(project_name, **kwargs)
+#     tuner.fit_data(
+#         x_train, y_train,
+#         partial(_stats_wrapper, zip(extractors, model_trial_paths))
+#     )
+#     tuner.search(x_train, y_train)
+#     return tuner
+
+
+def tune_tweet_level_model(x_train, y_train, project_name, **kwargs):
+    # Tweet-level tuning
+    extractor = tweet_level_extractor()
+    y_tl = np.asarray([v for v in y_train for _ in range(len(x_train[0]))])
+    x_tl = extractor.transform(np.asarray([tweet for tweet_feed in x_train for tweet in tweet_feed]))
+    tl_tuner = tune_sklearn_model(x_tl, y_tl, "tweet_level_" + project_name, **kwargs)
+
+    tl_pipeline = build_sklearn_classifier_model(tl_tuner.get_best_hyperparameters(1)[0])
+    tl_steps = tl_pipeline.steps
+    tl_steps[-1] = (tl_steps[-1][0], PipelineEstimatorWrapper(tl_steps[-1][1]))
+    tl_pipeline = SklearnTunerPipeline(tl_steps, tweet_level=True)
+
+    # Pick best tweet-level model and find the best ensemble model for the results
+    y_ul = y_train
+    x_ul = x_tl.reshape((len(x_train), len(x_train[0]), len(x_tl[0])))
+
+    def build_model(hp: HyperParameters):
+        return SklearnTunerPipeline([
+            ("tweet_level_pipeline", tl_pipeline),
+            ("estimator", build_sklearn_classifier_model(hp, preprocessing=False)),
+        ], tweet_level=False)
+    ul_tuner = tune_sklearn_model(x_ul, y_ul, "tweet_level_ensemble_" + project_name, build_model=build_model, **kwargs)
+
+    return tl_tuner, ul_tuner
+
+
 def tune_nn_model(x_train, y_train, project_name, feature_extractor=None, tf_train_device="/gpu:0", **kwargs):
     # Extract features
     if feature_extractor is not None:
@@ -187,25 +287,27 @@ def nn_tuner(project_name, hyperparameters=None, max_trials=30, directory="../..
     )
 
 
-def tune_sklearn_model(x_train, y_train, project_name, feature_extractor=None, **kwargs):
+def tune_sklearn_model(x_train, y_train, project_name, feature_extractor=None,
+                       build_model=build_sklearn_classifier_model, **kwargs):
     # Extract features
     if feature_extractor is not None:
         x_train = feature_extractor.transform(x_train)
 
     # Setup Keras Tuner
-    tuner = sklearn_tuner(project_name, **kwargs)
+    tuner = sklearn_tuner(project_name, build_model=build_model, **kwargs)
     tuner.search(x_train, y_train)
     return tuner
 
 
-def sklearn_tuner(project_name, max_trials=30, directory="../../training/statistical",
+def sklearn_tuner(project_name, build_model=build_sklearn_classifier_model, max_trials=30,
+                  directory="../../training/statistical",
                   kfold=StratifiedKFold(n_splits=5, shuffle=True, random_state=3)):
     return Sklearn(
         oracle=BayesianOptimization(
             objective=Objective("score", "min"),  # minimise log loss
             max_trials=max_trials,
         ),
-        hypermodel=build_sklearn_classifier_model,
+        hypermodel=build_model,
         scoring=make_scorer(log_loss, needs_proba=True),
         metrics=[accuracy_score, f1_score],
         cv=kfold,

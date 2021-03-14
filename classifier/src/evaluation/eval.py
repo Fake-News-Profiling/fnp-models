@@ -94,7 +94,8 @@ def main():
     eval_models = [
         # Baselines
         # (models.RandomModel, None),
-        (models.TfIdfModel, None),
+        # (models.TfIdfModel, None),
+        (models.tfidf.TfIdfFfnnModel, None)
         # (models.Buda20NgramEnsembleModel, None),
 
         # My models
