@@ -23,9 +23,11 @@ import ipynb.fs.full.preprocessing as processing
 import ipynb.fs.full.bert_fake_news_classifier as bclf
 from ipynb.fs.full.notif_email import send_email
 
+from data.data_parser import Tweet
+
 # Load the saved dataset split
 def load_data():
-    return np.load("datasets/en_split_data.npy", allow_pickle=True)
+    return np.load("datasets/en_split_data-backup.npy", allow_pickle=True)
 
 (tweet_train, label_train, 
  tweet_val, label_val, 

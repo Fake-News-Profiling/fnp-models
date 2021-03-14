@@ -1,0 +1,61 @@
+{
+  "trial_id": "2d28de1cc912dc2509dfa536e69b13fe",
+  "hyperparameters": {
+    "space":[],
+    "values": {
+      "StatisticalModel_name": "ReadabilityStatisticalModel",
+      "StatisticalModel_data_type": "readability",
+      "StatisticalModel_model_type": "XGBClassifier",
+      "StatisticalModel_learning_rate": 0.08669363953177207,
+      "StatisticalModel_gamma": 5.955678079702624,
+      "StatisticalModel_max_depth": 5,
+      "StatisticalModel_min_child_weight": 4,
+      "StatisticalModel_subsample": 0.6089071380397063,
+      "StatisticalModel_colsample_bytree": 0.5205555493166993,
+      "StatisticalModel_colsample_bylevel": 0.8931299666342941,
+      "StatisticalModel_colsample_bynode": 0.3665620451438264,
+      "StatisticalModel_reg_lambda": 0.4924234211006915,
+      "StatisticalModel_reg_alpha": 0.19265879372624045
+    }
+  },
+  "metrics": {
+    "metrics": {
+      "score": {
+        "direction": "min",
+        "observations": [
+          {
+            "value": [
+              1.018448111488603
+            ],
+            "step": 0
+          }
+        ]
+      },
+      "accuracy_score": {
+        "direction": "min",
+        "observations": [
+          {
+            "value": [
+              0.6407407407407406
+            ],
+            "step": 0
+          }
+        ]
+      },
+      "f1_score": {
+        "direction": "min",
+        "observations": [
+          {
+            "value": [
+              0.628389239384953
+            ],
+            "step": 0
+          }
+        ]
+      }
+    }
+  },
+  "score": 1.018448111488603,
+  "best_step": 0,
+  "status": "COMPLETED"
+}
