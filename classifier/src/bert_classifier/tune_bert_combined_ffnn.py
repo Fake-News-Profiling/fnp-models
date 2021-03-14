@@ -5,7 +5,7 @@ import tensorflow as tf
 from kerastuner import HyperParameters, Objective
 from kerastuner.oracles import BayesianOptimization as BayesianOptimizationOracle
 from official.nlp import optimization
-from sklearn.metrics import make_scorer, accuracy_score, f1_score
+from sklearn.metrics import make_scorer, accuracy_score, f1_score, log_loss
 from sklearn.model_selection import StratifiedKFold
 from tensorflow.keras import Model
 from tensorflow.keras.callbacks import EarlyStopping, TensorBoard, TerminateOnNaN
@@ -18,7 +18,7 @@ from bert_classifier import BayesianOptimizationCVTunerWithFitHyperParameters
 from bert_classifier.cv_tuners import SklearnCV
 from bert_classifier.tune_bert_ffnn import load_bert_single_dense_model, preprocess_data
 from statistical.data_extraction import combined_tweet_extractor
-from statistical.tune_statistical import build_sklearn_classifier_model, loss_accuracy_scorer
+from statistical.tune_statistical import build_sklearn_classifier_model
 
 """
 Tuning objective: Feed data into an already fine-tuned BERT model and extract the pooled outputs. Pool all of these 
@@ -35,6 +35,8 @@ def data_preprocessing_func(hp, x_train, y_train, x_test, y_test):
             return tf.convert_to_tensor([np.min(tweet_feed, axis=0) for tweet_feed in x])
         elif hp.get("pooling_type") == "average":
             return tf.convert_to_tensor([np.mean(tweet_feed, axis=0) for tweet_feed in x])
+        elif hp.get("pooling_type") == "concatenate":
+            return tf.convert_to_tensor([np.concatenate(tweet_feed) for tweet_feed in x])
         else:
             raise RuntimeError("Invalid 'pooling_type', should be 'average' or 'max'")
 
@@ -44,7 +46,7 @@ def data_preprocessing_func(hp, x_train, y_train, x_test, y_test):
 
 
 def _bert_model_wrapper(x_train, y_train, x_test, trial_filepath,
-                        tf_device="/gpu:0", tokenizer_class=BertTweetFeedTokenizer):
+                        tf_device="/gpu:0", tokenizer_class=BertTweetFeedTokenizer, encoder_output=True):
     """
     Fits a BERT model, based on hyper-parameters from a previous trial. Note that this uses the
     `load_bert_single_dense_model` function from `tune_bert_ffnn.py`.
@@ -67,12 +69,15 @@ def _bert_model_wrapper(x_train, y_train, x_test, trial_filepath,
             epochs=hp.get("epochs"),
             batch_size=hp.get("batch_size"),
         )
-        encoder_model = Model(bert_model.inputs, bert_model.layers[3].output["pooled_output"])
+        if encoder_output:
+            predict_model = Model(bert_model.inputs, bert_model.layers[3].output["pooled_output"])
+        else:
+            predict_model = bert_model
 
         # Transform the input data and pass it through BERT
         def _bert_tokenize_predict(data):
             return np.asarray([
-                encoder_model.predict(
+                predict_model.predict(
                     tokenizer.tokenize_input([tweet_feed], overlap=hp.get("feed_data_overlap"))
                 ) for tweet_feed in data
             ])
@@ -82,6 +87,26 @@ def _bert_model_wrapper(x_train, y_train, x_test, trial_filepath,
         assert len(x_train_out) == len(x_train)
         assert len(x_test_out) == len(x_test)
         return x_train_out, x_test_out
+
+
+def _bert_tweet_level_stats_wrapper(x_train, y_train, x_test, *args, **kwargs):
+    """
+    Fits a BERT model and extracts BERT (Individual) tweet-level embeddings, as well as statistical tweet-level
+    embeddings, returning the concatenated embeddings for each tweet
+    """
+    kwargs["tokenizer_class"] = BertIndividualTweetTokenizer
+    tl_extractor = tweet_level_extractor()
+
+    def tl_extractor_wrapper(data):
+        return np.asarray([tl_extractor.transform(tweet_feed) for tweet_feed in data])
+
+    x_train_stats, x_test_stats = tl_extractor_wrapper(x_train), tl_extractor_wrapper(x_test)
+    x_train_bert, x_test_bert = _bert_model_wrapper(x_train, y_train, x_test, *args, **kwargs)
+    # shapes = (num_users, num_tweets, embedding_size)
+    # Transform to (num_users, num_tweets, bert_embedding_size + stats_embedding_size)
+    x_train_out = np.concatenate([x_train_stats, x_train_bert], axis=-1)
+    x_test_out = np.concatenate([x_test_stats, x_test_bert], axis=-1)
+    return x_train_out, x_test_out
 
 
 def build_nn_classifier(hp):
@@ -171,7 +196,9 @@ def tune_bert_sklearn_classifier(x_train, y_train, project_name, bert_model_tria
         x_train, y_train,
         partial(_bert_model_wrapper,
                 trial_filepath=bert_model_trial_filepath,
-                tokenizer_class=BertTweetFeedTokenizer if bert_model_type == "feed" else BertIndividualTweetTokenizer)
+                tokenizer_class=BertTweetFeedTokenizer if bert_model_type == "feed" else BertIndividualTweetTokenizer,
+                encoder_output=True,
+                )
     )
 
     print("Beginning tuning")
@@ -179,9 +206,33 @@ def tune_bert_sklearn_classifier(x_train, y_train, project_name, bert_model_tria
     return tuner
 
 
-def sklearn_classifier(project_name, max_trials=30):
+def tune_bert_tweet_level_stats_sklearn_classifier(x_train, y_train, project_name, bert_model_trial_filepath,
+                                                   max_trials=30):
+    """
+    Tune a BERT final classifier, where BERT (Individual) outputs are combined with tweet-level statistical
+    information
+    """
+    print("Building tuner")
+    tuner = sklearn_classifier(project_name, max_trials=max_trials, pooling_types=["concatenate", "mean", "max"])
+
+    print("Fitting tuner with training data")
+    tuner.fit_data(
+        x_train, y_train,
+        partial(_bert_tweet_level_stats_wrapper,
+                trial_filepath=bert_model_trial_filepath,
+                encoder_output=True)
+    )
+
+    print("Beginning tuning")
+    tuner.search(x_train, y_train)
+    return tuner
+
+
+def sklearn_classifier(project_name, max_trials=30, pooling_types=None):
     hp = HyperParameters()
-    hp.Choice("pooling_type", ["max", "min", "average"])
+    if pooling_types is None:
+        pooling_types = ["concatenate"]
+    hp.Choice("pooling_type", pooling_types)
 
     return SklearnCV(
         preprocess=data_preprocessing_func,
@@ -191,7 +242,7 @@ def sklearn_classifier(project_name, max_trials=30):
             hyperparameters=hp,
         ),
         hypermodel=build_sklearn_classifier_model,
-        scoring=make_scorer(loss_accuracy_scorer, needs_proba=True),
+        scoring=make_scorer(log_loss, needs_proba=True),
         metrics=[accuracy_score, f1_score],
         cv=StratifiedKFold(n_splits=5, shuffle=True, random_state=3),
         directory="../training/bert_clf/initial_eval",

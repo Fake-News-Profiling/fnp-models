@@ -21,7 +21,7 @@ from sklearn.svm import SVC
 from tensorflow.python.keras.callbacks import TerminateOnNaN, EarlyStopping, TensorBoard
 from xgboost import XGBClassifier
 
-from bert_classifier import BayesianOptimizationTunerWithFitHyperParameters
+from bert_classifier import BayesianOptimizationCVTunerWithFitHyperParameters
 from statistical.data_extraction import readability_tweet_extractor, ner_tweet_extractor, sentiment_tweet_extractor, \
     combined_tweet_extractor
 
@@ -177,7 +177,7 @@ def tune_nn_model(x_train, y_train, project_name, feature_extractor=None, tf_tra
 
 
 def nn_tuner(project_name, hyperparameters=None, max_trials=30, directory="../../training/statistical"):
-    return BayesianOptimizationTunerWithFitHyperParameters(
+    return BayesianOptimizationCVTunerWithFitHyperParameters(
         hyperparameters=hyperparameters,
         hypermodel=build_nn_classifier_model,
         objective="val_loss",

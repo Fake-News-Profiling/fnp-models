@@ -30,10 +30,10 @@ def evaluate_models(x, y, x_test, y_test, eval_models, eval_metrics, cv_splits=5
     for i, (train_indices, val_indices) in enumerate(kfold.split(x, y)):
         print("y_true", y[val_indices])
 
-        for model_class, hyperparameters in eval_models:
+        for name, model_class, hyperparameters in eval_models:
             cv_metrics["CV split"].append(i + 1)
             model = model_class(hyperparameters)
-            cv_metrics["Model"].append(model.name)
+            cv_metrics["Model"].append(name)
 
             if model_class.__name__ == models.BertPooledModel.__name__:
                 model.fit(x[train_indices], y[train_indices], x[val_indices], y[val_indices])
@@ -65,14 +65,14 @@ def evaluate_models(x, y, x_test, y_test, eval_models, eval_metrics, cv_splits=5
 
     # Fit the models on the entire training set and evaluate them on the test set
     test_metrics = defaultdict(list)
-    for model_class, hyperparameters in eval_models:
+    for name, model_class, hyperparameters in eval_models:
         model = model_class(hyperparameters)
         model.fit(x, y)
         metrics = evaluate(model, x_test, y_test, eval_metrics)
-        test_metrics["Model"].append(model.name)
+        test_metrics["Model"].append(name)
 
-        for name, value in metrics.items():
-            test_metrics[name].append(float(value))
+        for metric_name, value in metrics.items():
+            test_metrics[metric_name].append(float(value))
 
         # TODO - Write model test results to file here
 
@@ -93,18 +93,23 @@ def main():
     print("Beginning model evaluation")
     eval_models = [
         # Baselines
-        # (models.RandomModel, None),
-        (models.TfIdfModel, None),
-        # (models.Buda20NgramEnsembleModel, None),
+        # ("RandomModel", models.RandomModel, None),
+        ("TfIdfModel", models.TfIdfModel, None),
+        # ("Buda20NgramEnsembleModel", models.Buda20NgramEnsembleModel, None),
 
         # My models
-        # (models.StatisticalModel, load_hyperparameters("models/hyperparameters/readability_model.json")),
-        # (models.StatisticalModel, load_hyperparameters("models/hyperparameters/ner_model.json")),
-        # (models.StatisticalModel, load_hyperparameters("models/hyperparameters/sentiment_model.json")),
-        # (models.StatisticalModel, load_hyperparameters("models/hyperparameters/combined_statistical_model.json")),
-        # (models.EnsembleModel, load_hyperparameters(
+        # ("ReadabilityStatisticalModel", models.StatisticalModel,
+        # load_hyperparameters("models/hyperparameters/readability_model.json")),
+        # ("NerStatisticalModel", models.StatisticalModel,
+        # load_hyperparameters("models/hyperparameters/ner_model.json")),
+        # ("SentimentStatisticalModel", models.StatisticalModel,
+        # load_hyperparameters("models/hyperparameters/sentiment_model.json")),
+        # ("CombinedStatisticalModel", models.StatisticalModel,
+        # load_hyperparameters("models/hyperparameters/combined_statistical_model.json")),
+        # ("EnsembleCombinedStatisticalModel", models.EnsembleModel, load_hyperparameters(
         #     "models/hyperparameters/ensemble_combined_statistical_model.json")),
-        # (models.BertPooledModel, load_hyperparameters("models/hyperparameters/bert_model.json")),
+        # ("BertPooledModel", models.BertPooledModel,
+        # load_hyperparameters("models/hyperparameters/bert_model.json")),
     ]
     metrics = [
         ("Loss", tf.keras.losses.binary_crossentropy),

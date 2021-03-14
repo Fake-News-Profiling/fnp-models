@@ -10,7 +10,6 @@ class EnsembleModel(AbstractModel):
     """ A random model which uses `numpy.random.randint()` to pick a prediction value of 0 or 1 """
     def __init__(self, hyperparameters: HyperParameters, models: List[AbstractModel]):
         super().__init__(hyperparameters)
-        self.name = self.__class__.__name__
         self.models = models
         self.ensemble_model = None
 
