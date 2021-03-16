@@ -130,3 +130,103 @@ Final test set results:
 |  3 | SentimentStatisticalModel   |  6.14858 |   0.6      |    0.588235 | 0.666667 | 0.625    |
 |  4 | CombinedStatisticalModel    |  5.63747 |   0.633333 |    0.625    | 0.666667 | 0.645161 |
 |  5 | Buda20NgramEnsembleModel    |  3.07582 |   0.8      |    0.8      | 0.8      | 0.8      |
+
+
+Results 15/03/2021:
+-------------------------------------------------
+
+5-fold Cross-Validation results:
+|    | CV split   | Model                       |    Loss |   Accuracy |   Precision |   Recall |       F1 |
+|---:|:-----------|:----------------------------|--------:|-----------:|------------:|---------:|---------:|
+| 10 | 1          | Bert256PooledModel          | 3.98378 |   0.740741 |    0.709677 | 0.814815 | 0.758621 |
+| 22 | 2          | Bert256PooledModel          | 5.12806 |   0.666667 |    0.68     | 0.62963  | 0.653846 |
+| 34 | 3          | Bert256PooledModel          | 6.83176 |   0.555556 |    0.548387 | 0.62963  | 0.586207 |
+| 46 | 4          | Bert256PooledModel          | 5.40692 |   0.648148 |    0.625    | 0.740741 | 0.677966 |
+| 58 | 5          | Bert256PooledModel          | 4.84242 |   0.685185 |    0.692308 | 0.666667 | 0.679245 |
+| 70 | Average    | Bert256PooledModel          | 5.23859 |   0.659259 |    0.651074 | 0.696296 | 0.671177 |
+|  8 | 1          | BertPooledModel             | 5.40862 |   0.648148 |    0.633333 | 0.703704 | 0.666667 |
+| 20 | 2          | BertPooledModel             | 5.41371 |   0.648148 |    0.666667 | 0.592593 | 0.627451 |
+| 32 | 3          | BertPooledModel             | 5.97821 |   0.611111 |    0.6      | 0.666667 | 0.631579 |
+| 44 | 4          | BertPooledModel             | 5.11787 |   0.666667 |    0.621622 | 0.851852 | 0.71875  |
+| 56 | 5          | BertPooledModel             | 3.98887 |   0.740741 |    0.76     | 0.703704 | 0.730769 |
+| 68 | Average    | BertPooledModel             | 5.18146 |   0.662963 |    0.656324 | 0.703704 | 0.675043 |
+|  2 | 1          | Buda20NgramEnsembleModel    | 4.55337 |   0.703704 |    0.677419 | 0.777778 | 0.724138 |
+| 14 | 2          | Buda20NgramEnsembleModel    | 3.99227 |   0.740741 |    0.809524 | 0.62963  | 0.708333 |
+| 26 | 3          | Buda20NgramEnsembleModel    | 5.41031 |   0.648148 |    0.642857 | 0.666667 | 0.654545 |
+| 38 | 4          | Buda20NgramEnsembleModel    | 3.13363 |   0.796296 |    0.807692 | 0.777778 | 0.792453 |
+| 50 | 5          | Buda20NgramEnsembleModel    | 3.70322 |   0.759259 |    0.769231 | 0.740741 | 0.754717 |
+| 62 | Average    | Buda20NgramEnsembleModel    | 4.15856 |   0.72963  |    0.741345 | 0.718519 | 0.726837 |
+|  6 | 1          | CombinedStatisticalModel    | 6.26216 |   0.592593 |    0.580645 | 0.666667 | 0.62069  |
+| 18 | 2          | CombinedStatisticalModel    | 6.26725 |   0.592593 |    0.6      | 0.555556 | 0.576923 |
+| 30 | 3          | CombinedStatisticalModel    | 5.97821 |   0.611111 |    0.6      | 0.666667 | 0.631579 |
+| 42 | 4          | CombinedStatisticalModel    | 4.26942 |   0.722222 |    0.7      | 0.777778 | 0.736842 |
+| 54 | 5          | CombinedStatisticalModel    | 4.26772 |   0.722222 |    0.6875   | 0.814815 | 0.745763 |
+| 66 | Average    | CombinedStatisticalModel    | 5.40895 |   0.648148 |    0.633629 | 0.696296 | 0.662359 |
+| 11 | 1          | EnsembleBert256PooledModel  | 4.84411 |   0.685185 |    0.708333 | 0.62963  | 0.666667 |
+| 23 | 2          | EnsembleBert256PooledModel  | 5.12976 |   0.666667 |    0.695652 | 0.592593 | 0.64     |
+| 35 | 3          | EnsembleBert256PooledModel  | 6.25876 |   0.592593 |    0.571429 | 0.740741 | 0.645161 |
+| 47 | 4          | EnsembleBert256PooledModel  | 4.27622 |   0.722222 |    0.772727 | 0.62963  | 0.693878 |
+| 59 | 5          | EnsembleBert256PooledModel  | 4.27452 |   0.722222 |    0.75     | 0.666667 | 0.705882 |
+| 71 | Average    | EnsembleBert256PooledModel  | 4.95667 |   0.677778 |    0.699628 | 0.651852 | 0.670318 |
+|  9 | 1          | EnsembleBertPooledModel     | 5.69596 |   0.62963  |    0.62963  | 0.62963  | 0.62963  |
+| 21 | 2          | EnsembleBertPooledModel     | 5.98331 |   0.611111 |    0.625    | 0.555556 | 0.588235 |
+| 33 | 3          | EnsembleBertPooledModel     | 5.97821 |   0.611111 |    0.6      | 0.666667 | 0.631579 |
+| 45 | 4          | EnsembleBertPooledModel     | 4.55677 |   0.703704 |    0.703704 | 0.703704 | 0.703704 |
+| 57 | 5          | EnsembleBertPooledModel     | 3.98717 |   0.740741 |    0.740741 | 0.740741 | 0.740741 |
+| 69 | Average    | EnsembleBertPooledModel     | 5.24028 |   0.659259 |    0.659815 | 0.659259 | 0.658778 |
+|  7 | 1          | EnsembleStatisticalModel    | 5.68917 |   0.62963  |    0.6      | 0.777778 | 0.677419 |
+| 19 | 2          | EnsembleStatisticalModel    | 5.98331 |   0.611111 |    0.625    | 0.555556 | 0.588235 |
+| 31 | 3          | EnsembleStatisticalModel    | 4.55167 |   0.703704 |    0.666667 | 0.814815 | 0.733333 |
+| 43 | 4          | EnsembleStatisticalModel    | 4.27282 |   0.722222 |    0.730769 | 0.703704 | 0.716981 |
+| 55 | 5          | EnsembleStatisticalModel    | 5.40692 |   0.648148 |    0.625    | 0.740741 | 0.677966 |
+| 67 | Average    | EnsembleStatisticalModel    | 5.18078 |   0.662963 |    0.649487 | 0.718519 | 0.678787 |
+|  4 | 1          | NerStatisticalModel         | 5.69256 |   0.62963  |    0.612903 | 0.703704 | 0.655172 |
+| 16 | 2          | NerStatisticalModel         | 5.69766 |   0.62963  |    0.64     | 0.592593 | 0.615385 |
+| 28 | 3          | NerStatisticalModel         | 5.12467 |   0.666667 |    0.655172 | 0.703704 | 0.678571 |
+| 40 | 4          | NerStatisticalModel         | 4.84751 |   0.685185 |    0.75     | 0.555556 | 0.638298 |
+| 52 | 5          | NerStatisticalModel         | 5.41031 |   0.648148 |    0.642857 | 0.666667 | 0.654545 |
+| 64 | Average    | NerStatisticalModel         | 5.35454 |   0.651852 |    0.660187 | 0.644444 | 0.648394 |
+|  0 | 1          | RandomModel                 | 5.70106 |   0.62963  |    0.666667 | 0.518519 | 0.583333 |
+| 12 | 2          | RandomModel                 | 7.1242  |   0.537037 |    0.545455 | 0.444444 | 0.489796 |
+| 24 | 3          | RandomModel                 | 8.83129 |   0.425926 |    0.416667 | 0.37037  | 0.392157 |
+| 36 | 4          | RandomModel                 | 8.54394 |   0.444444 |    0.444444 | 0.444444 | 0.444444 |
+| 48 | 5          | RandomModel                 | 5.97651 |   0.611111 |    0.59375  | 0.703704 | 0.644068 |
+| 60 | Average    | RandomModel                 | 7.2354  |   0.52963  |    0.533396 | 0.496296 | 0.51076  |
+|  3 | 1          | ReadabilityStatisticalModel | 5.12467 |   0.666667 |    0.655172 | 0.703704 | 0.678571 |
+| 15 | 2          | ReadabilityStatisticalModel | 5.69936 |   0.62963  |    0.652174 | 0.555556 | 0.6      |
+| 27 | 3          | ReadabilityStatisticalModel | 5.97481 |   0.611111 |    0.588235 | 0.740741 | 0.655738 |
+| 39 | 4          | ReadabilityStatisticalModel | 4.27282 |   0.722222 |    0.730769 | 0.703704 | 0.716981 |
+| 51 | 5          | ReadabilityStatisticalModel | 4.55507 |   0.703704 |    0.689655 | 0.740741 | 0.714286 |
+| 63 | Average    | ReadabilityStatisticalModel | 5.12535 |   0.666667 |    0.663201 | 0.688889 | 0.673115 |
+|  5 | 1          | SentimentStatisticalModel   | 5.12636 |   0.666667 |    0.666667 | 0.666667 | 0.666667 |
+| 17 | 2          | SentimentStatisticalModel   | 4.55677 |   0.703704 |    0.703704 | 0.703704 | 0.703704 |
+| 29 | 3          | SentimentStatisticalModel   | 5.69426 |   0.62963  |    0.62069  | 0.666667 | 0.642857 |
+| 41 | 4          | SentimentStatisticalModel   | 5.41031 |   0.648148 |    0.642857 | 0.666667 | 0.654545 |
+| 53 | 5          | SentimentStatisticalModel   | 4.27282 |   0.722222 |    0.730769 | 0.703704 | 0.716981 |
+| 65 | Average    | SentimentStatisticalModel   | 5.01211 |   0.674074 |    0.672937 | 0.681481 | 0.676951 |
+|  1 | 1          | TfIdfModel                  | 5.11617 |   0.666667 |    0.615385 | 0.888889 | 0.727273 |
+| 13 | 2          | TfIdfModel                  | 6.54611 |   0.574074 |    0.5625   | 0.666667 | 0.610169 |
+| 25 | 3          | TfIdfModel                  | 7.6853  |   0.5      |    0.5      | 0.592593 | 0.542373 |
+| 37 | 4          | TfIdfModel                  | 4.83732 |   0.685185 |    0.65625  | 0.777778 | 0.711864 |
+| 49 | 5          | TfIdfModel                  | 6.53932 |   0.574074 |    0.55     | 0.814815 | 0.656716 |
+| 61 | Average    | TfIdfModel                  | 6.14484 |   0.6      |    0.576827 | 0.748148 | 0.649679 |
+
+
+Results 15/03/2021:
+Updated BERTPooled Model to take output from BERT's FFNN (not pooled_output) and then concatenate that data
+with tweet-level statistical data
+----------------------------------
+|    | CV split   | Model                          |    Loss |   Accuracy |   Precision |   Recall |       F1 |
+|---:|:-----------|:-------------------------------|--------:|-----------:|------------:|---------:|---------:|
+|  1 | 1          | BertPooledModelFfnnOut         | 5.12636 |   0.666667 |    0.666667 | 0.666667 | 0.666667 |
+|  3 | 2          | BertPooledModelFfnnOut         | 4.84242 |   0.685185 |    0.692308 | 0.666667 | 0.679245 |
+|  5 | 3          | BertPooledModelFfnnOut         | 4.55507 |   0.703704 |    0.689655 | 0.740741 | 0.714286 |
+|  7 | 4          | BertPooledModelFfnnOut         | 5.12467 |   0.666667 |    0.655172 | 0.703704 | 0.678571 |
+|  9 | 5          | BertPooledModelFfnnOut         | 4.27112 |   0.722222 |    0.714286 | 0.740741 | 0.727273 |
+| 11 | Average    | BertPooledModelFfnnOut         | 4.78393 |   0.688889 |    0.683618 | 0.703704 | 0.693208 |
+|  0 | 1          | EnsembleBertPooledModelFfnnOut | 5.41031 |   0.648148 |    0.642857 | 0.666667 | 0.654545 |
+|  2 | 2          | EnsembleBertPooledModelFfnnOut | 5.12467 |   0.666667 |    0.655172 | 0.703704 | 0.678571 |
+|  4 | 3          | EnsembleBertPooledModelFfnnOut | 3.41588 |   0.777778 |    0.758621 | 0.814815 | 0.785714 |
+|  6 | 4          | EnsembleBertPooledModelFfnnOut | 4.55337 |   0.703704 |    0.677419 | 0.777778 | 0.724138 |
+|  8 | 5          | EnsembleBertPooledModelFfnnOut | 4.56356 |   0.703704 |    0.789474 | 0.555556 | 0.652174 |
+| 10 | Average    | EnsembleBertPooledModelFfnnOut | 4.61356 |   0.7      |    0.704709 | 0.703704 | 0.699029 |

@@ -116,15 +116,12 @@ class BertModel(AbstractModel):
 
     def predict(self, x):
         x_processed = self.preprocessor.transform(x)
-        if self.hyperparameters.get("encoder_output"):
-            return np.asarray([
-                self.encoder_model.predict(
-                    self.tokenize([tweet_feed], overlap=self.hyperparameters.get("feed_data_overlap"))
-                ) for tweet_feed in x_processed
-            ])
-
-        x_tokenized = self.tokenize(x_processed)
-        return self.model.predict(x_tokenized)
+        use_model = self.encoder_model if self.hyperparameters.get("encoder_output") else self.model
+        return np.asarray([
+            use_model.predict(
+                self.tokenize([tweet_feed], overlap=self.hyperparameters.get("feed_data_overlap"))
+            ) for tweet_feed in x_processed
+        ])
 
     def predict_proba(self, x):
         x_processed = self.preprocessor.transform(x)
@@ -143,11 +140,11 @@ class PoolingModel(AbstractModel):
         self.sklearn_model = SklearnModel(self.hyperparameters.get_scope("SklearnModel"))
 
     def pool_embeddings(self, x):
-        return list({
+        return np.asarray(list({
             "max": (np.max(tweet_feed, axis=0) for tweet_feed in x),
             "average": (np.mean(tweet_feed, axis=0) for tweet_feed in x),
             "concatenate": (np.concatenate(tweet_feed) for tweet_feed in x),
-        }[self.hyperparameters.get("pooling_type")])
+        }[self.hyperparameters.get("pooling_type")]))
 
     def fit(self, x, y):
         x_pooled = self.pool_embeddings(x)

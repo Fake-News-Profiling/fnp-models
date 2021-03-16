@@ -52,12 +52,13 @@ def preprocess_data(hp, x_train, y_train, x_test, y_test):
     }[hp.get("preprocessing")]  # TODO - tag numbers?
     preprocessor = pre.BertTweetPreprocessor(
         [pre.tag_indicators, pre.replace_xml_and_html] + transformers + [pre.remove_extra_spacing])
-    x_train_processed = preprocessor.transform(x_train)
-    x_test_processed = preprocessor.transform(x_test)
-    return hp, x_train_processed, y_train, x_test_processed, y_test
+    x_train = preprocessor.transform(x_train)
+    if x_test is not None:
+        x_test = preprocessor.transform(x_test)
+    return hp, x_train, y_train, x_test, y_test
 
 
-def tokenize_data(hp, x_train, y_train, x_test, y_test, tokenizer_class=BertTweetFeedTokenizer):
+def tokenize_data(hp, x_train, y_train, x_test, y_test, tokenizer_class=BertTweetFeedTokenizer, shuffle=True):
     return tokenize_bert_input(
         encoder_url=hp.get("bert_encoder_url"),
         hidden_layer_size=hp.get("bert_size"),
@@ -66,7 +67,7 @@ def tokenize_data(hp, x_train, y_train, x_test, y_test, tokenizer_class=BertTwee
         y_train=y_train,
         x_val=x_test,
         y_val=y_test,
-        shuffle=True,
+        shuffle=shuffle,
         feed_overlap=hp.get("feed_data_overlap"),
     )
 
@@ -181,7 +182,7 @@ def tune_bert_ffnn(x_train, y_train, bert_encoder_url, bert_size, project_name, 
             data_preprocessing_func = comp(tokenizer_func, preprocess_data)
 
         tuner = BayesianOptimizationCVTunerWithFitHyperParameters(
-            data_preprocessing_func=data_preprocessing_func,
+            preprocess=data_preprocessing_func,
             hyperparameters=hp,
             hypermodel=_build_bert_single_dense,
             objective="val_loss",

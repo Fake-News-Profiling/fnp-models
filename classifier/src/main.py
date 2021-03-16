@@ -2,6 +2,7 @@ import numpy as np
 import tensorflow as tf
 
 from base.training import allow_gpu_memory_growth
+from bert_classifier.tune_bert_stats_ffnn import tune_bert_stats_ffnn
 from data import load_data, BertTweetPreprocessor, parse_labels_to_floats
 from bert_classifier.tune_ffnn import tune_ffnn
 from bert_classifier.tune_bert_ffnn import tune_bert_ffnn
@@ -26,8 +27,8 @@ def main():
     label_val = parse_labels_to_floats(label_val)
     label_test = parse_labels_to_floats(label_test)
 
-    x_train = np.concatenate([tweet_train, tweet_val])
-    y_train = np.concatenate([label_train, label_val])
+    x_train = np.concatenate([tweet_train, tweet_val, tweet_test])
+    y_train = np.concatenate([label_train, label_val, label_test])
 
     print("Preprocessing data")
     # tweet_preprocessor = BertTweetPreprocessor()
@@ -77,11 +78,19 @@ def main():
     #     max_trials=100,
     #     bert_model_type="individual",
     # )
-    tuner_128_stats_sklearn = tune_bert_tweet_level_stats_sklearn_classifier(
-        x_train, y_train,
-        project_name="bert_combined_ffnn_19",
-        bert_model_trial_filepath="../training/bert_clf/initial_eval/bert_combined_ffnn_12/bert_model.json",
-        max_trials=100,
+    # tuner_128_stats_sklearn = tune_bert_tweet_level_stats_sklearn_classifier(
+    #     x_train, y_train,
+    #     project_name="bert_combined_ffnn_19",
+    #     bert_model_trial_filepath="../training/bert_clf/initial_eval/bert_combined_ffnn_12/bert_model.json",
+    #     max_trials=100,
+    # )
+    tuner_128_stats_sklearn = tune_bert_stats_ffnn(
+            x_train, y_train,
+            bert_encoder_url="https://tfhub.dev/tensorflow/small_bert/bert_en_uncased_L-12_H-128_A-2/1",
+            bert_size=128,
+            project_name="bert_ffnn_19",
+            max_trials=12,
+            batch_sizes=[64],
     )
     #
     # # Tune BERT 256, final classifier

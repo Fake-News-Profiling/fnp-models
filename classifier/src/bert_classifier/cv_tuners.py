@@ -28,14 +28,14 @@ class TunerCV:
         """ Fit the Optimizer with pre-computed cross-validation data """
         self.cv_data = cv_data
 
-    def fit_data(self, x_train, y_train, bert_model_wrapper):
+    def fit_data(self, x_train, y_train, transformer_wrapper):
         """
-        Splits the data into `n_splits` folds, trains BERT on each training fold, and saves the data for
-        cross-validation
+        Splits the data into `n_splits` folds, transforms data using the transformer_wrapper, and then saves the data
+        for cross-validation
         """
         data_splits = []
         for x_train, y_train, x_test, y_test in kfold_split_wrapper(self.cv, x_train, y_train):
-            x_train_bert, x_test_bert = bert_model_wrapper(x_train, y_train, x_test)
+            x_train_bert, x_test_bert = transformer_wrapper(x_train, y_train, x_test)
             data_splits.append((x_train_bert, y_train, x_test_bert, y_test))
 
         self.fit_cv_data(data_splits)
@@ -45,7 +45,7 @@ class BayesianOptimizationCV(BayesianOptimization, TunerCV):
     """ BayesianOptimization keras Tuner which performs Cross Validation """
     def __init__(self, n_splits=5, preprocess=None, *args, **kwargs):
         BayesianOptimization.__init__(self, *args, **kwargs)
-        TunerCV.__init__(self, cv=StratifiedKFold(n_splits=n_splits, shuffle=True, random_state=42),
+        TunerCV.__init__(self, cv=StratifiedKFold(n_splits=n_splits, shuffle=True, random_state=1),
                          preprocess=preprocess)
 
     def run_trial(self, trial, *fit_args, **fit_kwargs):

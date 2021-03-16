@@ -14,6 +14,7 @@
       "SklearnModel.colsample_bynode": 0.3559930345465102,
       "SklearnModel.reg_lambda": 0.8580033263383593,
       "SklearnModel.reg_alpha": 0.1585557542309413,
+      "SklearnModel.ignore_preprocessing": true,
 
       "ReadabilityModel.data_type": "readability",
       "ReadabilityModel.SklearnModel.model_type": "XGBClassifier",

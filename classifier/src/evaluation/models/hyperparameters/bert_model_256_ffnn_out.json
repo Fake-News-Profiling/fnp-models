@@ -17,18 +17,19 @@
       "BertModel.feed_data_overlap": 0,
       "BertModel.preprocessing": "[remove_emojis, remove_tags]",
 
-      "PoolingModel.pooling_type": "max",
+      "PoolingModel.pooling_type": "concatenate",
       "PoolingModel.SklearnModel.model_type": "XGBClassifier",
-      "PoolingModel.SklearnModel.learning_rate": 0.09668239593641734,
-      "PoolingModel.SklearnModel.gamma": 3.7356750439404793,
+      "PoolingModel.SklearnModel.learning_rate": 0.013432174592203307,
+      "PoolingModel.SklearnModel.gamma": 5.14496835379016,
       "PoolingModel.SklearnModel.max_depth": 3,
       "PoolingModel.SklearnModel.min_child_weight": 3,
-      "PoolingModel.SklearnModel.subsample": 0.9951628476922445,
-      "PoolingModel.SklearnModel.colsample_bytree": 0.5348996166573378,
-      "PoolingModel.SklearnModel.colsample_bylevel": 0.8212134966152725,
-      "PoolingModel.SklearnModel.colsample_bynode": 0.2212525897337931,
-      "PoolingModel.SklearnModel.reg_lambda": 0.4464415197692795,
-      "PoolingModel.SklearnModel.reg_alpha": 0.33968128951587034
+      "PoolingModel.SklearnModel.subsample": 0.6954853712401048,
+      "PoolingModel.SklearnModel.colsample_bytree": 0.5603139080344784,
+      "PoolingModel.SklearnModel.colsample_bylevel": 0.9845806958903114,
+      "PoolingModel.SklearnModel.colsample_bynode": 0.22032425181718476,
+      "PoolingModel.SklearnModel.reg_lambda": 0.4483236303624377,
+      "PoolingModel.SklearnModel.reg_alpha": 0.2554994268763928,
+      "PoolingModel.SklearnModel.ignore_preprocessing": true
     }
   },
   "metrics": {

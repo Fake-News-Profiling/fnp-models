@@ -49,7 +49,7 @@ def _filter_files(datasets_path, files, file_type):
     return list(map(lambda f: os.path.join(datasets_path, f), filtered))
 
 
-def parse_dataset(datasets_path, language, to_pandas=False):
+def parse_dataset(datasets_path, language, to_pandas=False, to_raw_strings=True):
     """
     Keyword arguments:
     datasets_path -- path to the datasets directory
@@ -85,8 +85,11 @@ def parse_dataset(datasets_path, language, to_pandas=False):
         tweet_data = []
         label_data = []
         for author_id, tweet_feed in author_tweets.items():
-            tweet_data.append([Tweet(author_id, tweet, str(i)) for i, tweet in enumerate(tweet_feed, start=1)])
+            tweet_data.append([Tweet(author_id, tweet, str(i) if to_raw_strings else tweet)
+                               for i, tweet in enumerate(tweet_feed, start=1)])
             label_data.append(author_truths[author_id])
+
+        label_data = parse_labels_to_floats(label_data)
 
         return np.asarray(tweet_data), np.asarray(label_data)
 

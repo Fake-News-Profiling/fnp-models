@@ -61,7 +61,10 @@ class SklearnModel(AbstractModel):
         if self.hyperparameters.get("model_type") != "XGBClassifier":
             steps.insert(0, ("PCA", PCA()))
 
-        self.model = Pipeline(steps)
+        if self.hyperparameters.get("ignore_preprocessing"):
+            self.model = estimator
+        else:
+            self.model = Pipeline(steps)
 
     def fit(self, x, y):
         self.build()

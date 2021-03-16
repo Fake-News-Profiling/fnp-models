@@ -1,5 +1,6 @@
 import json
 from abc import ABC, abstractmethod
+from typing import Union
 
 from kerastuner import HyperParameters
 
@@ -77,7 +78,8 @@ class AbstractModel(ABC):
         pass
 
 
-def load_hyperparameters(trial_filepath, to_scoped_hyperparameters=False):
+def load_hyperparameters(trial_filepath: str, to_scoped_hyperparameters: bool = False) -> Union[ScopedHyperParameters,
+                                                                                                HyperParameters]:
     """ Load a trials hyper-parameters from a JSON file """
     with open(trial_filepath) as trial_file:
         trial = json.load(trial_file)

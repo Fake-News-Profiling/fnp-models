@@ -36,8 +36,7 @@ def tokenize_bert_input(encoder_url, hidden_layer_size, tokenizer_class, x_train
     y_train = tokenizer.tokenize_labels(y_train)
 
     if shuffle:
-        y_train = _shuffle_tensor_with_seed(y_train, seed=1)
-        x_train = {k: _shuffle_tensor_with_seed(v, seed=1) for k, v in x_train.items()}
+        x_train, y_train = shuffle_bert_data(x_train, y_train)
 
     result = [x_train, y_train]
 
@@ -50,6 +49,12 @@ def tokenize_bert_input(encoder_url, hidden_layer_size, tokenizer_class, x_train
         result.append(tokenizer)
 
     return result
+
+
+def shuffle_bert_data(x, y, seed=1):
+    y_shuffled = _shuffle_tensor_with_seed(y, seed=seed)
+    x_shuffled = {k: _shuffle_tensor_with_seed(v, seed=seed) for k, v in x.items()}
+    return x_shuffled, y_shuffled
 
 
 def _shuffle_tensor_with_seed(tensor, seed=1):

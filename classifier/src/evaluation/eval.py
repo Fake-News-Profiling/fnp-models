@@ -21,9 +21,9 @@ def evaluate(model, x, y, eval_metrics):
     return {name: fn(y, predictions) for name, fn in eval_metrics}
 
 
-def evaluate_models(x, y, x_test, y_test, eval_models, eval_metrics, cv_splits=5):
+def evaluate_models(x, y, eval_models, eval_metrics, cv_splits=5):
     """ Evaluate fake news profiling models, using K-fold Cross-Validation """
-    kfold = StratifiedKFold(n_splits=cv_splits, shuffle=True, random_state=2)
+    kfold = StratifiedKFold(n_splits=cv_splits, shuffle=True, random_state=1)
 
     # Fit and evaluate models using Cross-Validation on the training set
     cv_metrics = defaultdict(list)
@@ -55,25 +55,9 @@ def evaluate_models(x, y, x_test, y_test, eval_models, eval_metrics, cv_splits=5
     cv_df = cv_df.sort_values(["Model", "CV split"])
     print(f"\n{cv_splits}-fold Cross-Validation results:\n", cv_df.to_markdown(), sep="", end="\n")
 
-    # Fit the models on the entire training set and evaluate them on the test set
-    test_metrics = defaultdict(list)
-    for name, model_class, hyperparameters in eval_models:
-        model = model_class(hyperparameters)
-        model.fit(x, y)
-        metrics = evaluate(model, x_test, y_test, eval_metrics)
-        test_metrics["Model"].append(name)
-
-        for metric_name, value in metrics.items():
-            test_metrics[metric_name].append(float(value))
-
-    test_df = pd.DataFrame(test_metrics)
-    print(f"\nFinal test set results:\n", test_df.to_markdown(), sep="", end="\n")
-
     with open("src/evaluation/eval_results.txt", "a") as file:
         file.write("\n")
         cv_df.to_markdown(file)
-        file.write("\n")
-        test_df.to_markdown(file)
 
 
 def main():
@@ -81,10 +65,9 @@ def main():
     print("Loading data")
     tweet_train, label_train, tweet_val, label_val, tweet_test, label_test = load_data(
         filepath="../../datasets/en_split_data.npy")
-    x = np.asarray([[tweet.text for tweet in tweet_feed] for tweet_feed in np.concatenate([tweet_train, tweet_val])])
-    y = parse_labels_to_floats(np.concatenate([label_train, label_val]))
-    x_test = np.asarray([[tweet.text for tweet in tweet_feed] for tweet_feed in tweet_test])
-    y_test = parse_labels_to_floats(label_test)
+    x = np.asarray([[tweet.text for tweet in tweet_feed] for tweet_feed in
+                    np.concatenate([tweet_train, tweet_val, tweet_test])])
+    y = parse_labels_to_floats(np.concatenate([label_train, label_val, label_test]))
 
     # Evaluate models
     print("Beginning model evaluation")
@@ -116,29 +99,16 @@ def main():
          load_hyperparameters("models/hyperparameters/bert_model_256.json", to_scoped_hyperparameters=True)),
         ("EnsembleBert256PooledModel", models.ensemble_bert_pooled_model,
          load_hyperparameters("models/hyperparameters/ensemble_bert_model_256.json", to_scoped_hyperparameters=True)),
-    ]
-    metrics = [
-        ("Loss", tf.keras.losses.binary_crossentropy),
-        ("Accuracy", tf.metrics.binary_accuracy),
-        ("Precision", precision_score),
-        ("Recall", recall_score),
-        ("F1", f1_score),
-    ]
-    with tf.device("/gpu:0"):
-        evaluate_models(x, y, x_test, y_test, eval_models, metrics)
-
-    # With encoder_output=False
-    eval_models = [
+        ("EnsembleBertPooledModelFfnnOut", models.ensemble_bert_pooled_model,
+         load_hyperparameters("models/hyperparameters/ensemble_bert_model_ffnn_out.json",
+                              to_scoped_hyperparameters=True)),
         ("BertPooledModelFfnnOut", models.BertPooledModel,
          load_hyperparameters("models/hyperparameters/bert_model_ffnn_out.json", to_scoped_hyperparameters=True)),
-        ("EnsembleBertPooledModelFfnnOut", models.ensemble_bert_pooled_model,
-         load_hyperparameters("models/hyperparameters/ensemble_bert_model__ffnn_out.json",
-                              to_scoped_hyperparameters=True)),
-        ("Bert256PooledModelFfnnOut", models.BertPooledModel,
-         load_hyperparameters("models/hyperparameters/bert_model_256_ffnn_out.json", to_scoped_hyperparameters=True)),
-        ("EnsembleBert256PooledModelFfnnOut", models.ensemble_bert_pooled_model,
-         load_hyperparameters("models/hyperparameters/ensemble_bert_model_256_ffnn_out.json",
-                              to_scoped_hyperparameters=True)),
+        # ("Bert256PooledModelFfnnOut", models.BertPooledModel,
+        #  load_hyperparameters("models/hyperparameters/bert_model_256_ffnn_out.json", to_scoped_hyperparameters=True)),
+        # ("EnsembleBert256PooledModelFfnnOut", models.ensemble_bert_pooled_model,
+        #  load_hyperparameters("models/hyperparameters/ensemble_bert_model_256_ffnn_out.json",
+        #                       to_scoped_hyperparameters=True)),
     ]
     metrics = [
         ("Loss", tf.keras.losses.binary_crossentropy),
@@ -148,7 +118,8 @@ def main():
         ("F1", f1_score),
     ]
     with tf.device("/gpu:0"):
-        evaluate_models(x, y, x_test, y_test, eval_models, metrics)
+        evaluate_models(x, y, eval_models, metrics)
+
 
 if __name__ == "__main__":
     main()

@@ -14,7 +14,8 @@
       "SklearnModel.colsample_bylevel": 0.8889056357774469,
       "SklearnModel.colsample_bynode": 0.238765307044096,
       "SklearnModel.reg_lambda": 0.4578715873994581,
-      "SklearnModel.reg_alpha": 0.14395547238532985
+      "SklearnModel.reg_alpha": 0.14395547238532985,
+      "SklearnModel.ignore_preprocessing": false
     }
   },
   "metrics": {
