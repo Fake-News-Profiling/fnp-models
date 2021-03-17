@@ -23,7 +23,8 @@ from tensorflow.python.keras.callbacks import TerminateOnNaN, EarlyStopping, Ten
 from xgboost import XGBClassifier
 
 from base import load_hyperparameters
-from bert_classifier import BayesianOptimizationTunerWithFitHyperParameters
+from bert_classifier import BayesianOptimizationCVTunerWithFitHyperParameters
+from bert_classifier.tuning import sklearn_classifier
 from statistical.data_extraction import readability_tweet_extractor, ner_tweet_extractor, sentiment_tweet_extractor, \
     combined_tweet_extractor, tweet_level_extractor
 
@@ -88,14 +89,14 @@ class PipelineEstimatorWrapper(TransformerMixin, BaseEstimator):
 def _stats_wrapper(x_train, y_train, x_test, model_extractors_and_paths):
     x_train_out = []
     x_test_out = []
-    for extractor, path in model_extractors_and_paths:
+    for (extractor, path) in model_extractors_and_paths:
         x_train_model = extractor.transform(x_train)
         x_test_model = extractor.transform(x_test)
         hp = load_hyperparameters(path)
         model = build_sklearn_classifier_model(hp)
-        model.fit(x_train, y_train)
-        x_train_out.append(model.predict_proba(x_train))
-        x_train_out.append(model.predict_proba(x_test))
+        model.fit(x_train_model, y_train)
+        x_train_out.append(model.predict_proba(x_train_model))
+        x_test_out.append(model.predict_proba(x_test_model))
 
     x_train_out = np.concatenate(x_train_out, axis=-1)
     x_test_out = np.concatenate(x_test_out, axis=-1)
@@ -106,7 +107,8 @@ def build_sklearn_classifier_model(hps: HyperParameters, preprocessing=True, twe
     """ Build an SkLearn classifier """
     sklearn_model = hps.Choice(
         "sklearn_model",
-        [LogisticRegression.__name__, SVC.__name__, RandomForestClassifier.__name__, XGBClassifier.__name__]
+        # [LogisticRegression.__name__, SVC.__name__, RandomForestClassifier.__name__, XGBClassifier.__name__]
+        [LogisticRegression.__name__, SVC.__name__, RandomForestClassifier.__name__]
     )
     steps = [("scaler", StandardScaler())]
 
@@ -213,16 +215,25 @@ def tune_combined_statistical_models(x_train, y_train, project_name, tune_sklear
         return tune_nn_model(x_train, y_train, "combined_nn_" + project_name, combined_tweet_extractor(), **kwargs)
 
 
-# def tune_combined_ensemble_model(x_train, y_train, project_name, model_trial_paths, **kwargs):
-#     extractors = [readability_tweet_extractor(), ner_tweet_extractor(), sentiment_tweet_extractor()]
-#
-#     tuner = sklearn_classifier(project_name, **kwargs)
-#     tuner.fit_data(
-#         x_train, y_train,
-#         partial(_stats_wrapper, zip(extractors, model_trial_paths))
-#     )
-#     tuner.search(x_train, y_train)
-#     return tuner
+def tune_combined_ensemble_model(x_train, y_train, project_name, **kwargs):
+    extractors = [readability_tweet_extractor(), ner_tweet_extractor(), sentiment_tweet_extractor()]
+    model_trial_paths = [
+        f"../../training/statistical/readability_5/trial_5b6dd815ed192d976dbf5f9e4b24ce31/trial.json",
+        f"../../training/statistical/ner_5/trial_5a645a5ce486c6f577c97060923bbb6b/trial.json",
+        f"../../training/statistical/sentiment_5/trial_c0ebd26758c897f69f8aab7d4eccc427/trial.json",
+    ]
+    tuner = sklearn_classifier(
+        "combined_ensemble_" + project_name,
+        directory="../../training/statistical",
+        hypermodel=partial(build_sklearn_classifier_model, preprocessing=False),
+        **kwargs,
+    )
+    tuner.fit_data(
+        x_train, y_train,
+        partial(_stats_wrapper, model_extractors_and_paths=list(zip(extractors, model_trial_paths)))
+    )
+    tuner.search(x_train, y_train)
+    return tuner
 
 
 def tune_tweet_level_model(x_train, y_train, project_name, **kwargs):
@@ -277,7 +288,7 @@ def tune_nn_model(x_train, y_train, project_name, feature_extractor=None, tf_tra
 
 
 def nn_tuner(project_name, hyperparameters=None, max_trials=30, directory="../../training/statistical"):
-    return BayesianOptimizationTunerWithFitHyperParameters(
+    return BayesianOptimizationCVTunerWithFitHyperParameters(
         hyperparameters=hyperparameters,
         hypermodel=build_nn_classifier_model,
         objective="val_loss",

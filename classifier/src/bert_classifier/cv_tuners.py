@@ -28,14 +28,14 @@ class TunerCV:
         """ Fit the Optimizer with pre-computed cross-validation data """
         self.cv_data = cv_data
 
-    def fit_data(self, x_train, y_train, bert_model_wrapper):
+    def fit_data(self, x_train, y_train, data_transformer_wrapper):
         """
         Splits the data into `n_splits` folds, trains BERT on each training fold, and saves the data for
         cross-validation
         """
         data_splits = []
         for x_train, y_train, x_test, y_test in kfold_split_wrapper(self.cv, x_train, y_train):
-            x_train_bert, x_test_bert = bert_model_wrapper(x_train, y_train, x_test)
+            x_train_bert, x_test_bert = data_transformer_wrapper(x_train, y_train, x_test)
             data_splits.append((x_train_bert, y_train, x_test_bert, y_test))
 
         self.fit_cv_data(data_splits)
@@ -138,3 +138,5 @@ def kfold_split_wrapper(kfold, x, y):
         x_array = np.asarray(x)
         y_array = np.asarray(y)
         yield x_array[train_indices], y_array[train_indices], x_array[test_indices], y_array[test_indices]
+
+

@@ -95,8 +95,7 @@ def main():
         # Baselines
         # (models.RandomModel, None),
         # (models.TfIdfModel, None),
-        (models.tfidf.TfIdfFfnnModel, None)
-        # (models.Buda20NgramEnsembleModel, None),
+        (models.Buda20NgramEnsembleModel, None),
 
         # My models
         # (models.StatisticalModel, load_hyperparameters("models/hyperparameters/readability_model.json")),

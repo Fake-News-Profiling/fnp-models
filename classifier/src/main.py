@@ -5,8 +5,8 @@ from base.training import allow_gpu_memory_growth
 from data import load_data, BertTweetPreprocessor, parse_labels_to_floats
 from bert_classifier.tune_ffnn import tune_ffnn
 from bert_classifier.tune_bert_ffnn import tune_bert_ffnn
-from bert_classifier.tune_bert_combined_ffnn import tune_bert_nn_classifier, tune_bert_sklearn_classifier, \
-    sklearn_classifier
+from bert_classifier.tune_bert_combined_ffnn import tune_bert_nn_classifier, tune_bert_sklearn_classifier
+from bert_classifier.tuning import sklearn_classifier
 from statistical.tuning import get_best_trials
 
 allow_gpu_memory_growth()
