@@ -26,12 +26,14 @@ def bert_layers(encoder_url, trainable, hidden_layer_size, return_encoder=False)
     return inputs, output
 
 
+def bert_tokenizer(encoder_url, hidden_layer_size, tokenizer_class):
+    encoder = KerasLayer(encoder_url, trainable=False)
+    return tokenizer_class(encoder, hidden_layer_size)
+
+
 def tokenize_bert_input(encoder_url, hidden_layer_size, tokenizer_class, x_train, y_train, x_val=None, y_val=None,
                         shuffle=False, feed_overlap=50, return_tokenizer=False):
-    encoder = KerasLayer(encoder_url, trainable=False)
-
-    # Tokenize input
-    tokenizer = tokenizer_class(encoder, hidden_layer_size)
+    tokenizer = bert_tokenizer(encoder_url, hidden_layer_size, tokenizer_class)
     x_train = tokenizer.tokenize_input(x_train, overlap=feed_overlap)
     y_train = tokenizer.tokenize_labels(y_train)
 

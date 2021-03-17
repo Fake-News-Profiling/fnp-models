@@ -6,12 +6,12 @@ from kerastuner import HyperParameters
 from official.nlp import optimization
 from tensorflow.keras import Model
 from tensorflow.keras.callbacks import EarlyStopping, TensorBoard, TerminateOnNaN
-from tensorflow.keras.layers import Dense, BatchNormalization, Dropout
+from tensorflow.keras.layers import Dense, Dropout
 
 import data.preprocess as pre
 from bert import bert_layers, BertIndividualTweetTokenizer
 from bert.models import shuffle_bert_data
-from bert_classifier import BayesianOptimizationCVTunerWithFitHyperParameters
+from experiments.tuners import BayesianOptimizationCV
 from bert_classifier.tune_bert_ffnn import tokenize_data, preprocess_data, comp
 from statistical.data_extraction import tweet_level_extractor
 
@@ -72,35 +72,37 @@ def _build_bert_single_dense(hp):
         "sum_last_4_hidden_layers",
         "concat_4_2nd_to_last_hidden_layers",
         "concat_last_4_hidden_layers",
+        "default",
     ])
-    encoder_outputs = encoder_outputs[{
-        "first_layer": np.s_[:1],
-        "2nd_to_last_hidden_layer": np.s_[-2:-1],
-        "last_hidden_layer": np.s_[-1:],
-        "sum_all_but_last_hidden_layers": np.s_[:-1],
-        "sum_all_hidden_layers": np.s_[:],
-        "sum_4_2nd_to_last_hidden_layers": np.s_[-5:-1],
-        "sum_last_4_hidden_layers": np.s_[:-4],
-        "concat_4_2nd_to_last_hidden_layers": np.s_[-5:-1],
-        "concat_last_4_hidden_layers": np.s_[:-4],
-    }[selected_encoder_outputs]]
 
-    # Pool encoder_outputs by summing or concatenating
-    if selected_encoder_outputs.startswith("concat"):
-        # Concatenate layer outputs, and extract the concatenated '[CLF]' embeddings
-        # pooled_outputs.shape == (batch_size, len(encoder_outputs) * hidden_size)
-        pooled_outputs = tf.concat(encoder_outputs, axis=-1)[:, 0, :]
+    if selected_encoder_outputs == "default":
+        dense_pooled = bert_output["pooled_output"]
     else:
-        # Extract the '[CLF]' embeddings of each layer, and then sum them
-        pooled_outputs = tf.convert_to_tensor(encoder_outputs)[:, :, 0, :]
-        # pooled_outputs.shape == (batch_size, hidden_size)
-        pooled_outputs = tf.reduce_sum(pooled_outputs, axis=0)
+        encoder_outputs = encoder_outputs[{
+            "first_layer": np.s_[:1],
+            "2nd_to_last_hidden_layer": np.s_[-2:-1],
+            "last_hidden_layer": np.s_[-1:],
+            "sum_all_but_last_hidden_layers": np.s_[:-1],
+            "sum_all_hidden_layers": np.s_[:],
+            "sum_4_2nd_to_last_hidden_layers": np.s_[-5:-1],
+            "sum_last_4_hidden_layers": np.s_[:-4],
+            "concat_4_2nd_to_last_hidden_layers": np.s_[-5:-1],
+            "concat_last_4_hidden_layers": np.s_[:-4],
+        }[selected_encoder_outputs]]
 
-    # Pass pooled_outputs through a tanh layer
-    dense_pooled = Dense(hp.get("bert_size"), activation="tanh")(pooled_outputs)
+        # Pool encoder_outputs by summing or concatenating
+        if selected_encoder_outputs.startswith("concat"):
+            # Concatenate layer outputs, and extract the concatenated '[CLF]' embeddings
+            # pooled_outputs.shape == (batch_size, len(encoder_outputs) * hidden_size)
+            pooled_outputs = tf.concat(encoder_outputs, axis=-1)[:, 0, :]
+        else:
+            # Extract the '[CLF]' embeddings of each layer, and then sum them
+            pooled_outputs = tf.convert_to_tensor(encoder_outputs)[:, :, 0, :]
+            # pooled_outputs.shape == (batch_size, hidden_size)
+            pooled_outputs = tf.reduce_sum(pooled_outputs, axis=0)
 
-    # Concatenate stats with BERT output
-    # pooled_outputs_and_stats = tf.concat([bert_input["tweet_level_stats"], pooled_outputs], -1)
+        # Pass pooled_outputs through a tanh layer
+        dense_pooled = Dense(hp.get("bert_size"), activation="tanh")(pooled_outputs)
 
     # Classifier layer
     dropout = Dropout(hp.Fixed("dropout_rate", 0.1))(dense_pooled)
@@ -141,7 +143,7 @@ def tune_bert_stats_ffnn(x_train, y_train, bert_encoder_url, bert_size, project_
         data_preprocessing_func = comp(partial(tokenize_data, tokenizer_class=BertIndividualTweetTokenizer),
                                        preprocess_data)  # preprocess_and_extract_data
 
-        tuner = BayesianOptimizationCVTunerWithFitHyperParameters(
+        tuner = BayesianOptimizationCV(
             preprocess=data_preprocessing_func,
             hyperparameters=hp,
             hypermodel=_build_bert_single_dense,

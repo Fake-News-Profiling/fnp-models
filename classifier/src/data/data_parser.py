@@ -85,7 +85,7 @@ def parse_dataset(datasets_path, language, to_pandas=False, to_raw_strings=True)
         tweet_data = []
         label_data = []
         for author_id, tweet_feed in author_tweets.items():
-            tweet_data.append([Tweet(author_id, tweet, str(i) if to_raw_strings else tweet)
+            tweet_data.append([tweet if to_raw_strings else Tweet(author_id, tweet, str(i))
                                for i, tweet in enumerate(tweet_feed, start=1)])
             label_data.append(author_truths[author_id])
 

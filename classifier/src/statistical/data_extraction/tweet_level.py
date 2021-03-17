@@ -13,12 +13,11 @@ def tweet_level_extractor():
     extractor = pre.TweetStatsExtractor(extractors=[
         tag_counts,
         emojis_count,
-        syllables_to_words_ratios,
+        syllables_count,
         tweet_lengths,
         punctuation_counts,
         number_counts,
         personal_pronouns,
-        char_to_words_ratio,
         quote_counts,
         capitalisation_counts,
         tweet_sentiment,
@@ -32,7 +31,7 @@ def tweet_level_extractor():
         # emojis_count
         "Number of emojis",
         # syllables_to_words_ratios
-        "Syllables-words ratio",
+        "Syllables count",
         # tweet_lengths
         "Tweet length in words",
         "Tweet length in characters",
@@ -47,8 +46,6 @@ def tweet_level_extractor():
         "Number of monetary values",
         # personal_pronouns
         "Number of personal pronouns",
-        # char_to_words_ratio
-        "Ratio of characters to words",
         # quote_counts
         "Number of quotes",
         # capitalisation_counts
@@ -72,11 +69,11 @@ def emojis_count(tweet):
     return len(pre.emoji_chars([tweet])[0])
 
 
-def syllables_to_words_ratios(tweet):
-    """ Returns the number of syllables to the number of words in this tweet """
+def syllables_count(tweet):
+    """ Returns the number of syllables in this tweet """
     tweet_words = pre.tweets_to_words([tweet], remove_tags=True)[0]
     tweet_syllables = sum(map(pre.syllables, tweet_words))
-    return tweet_syllables / max(1, len(tweet_words))
+    return tweet_syllables
 
 
 def tweet_lengths(tweet):
@@ -112,15 +109,6 @@ def personal_pronouns(tweet):
     return count
 
 
-def char_to_words_ratio(tweet):
-    """ Returns the ratio of characters to words in the tweet """
-    clean_tweet = pre.clean_text(tweet, remove_digits=False, remove_tags=True)
-    chars = len(clean_tweet)
-    words = len(clean_tweet.split())
-    chars -= words  # don't want to count spaces in chars
-    return chars / max(1, words)
-
-
 def quote_counts(tweet):
     """ Returns the number of quotes in the tweet """
     return len(re.findall("(?:^| )(?:“.*?”|‘.*?’|\".*?\"|\'.*?\')", tweet))
@@ -136,4 +124,4 @@ def capitalisation_counts(tweet):
 
 def tweet_sentiment(tweet):
     """ Returns the compound sentiment of the tweet """
-    return analyzer.polarity_scores(tweet)['compound']
+    return int(analyzer.polarity_scores(tweet)['compound'] * 100)

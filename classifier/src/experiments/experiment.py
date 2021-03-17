@@ -7,8 +7,12 @@ from kerastuner import HyperParameters
 
 from bert import BertTweetFeedTokenizer
 from bert.models import tokenize_bert_input, bert_layers
-from bert_classifier import BayesianOptimizationCVTunerWithFitHyperParameters
+from experiments import allow_gpu_memory_growth
+from experiments.tuners import BayesianOptimizationCV
 import data.preprocess as pre
+
+
+allow_gpu_memory_growth()
 
 
 class AbstractExperiment(ABC):
@@ -65,8 +69,10 @@ class AbstractExperiment(ABC):
             else:
                 hp.Fixed(name, value)
 
+        return hp
 
-class AbstractTfExperiment(ABC, AbstractExperiment):
+
+class AbstractTfExperiment(AbstractExperiment, ABC):
     """ Abstract base class for conducting a Keras Tuner tuning experiment with a TensorFlow model """
 
     def __init__(self, experiment_directory: str, experiment_name: str, config: dict):
@@ -74,7 +80,7 @@ class AbstractTfExperiment(ABC, AbstractExperiment):
         self._init_tuner(config.get("max_trials", 30))
 
     def _init_tuner(self, max_trials):
-        self.tuner = BayesianOptimizationCVTunerWithFitHyperParameters(
+        self.tuner = BayesianOptimizationCV(
             preprocess=self.preprocess_cv_data,
             hypermodel=self.build_model,
             hyperparameters=self.hyperparameters,
@@ -91,6 +97,8 @@ class AbstractTfExperiment(ABC, AbstractExperiment):
                 tf.keras.callbacks.EarlyStopping("val_loss", patience=2),
                 tf.keras.callbacks.TensorBoard(log_dir=self.experiment_directory + "/" + self.experiment_name + "/logs")
             ]
+        if hasattr(self, "cv_data_transformer"):
+            self.tuner.fit_data(x, y, self.cv_data_transformer)
 
         self.tuner.search(x=x, y=y, callbacks=callbacks, *args, **kwargs)
 
@@ -100,14 +108,18 @@ class AbstractTfExperiment(ABC, AbstractExperiment):
         return hp, x_train, y_train, x_test, y_test
 
 
-class AbstractBertExperiment(ABC, AbstractTfExperiment):
+class AbstractBertExperiment(AbstractTfExperiment, ABC):
     """ Abstract base class for conducting a Keras Tuner tuning experiment with a BERT-base TensorFlow model """
 
-    def compile_model_with_adamw(self, model_inputs, model_outputs):
+    @staticmethod
+    def compile_model_with_adamw(hp, model_inputs, model_outputs, learning_rate=None):
         """ Compile a model using AdamWeightDecay """
+        if learning_rate is None:
+            learning_rate = hp.get("learning_rate")
+
         model = tf.keras.Model(model_inputs, model_outputs)
         model.compile(
-            optimizer=AdamWeightDecay(learning_rate=self.hyperparameters.get("learning_rate")),
+            optimizer=AdamWeightDecay(learning_rate=learning_rate),
             loss=tf.keras.losses.BinaryCrossentropy(from_logits=True),
             metrics=tf.metrics.BinaryAccuracy(),
         )
@@ -115,11 +127,11 @@ class AbstractBertExperiment(ABC, AbstractTfExperiment):
 
     @staticmethod
     def single_dense_layer(inputs, dropout_rate, dense_activation, dense_kernel_reg,
-                           dense_bias_reg, dense_activity_reg):
+                           dense_bias_reg, dense_activity_reg, dense_units=1):
         dropout = tf.keras.layers.Dropout(dropout_rate)(inputs)
-        batch = tf.keras.layers.BatchNormalization(dropout)
+        batch = tf.keras.layers.BatchNormalization()(dropout)
         dense_out = tf.keras.layers.Dense(
-            units=1,
+            units=dense_units,
             activation=dense_activation,
             kernel_regularizer=tf.keras.regularizers.l2(dense_kernel_reg),
             bias_regularizer=tf.keras.regularizers.l2(dense_bias_reg),
@@ -182,3 +194,5 @@ class AbstractBertExperiment(ABC, AbstractTfExperiment):
         x_test = preprocessor.transform(x_test)
 
         return hp, x_train, y_train, x_test, y_test
+
+

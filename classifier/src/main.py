@@ -89,7 +89,7 @@ def main():
             bert_encoder_url="https://tfhub.dev/tensorflow/small_bert/bert_en_uncased_L-12_H-128_A-2/1",
             bert_size=128,
             project_name="bert_ffnn_19",
-            max_trials=12,
+            max_trials=21,
             batch_sizes=[64],
     )
     #

@@ -14,8 +14,7 @@ from tensorflow.python.keras.layers import BatchNormalization
 
 from bert import BertTweetFeedTokenizer, BertIndividualTweetTokenizer
 from bert.models import tokenize_bert_input
-from bert_classifier import BayesianOptimizationCVTunerWithFitHyperParameters
-from bert_classifier.cv_tuners import SklearnCV
+from experiments.tuners import BayesianOptimizationCV, SklearnCV
 from bert_classifier.tune_bert_ffnn import load_bert_single_dense_model, preprocess_data
 from statistical.data_extraction import combined_tweet_extractor, tweet_level_extractor
 from statistical.tune_statistical import build_sklearn_classifier_model
@@ -153,7 +152,7 @@ def tune_bert_nn_classifier(x_train, y_train, bert_size, project_name, bert_mode
         hp.Choice("pooling_type", ["max", "min", "average"])
         hp.Fixed("bert_size", bert_size)
 
-        tuner = BayesianOptimizationCVTunerWithFitHyperParameters(
+        tuner = BayesianOptimizationCV(
             preprocess=data_preprocessing_func,
             hyperparameters=hp,
             hypermodel=build_nn_classifier,

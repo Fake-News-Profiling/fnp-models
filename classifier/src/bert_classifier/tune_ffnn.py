@@ -6,8 +6,7 @@ from tensorflow.keras.layers import Input, Dense, BatchNormalization, Dropout
 from tensorflow.keras.callbacks import EarlyStopping, TensorBoard
 
 from bert import BertTweetFeedTokenizer, build_base_bert
-from bert_classifier import BayesianOptimizationCVTunerWithFitHyperParameters
-
+from experiments.tuners import BayesianOptimizationCV
 
 """
 Tuning objective: Feed predictions from an already fine-tuned BERT model into a FFNN, and train the FFNN on the 
@@ -75,7 +74,7 @@ def tune_ffnn(X_train, y_train, X_val, y_val):
         hps.Choice("batch_size", [16, 32, 64, 80])
         hps.Fixed("epochs", 50)
 
-        tuner = BayesianOptimizationCVTunerWithFitHyperParameters(
+        tuner = BayesianOptimizationCV(
             hyperparameters=hps,
             hypermodel=partial(_build_ffnn, bert_hidden_layer_size=bert_hidden_layer_size),
             objective="val_loss",

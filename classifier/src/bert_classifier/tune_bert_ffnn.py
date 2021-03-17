@@ -11,7 +11,7 @@ from kerastuner import HyperParameters
 from base import load_hyperparameters
 from bert import BertTweetFeedTokenizer, bert_layers, BertIndividualTweetTokenizer
 from bert.models import tokenize_bert_input
-from bert_classifier import BayesianOptimizationCVTunerWithFitHyperParameters
+from experiments.tuners import BayesianOptimizationCV
 import data.preprocess as pre
 
 """
@@ -181,7 +181,7 @@ def tune_bert_ffnn(x_train, y_train, bert_encoder_url, bert_size, project_name, 
                                         "[replace_emojis_no_sep, remove_tags, remove_punctuation]"])
             data_preprocessing_func = comp(tokenizer_func, preprocess_data)
 
-        tuner = BayesianOptimizationCVTunerWithFitHyperParameters(
+        tuner = BayesianOptimizationCV(
             preprocess=data_preprocessing_func,
             hyperparameters=hp,
             hypermodel=_build_bert_single_dense,
@@ -227,6 +227,4 @@ Current best:
              drop -> batch -> dense (1 unit) -> 
 
 All of the above have 'feed_data_overlap' = 50 (default)
-
-
 """

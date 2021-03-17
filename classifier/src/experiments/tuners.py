@@ -1,11 +1,13 @@
-from collections import defaultdict
 import copy
+from collections import defaultdict
 
 import numpy as np
-from sklearn.model_selection import StratifiedKFold
 import tensorflow as tf
+from kerastuner import BayesianOptimization
 from kerastuner.engine.tuner_utils import TunerCallback
-from kerastuner.tuners import BayesianOptimization, Sklearn
+from kerastuner.tuners import Sklearn
+from sklearn.model_selection import StratifiedKFold
+
 
 """ 
 Academic Integrity Statement:
@@ -24,21 +26,13 @@ class TunerCV:
         self.cv_data = None
         self.preprocess = preprocess
 
-    def fit_cv_data(self, cv_data):
-        """ Fit the Optimizer with pre-computed cross-validation data """
-        self.cv_data = cv_data
-
     def fit_data(self, x_train, y_train, transformer_wrapper):
         """
         Splits the data into `n_splits` folds, transforms data using the transformer_wrapper, and then saves the data
         for cross-validation
         """
-        data_splits = []
-        for x_train, y_train, x_test, y_test in kfold_split_wrapper(self.cv, x_train, y_train):
-            x_train_bert, x_test_bert = transformer_wrapper(x_train, y_train, x_test)
-            data_splits.append((x_train_bert, y_train, x_test_bert, y_test))
-
-        self.fit_cv_data(data_splits)
+        data_splits = [transformer_wrapper(*cv_fold) for cv_fold in kfold_split_wrapper(self.cv, x_train, y_train)]
+        self.cv_data = data_splits
 
 
 class BayesianOptimizationCV(BayesianOptimization, TunerCV):
@@ -50,6 +44,10 @@ class BayesianOptimizationCV(BayesianOptimization, TunerCV):
 
     def run_trial(self, trial, *fit_args, **fit_kwargs):
         """ A hybrid method, between Sklearn Tuner and MultiExecutionTuner (using code from both) """
+        # Use epochs and batch_size from trial.hyperparameters
+        fit_kwargs.setdefault("batch_size", trial.hyperparameters.get("batch_size"))
+        fit_kwargs.setdefault("epochs", trial.hyperparameters.get("epochs"))
+
         # Create a ModelCheckpoint
         model_checkpoint = tf.keras.callbacks.ModelCheckpoint(
             filepath=self._get_checkpoint_fname(trial.trial_id, self._reported_step),
@@ -60,12 +58,11 @@ class BayesianOptimizationCV(BayesianOptimization, TunerCV):
         original_callbacks = fit_kwargs.pop('callbacks', [])
         metrics = defaultdict(list)
 
-        split_data = self.cv_data if self.cv_data is not None else kfold_split_wrapper(self.cv, fit_kwargs["x"],
-                                                                                       fit_kwargs["y"])
+        split_data = self.cv_data if self.cv_data is not None else kfold_split_wrapper(
+            self.cv, fit_kwargs["x"], fit_kwargs["y"])
         for split_num, (x_train, y_train, x_test, y_test) in enumerate(split_data):
-            if self.preprocess is not None:
-                x_train, y_train, x_test, y_test = self.preprocess(trial.hyperparameters, x_train, y_train, x_test,
-                                                                   y_test)
+            _, x_train, y_train, x_test, y_test = self.preprocess(
+                trial.hyperparameters, x_train, y_train, x_test, y_test)
 
             # Copy kwargs and add data to it
             copied_fit_kwargs = copy.copy(fit_kwargs)
