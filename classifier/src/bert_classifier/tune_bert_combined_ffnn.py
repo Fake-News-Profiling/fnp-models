@@ -2,8 +2,7 @@ from functools import partial
 
 import numpy as np
 import tensorflow as tf
-from kerastuner import HyperParameters, Objective
-from kerastuner.oracles import BayesianOptimization as BayesianOptimizationOracle
+from kerastuner import HyperParameters
 from official.nlp import optimization
 from sklearn.metrics import make_scorer, accuracy_score, f1_score, log_loss
 from sklearn.model_selection import StratifiedKFold
@@ -15,7 +14,7 @@ from tensorflow.python.keras.layers import BatchNormalization
 from bert import BertTweetFeedTokenizer, BertIndividualTweetTokenizer
 from bert.models import tokenize_bert_input
 from bert_classifier import BayesianOptimizationCVTunerWithFitHyperParameters
-from bert_classifier.cv_tuners import SklearnCV
+from bert_classifier.tuning import sklearn_classifier
 from bert_classifier.tune_bert_ffnn import load_bert_single_dense_model, preprocess_data
 from statistical.data_extraction import combined_tweet_extractor, tweet_level_extractor
 from statistical.tune_statistical import build_sklearn_classifier_model
@@ -189,7 +188,17 @@ def tune_bert_sklearn_classifier(x_train, y_train, project_name, bert_model_tria
     """ Tune a BERT final classifier """
     # Generate user-level data from BERT
     print("Building tuner")
-    tuner = sklearn_classifier(project_name, max_trials=max_trials)
+    hp = HyperParameters()
+    hp.Choice("pooling_type", ["max", "min", "average"])
+
+    tuner = sklearn_classifier(
+        project_name,
+        directory="../training/bert_clf/initial_eval",
+        hypermodel=build_sklearn_classifier_model,
+        max_trials=max_trials,
+        preprocess=data_preprocessing_func,
+        hyperparameters=hp,
+    )
 
     print("Fitting tuner with training data")
     tuner.fit_data(
