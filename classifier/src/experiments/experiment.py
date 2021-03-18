@@ -1,28 +1,47 @@
 from abc import ABC, abstractmethod
+from dataclasses import dataclass
 from functools import partial
+from typing import Optional
 
 import tensorflow as tf
+from kerastuner import HyperParameters, Objective
+from kerastuner.tuners.bayesian import BayesianOptimizationOracle
 from official.nlp.optimization import AdamWeightDecay
-from kerastuner import HyperParameters
+from sklearn.decomposition import PCA
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.linear_model import LogisticRegression
+from sklearn.metrics import make_scorer, log_loss, f1_score, accuracy_score
+from sklearn.model_selection import StratifiedKFold
+from sklearn.pipeline import Pipeline
+from sklearn.preprocessing import StandardScaler
+from sklearn.svm import SVC
+from xgboost import XGBClassifier
 
+import data.preprocess as pre
 from bert import BertTweetFeedTokenizer
 from bert.models import tokenize_bert_input, bert_layers
 from experiments import allow_gpu_memory_growth
-from experiments.tuners import BayesianOptimizationCV
-import data.preprocess as pre
-
+from experiments.tuners import BayesianOptimizationCV, SklearnCV
 
 allow_gpu_memory_growth()
+
+
+@dataclass
+class ExperimentConfig:
+    experiment_dir: str
+    experiment_name: str
+    hyperparameters: Optional[dict] = None
+    max_trials: int = 30
 
 
 class AbstractExperiment(ABC):
     """ Abstract base class for conducting a Keras Tuner tuning experiment """
 
-    def __init__(self, experiment_directory: str, experiment_name: str, config: dict):
-        self.experiment_directory = experiment_directory
-        self.experiment_name = experiment_name
+    def __init__(self, config: ExperimentConfig):
+        self.experiment_directory = config.experiment_dir
+        self.experiment_name = config.experiment_name
         self.config = config
-        self.hyperparameters = self.parse_to_hyperparameters(self.config["hyperparameters"])
+        self.hyperparameters = self.parse_to_hyperparameters(self.config.hyperparameters)
         self.tuner = None
 
     @abstractmethod
@@ -72,20 +91,107 @@ class AbstractExperiment(ABC):
         return hp
 
 
+class AbstractSklearnExperiment(AbstractExperiment, ABC):
+    """ Abstract base class for conducting a Keras Tuner tuning experiment with an Sklearn model """
+
+    def __init__(self, config: ExperimentConfig):
+        super().__init__(config)
+        self.tuner = SklearnCV(
+            oracle=BayesianOptimizationOracle(
+                objective=Objective("score", "min"),  # minimise log loss
+                max_trials=self.config.max_trials,
+                hyperparameters=self.hyperparameters,
+            ),
+            hypermodel=self.build_model,
+            scoring=make_scorer(log_loss, needs_proba=True),
+            metrics=[accuracy_score, f1_score],
+            cv=StratifiedKFold(n_splits=5, shuffle=True, random_state=1),
+            directory=self.experiment_directory,
+            project_name=self.experiment_name,
+        )
+
+    def run(self, x, y, callbacks=None, *args, **kwargs):
+        xt = self.input_data_transformer(x)
+        self.tuner.search(xt, y)
+
+    @abstractmethod
+    def input_data_transformer(self, x):
+        """ Transform the input data, before it is passed to `tuner.search()` """
+        pass
+
+    def build_model(self, hp):
+        """ Build an Sklearn pipeline with a final estimator """
+        estimator = self.select_sklearn_model(hp)
+        steps = [("scaler", StandardScaler()), ("estimator", estimator)]
+
+        # Add PCA to deal with multi-collinearity issues in data (Gradient Boosting doesn't have this issue)
+        if hp.get("Sklearn.model_type") != XGBClassifier.__name__:
+            steps.insert(0, ("PCA", PCA()))
+
+        return Pipeline(steps)
+
+    @staticmethod
+    def select_sklearn_model(hp):
+        """ Select and instantiate an Sklearn estimator """
+        model_type = hp.Choice(
+            "Sklearn.model_type",
+            [LogisticRegression.__name__, SVC.__name__, RandomForestClassifier.__name__, XGBClassifier.__name__]
+        )
+
+        if model_type == LogisticRegression.__name__:
+            with hp.conditional_scope("Sklearn.model_type", LogisticRegression.__name__):
+                estimator = LogisticRegression(
+                    C=hp.Float("Sklearn.LogisticRegression.C", 0.0001, 1000),
+                    solver=hp.Choice(
+                        "Sklearn.LogisticRegression.solver", ["lbfgs", "liblinear", "sag", "saga", "newton-cg"])
+                )
+        elif model_type == SVC.__name__:
+            with hp.conditional_scope("Sklearn.model_type", SVC.__name__):
+                estimator = SVC(
+                    C=hp.Float("Sklearn.SVC.C", 0.0001, 1000),
+                    kernel=hp.Choice("Sklearn.SVC.kernel", ["poly", "rbf", "sigmoid"]),
+                    probability=True,
+                )
+        elif model_type == RandomForestClassifier.__name__:
+            with hp.conditional_scope("Sklearn.model_type", RandomForestClassifier.__name__):
+                estimator = RandomForestClassifier(
+                    n_estimators=hp.Choice("Sklearn.RandomForestClassifier.n_estimators", [50, 100, 200, 300, 400]),
+                    criterion=hp.Choice("Sklearn.RandomForestClassifier.criterion", ["gini", "entropy"]),
+                    min_samples_split=hp.Int("Sklearn.RandomForestClassifier.min_samples_split", 2, 8),
+                    min_samples_leaf=hp.Int("Sklearn.RandomForestClassifier.min_samples_leaf", 2, 6),
+                    min_impurity_decrease=hp.Float("Sklearn.RandomForestClassifier.min_impurity_decrease", 0, 1),
+                )
+        elif model_type == XGBClassifier.__name__:
+            with hp.conditional_scope("Sklearn.model_type", XGBClassifier.__name__):
+                estimator = XGBClassifier(
+                    learning_rate=hp.Float("Sklearn.XGBClassifier.learning_rate", 0.01, 0.1),
+                    gamma=hp.Float("Sklearn.XGBClassifier.gamma", 3, 7),
+                    max_depth=hp.Int("Sklearn.XGBClassifier.max_depth", 3, 6),
+                    min_child_weight=hp.Int("Sklearn.XGBClassifier.min_child_weight", 3, 6),
+                    subsample=hp.Float("Sklearn.XGBClassifier.subsample", 0.6, 1),
+                    colsample_bytree=hp.Float("Sklearn.XGBClassifier.colsample_bytree", 0.4, 0.7),
+                    colsample_bylevel=hp.Float("Sklearn.XGBClassifier.colsample_bylevel", 0.8, 1),
+                    colsample_bynode=hp.Float("Sklearn.XGBClassifier.colsample_bynode", 0.2, 0.5),
+                    reg_lambda=hp.Float("Sklearn.XGBClassifier.reg_lambda", 0.2, 1),
+                    reg_alpha=hp.Float("Sklearn.XGBClassifier.reg_alpha", 0.1, 0.5),
+                )
+        else:
+            raise RuntimeError("Invalid SkLearn model type")
+
+        return estimator
+
+
 class AbstractTfExperiment(AbstractExperiment, ABC):
     """ Abstract base class for conducting a Keras Tuner tuning experiment with a TensorFlow model """
 
-    def __init__(self, experiment_directory: str, experiment_name: str, config: dict):
-        super().__init__(experiment_directory, experiment_name, config)
-        self._init_tuner(config.get("max_trials", 30))
-
-    def _init_tuner(self, max_trials):
+    def __init__(self, config: ExperimentConfig):
+        super().__init__(config)
         self.tuner = BayesianOptimizationCV(
             preprocess=self.preprocess_cv_data,
             hypermodel=self.build_model,
             hyperparameters=self.hyperparameters,
             objective="val_loss",
-            max_trials=max_trials,
+            max_trials=self.config.max_trials,
             directory=self.experiment_directory,
             project_name=self.experiment_name,
         )
@@ -100,7 +206,8 @@ class AbstractTfExperiment(AbstractExperiment, ABC):
         if hasattr(self, "cv_data_transformer"):
             self.tuner.fit_data(x, y, self.cv_data_transformer)
 
-        self.tuner.search(x=x, y=y, callbacks=callbacks, *args, **kwargs)
+        with tf.device("/gpu:0"):
+            self.tuner.search(x=x, y=y, callbacks=callbacks, *args, **kwargs)
 
     @classmethod
     def preprocess_cv_data(cls, hp, x_train, y_train, x_test, y_test):
@@ -194,5 +301,3 @@ class AbstractBertExperiment(AbstractTfExperiment, ABC):
         x_test = preprocessor.transform(x_test)
 
         return hp, x_train, y_train, x_test, y_test
-
-
