@@ -42,8 +42,8 @@ class BertPlusStatsEmbeddingTweetLevelExperiment(AbstractBertExperiment):
             dropout_rate=hp.Float("Bert.dropout_rate", 0, 0.5),
             dense_activation=hp.Fixed("Bert.dense_activation", "linear"),
             dense_kernel_reg=hp.Choice("Bert.dense_kernel_reg", [0., 0.0001, 0.001, 0.01]),
-            dense_bias_reg=hp.Choice("Bert.dense_bias_reg", [0., 0.0001, 0.001, 0.01]),
-            dense_activity_reg=hp.Choice("Bert.dense_activity_reg", [0., 0.0001, 0.001, 0.01]),
+            dense_bias_reg=hp.Fixed("Bert.dense_bias_reg", 0),
+            dense_activity_reg=hp.Fixed("Bert.dense_activity_reg", 0),
         )
 
         return self.compile_model_with_adamw(hp, bert_input, dense_out)
@@ -89,12 +89,14 @@ class BertPlusStatsEmbeddingTweetLevelExperiment(AbstractBertExperiment):
         tweets_per_user = len(x_train[0]["input_word_ids"])
 
         def flatten_dicts(x_cv):
+            acc = x_cv[0].copy()
+
             def merge_dicts(d1, d2):
                 for k, v in d1.items():
                     d1[k] = tf.concat([v, d2[k]], axis=0)
 
                 return d1
-            return reduce(merge_dicts, x_cv)
+            return reduce(merge_dicts, x_cv[1:], acc)
 
         x_train_flat = flatten_dicts(x_train)
         x_test_flat = flatten_dicts(x_test)
@@ -131,9 +133,9 @@ class BertPlusStatsTweetLevelExperiment(AbstractBertExperiment):
             pooled_output_and_stats,
             dropout_rate=hp.Float("Bert.dropout_rate", 0, 0.5),
             dense_activation=hp.Fixed("Bert.dense_activation", "linear"),
-            dense_kernel_reg=hp.Choice("Bert.dense_kernel_reg", [0, 0.0001, 0.001, 0.01]),
-            dense_bias_reg=hp.Choice("Bert.dense_bias_reg", [0, 0.0001, 0.001, 0.01]),
-            dense_activity_reg=hp.Choice("Bert.dense_activity_reg", [0, 0.0001, 0.001, 0.01]),
+            dense_kernel_reg=hp.Choice("Bert.dense_kernel_reg", [0., 0.0001, 0.001, 0.01]),
+            dense_bias_reg=hp.Choice("Bert.dense_bias_reg", [0., 0.0001, 0.001, 0.01]),
+            dense_activity_reg=hp.Choice("Bert.dense_activity_reg", [0., 0.0001, 0.001, 0.01]),
         )
 
         return self.compile_model_with_adamw(hp, bert_input, dense_out)
@@ -172,11 +174,11 @@ if __name__ == "__main__":
             "max_trials": 20,
             "hyperparameters": {
                 "epochs": 8,
-                "batch_size": 64,
-                "learning_rate": [2e-5, 5e-5],
+                "batch_size": [32, 64],
+                "learning_rate": [5e-6, 2e-5, 5e-5],
                 "Bert.encoder_url": "https://tfhub.dev/tensorflow/small_bert/bert_en_uncased_L-12_H-128_A-2/1",
                 "Bert.hidden_size": 128,
-                "Bert.preprocessing": "[remove_emojis, remove_tags]",
+                "Bert.preprocessing": "[remove_emojis, remove_tags, remove_punctuation]",
             }
         }
         experiment = BertPlusStatsEmbeddingTweetLevelExperiment(experiment_dir, "bert_stats_embeddings_1", config)
