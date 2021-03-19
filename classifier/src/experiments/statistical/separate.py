@@ -3,6 +3,7 @@ import sys
 from experiments.experiment import AbstractSklearnExperiment
 import statistical.data_extraction as ex
 from experiments.handler import ExperimentHandler
+from experiments.statistical import get_ner_wrapper, get_sentiment_wrapper
 
 """ Experiments for individual statistical models """
 
@@ -19,12 +20,8 @@ class NerExperiment(AbstractSklearnExperiment):
     """ Extract named-entity recognition data at the user-level, and use this to train an Sklearn model """
 
     def input_data_transformer(self, x):
-        ner_library = self.hyperparameters.get("Ner.library")
-        model_filename = path_to_jar = None
-        if ner_library == "stanford":
-            model_filename = self.hyperparameters.get("Ner.model_filename")
-            path_to_jar = self.hyperparameters.get("Ner.path_to_jar")
-        extractor = ex.ner_tweet_extractor(ner_library, model_filename=model_filename, path_to_jar=path_to_jar)
+        ner_wrapper = get_ner_wrapper(self.hyperparameters)
+        extractor = ex.ner_tweet_extractor(ner_wrapper)
         return extractor.transform(x)
 
 
@@ -32,7 +29,8 @@ class SentimentExperiment(AbstractSklearnExperiment):
     """ Extract sentiment data at the user-level, and use this to train an Sklearn model """
 
     def input_data_transformer(self, x):
-        extractor = ex.sentiment_tweet_extractor()
+        sentiment_wrapper = get_sentiment_wrapper(self.hyperparameters)
+        extractor = ex.sentiment_tweet_extractor(sentiment_wrapper)
         return extractor.transform(x)
 
 
@@ -52,28 +50,33 @@ if __name__ == "__main__":
         #     NerExperiment,
         #     {
         #         "experiment_dir": "../training/statistical",
-        #         "experiment_name": "ner_spacy_7",
+        #         "experiment_name": "ner_spacy_sm_7",
         #         "max_trials": 100,
-        #         "hyperparameters": {"Ner.library": "spacy"},
+        #         "hyperparameters": {"Ner.library": "spacy", "Ner.spacy_pipeline": "en_core_web_sm"},
         #     }
         # ), (
-            NerExperiment,
+            SentimentExperiment,
             {
                 "experiment_dir": "../training/statistical",
-                "experiment_name": "ner_stanford_7",
+                "experiment_name": "sentiment_vader_7",
                 "max_trials": 100,
-                "hyperparameters": {
-                    "Ner.library": "stanford",
-                    "Ner.model_filename": "../../../stanford_ner/english.all.3class.distsim.crf.ser.gz",
-                    "Ner.path_to_jar": "../../../stanford_ner/stanford-ner-4.2.0.jar"
-                },
+                "hyperparameters": {"Sentiment.library": "vader"}
             }
         ), (
             SentimentExperiment,
             {
                 "experiment_dir": "../training/statistical",
-                "experiment_name": "sentiment_7",
+                "experiment_name": "sentiment_stanza_7",
                 "max_trials": 100,
+                "hyperparameters": {"Sentiment.library": "stanza"}
+            }
+        ), (
+            SentimentExperiment,
+            {
+                "experiment_dir": "../training/statistical",
+                "experiment_name": "sentiment_textblob_7",
+                "max_trials": 100,
+                "hyperparameters": {"Sentiment.library": "textblob"}
             }
         )
     ]
