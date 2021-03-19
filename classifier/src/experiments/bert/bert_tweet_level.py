@@ -29,7 +29,7 @@ class BertTweetLevelExperiment(AbstractBertExperiment):
             dense_activation=hp.Fixed("Bert.dense_activation", "linear"),
             dense_kernel_reg=hp.Choice("Bert.dense_kernel_reg", [0., 0.0001, 0.001, 0.01]),
             dense_bias_reg=hp.Choice("Bert.dense_bias_reg", [0., 0.0001, 0.001, 0.01]),
-            dense_activity_reg=hp.Choice("Bert.dense_activity_reg", [0., 0.0001, 0.001, 0.01]),
+            dense_activity_reg=hp.Fixed("Bert.dense_activity_reg", 0),
         )
 
         return self.compile_model_with_adamw(hp, bert_input, dense_out)
@@ -154,10 +154,10 @@ if __name__ == "__main__":
             "Bert.type": "individual",
         }
     }
-    experiment = BertTweetLevelFfnnExperiment(experiment_dir, "tweet_level_indiv_128_1", config)
+    experiment = BertTweetLevelExperiment(experiment_dir, "tweet_level_indiv_128_1", config)
     experiment.run(x, y)
 
-    # BertTweetLevelExperiment using BERT (H-128) Individual
+    # BertTweetLevelFfnnExperiment using BERT (H-128) Individual
     config = {
         "max_trials": 50,
         "hyperparameters": {
@@ -171,7 +171,7 @@ if __name__ == "__main__":
             "Bert.trainable": True,
         }
     }
-    experiment = BertTweetLevelExperiment(experiment_dir, "tweet_level_ffnn_indiv_128_1", config)
+    experiment = BertTweetLevelFfnnExperiment(experiment_dir, "tweet_level_ffnn_indiv_128_1", config)
     experiment.run(x, y)
 
 """

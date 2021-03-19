@@ -31,8 +31,7 @@ class TunerCV:
         Splits the data into `n_splits` folds, transforms data using the transformer_wrapper, and then saves the data
         for cross-validation
         """
-        data_splits = [transformer_wrapper(*cv_fold) for cv_fold in kfold_split_wrapper(self.cv, x_train, y_train)]
-        self.cv_data = data_splits
+        self.cv_data = [transformer_wrapper(*cv_fold) for cv_fold in kfold_split_wrapper(self.cv, x_train, y_train)]
 
 
 class BayesianOptimizationCV(BayesianOptimization, TunerCV):
