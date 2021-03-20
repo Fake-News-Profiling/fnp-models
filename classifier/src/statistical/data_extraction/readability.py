@@ -1,6 +1,7 @@
 from collections import Counter
 from functools import partial
 import re
+from typing import List
 
 import numpy as np
 import nltk
@@ -11,7 +12,7 @@ import statistical.data_extraction.preprocessing as pre
 """ Readability model data extraction functions """
 
 
-def readability_tweet_extractor():
+def readability_tweet_extractor() -> pre.TweetStatsExtractor:
     """ Create a TweetStatsExtractor for readability features """
     extractor = pre.TweetStatsExtractor(extractors=[
         tag_counts,
@@ -73,37 +74,37 @@ def readability_tweet_extractor():
     return extractor
 
 
-def tag_counts(user_tweets, tags=None):
+def tag_counts(tweet_feed: List[str], tags: bool = None) -> np.ndarray:
     """ Returns the average number of tag used, for each tag in tags """
     if tags is None:
         tags = ['#USER#', '#HASHTAG#', '#URL#']
-    return np.mean([[tweet.count(tag) for tag in tags] for tweet in user_tweets], axis=0)
+    return np.mean([[tweet.count(tag) for tag in tags] for tweet in tweet_feed], axis=0)
 
 
-def retweet_ratio(user_tweets):
+def retweet_ratio(tweet_feed: List[str]) -> float:
     """ Returns the ratio of retweets to regular tweets """
     retweets = 0
-    for tweet in user_tweets:
+    for tweet in tweet_feed:
         if tweet.startswith("RT"):
             retweets += 1
 
-    return retweets / len(user_tweets)
+    return retweets / len(tweet_feed)
 
 
-def emojis_counts(user_tweets):
+def emojis_counts(tweet_feed: List[str]) -> List:
     """ Returns the following emoji counts for this user: total number of emojis used, average number of emojis used
     per tweet, type-token ratio of emojis (uniqueness of emojis used) """
-    tweet_emojis = pre.emoji_chars(user_tweets)
+    tweet_emojis = pre.emoji_chars(tweet_feed)
     flattened_tweet_emojis = pre.flatten(tweet_emojis)
 
     total_num_emojis = len(flattened_tweet_emojis)
-    emoji_type_token_ratio = (len(Counter(flattened_tweet_emojis)) / total_num_emojis) if total_num_emojis > 0 else 0
-    return np.asarray([total_num_emojis, emoji_type_token_ratio])
+    emoji_type_token_ratio = len(Counter(flattened_tweet_emojis)) / max(1, total_num_emojis)
+    return [total_num_emojis, emoji_type_token_ratio]
 
 
-def syllables_to_words_ratios(user_tweets):
+def syllables_to_words_ratios(tweet_feed: List[str]) -> List:
     """ Returns the overall, average, min, and max ratios of the number of syllables to the number of words """
-    tweet_words = pre.tweets_to_words(user_tweets, remove_tags=True)
+    tweet_words = pre.tweets_to_words(tweet_feed, remove_tags=True)
     tweet_syllables = [sum(map(pre.syllables, words)) for words in tweet_words]
     per_tweet_ratios = [tweet_syllables[i] / max(1, len(tweet_words[i])) for i in range(len(tweet_words))]
 
@@ -111,56 +112,56 @@ def syllables_to_words_ratios(user_tweets):
     mean_ratio = np.mean(per_tweet_ratios)
     min_ratio = min(per_tweet_ratios)
     max_ratio = max(per_tweet_ratios)
-    return np.asarray([overall_ratio, mean_ratio, min_ratio, max_ratio])
+    return [overall_ratio, mean_ratio, min_ratio, max_ratio]
 
 
-def average_tweet_lengths(user_tweets):
+def average_tweet_lengths(tweet_feed: List[str]) -> List:
     """ Returns the average tweet lengths in words and characters """
-    mean_words = np.mean(list(map(len, pre.tweets_to_words(user_tweets, remove_tags=True))))
-    mean_chars = np.mean(list(map(len, map(partial(pre.clean_text, remove_tags=True), user_tweets))))
-    return np.asarray([mean_words, mean_chars])
+    mean_words = np.mean(list(map(len, pre.tweets_to_words(tweet_feed, remove_tags=True))))
+    mean_chars = np.mean(list(map(len, map(partial(pre.clean_text, remove_tags=True), tweet_feed))))
+    return [mean_words, mean_chars]
 
 
-def word_type_to_token_ratio(user_tweets):
+def word_type_to_token_ratio(tweet_feed: List[str]) -> float:
     """ Returns the ratio of unique words to the total number of words in all of a users tweets """
-    words = pre.flatten(pre.tweets_to_words(user_tweets, remove_tags=True))
-    return len(Counter(list(words))) / len(words)
+    words = pre.flatten(pre.tweets_to_words(tweet_feed, remove_tags=True))
+    return len(Counter(list(words))) / max(1, len(words))
 
 
-def truncated_tweets(user_tweets):
+def truncated_tweets(tweet_feed: List[str]) -> int:
     """ Returns the number of truncated tweets """
     count = 0
-    for tweet in user_tweets:
+    for tweet in tweet_feed:
         if re.match(r".*(?:\.\.\.|…)(?: #URL#)?$", tweet) is not None:
             count += 1
 
     return count
 
 
-def punctuation_counts(user_tweets, punctuation_marks="!?,:."):
+def punctuation_counts(tweet_feed: List[str], punctuation_marks: str = "!?,:.") -> np.ndarray:
     """ Returns the average number of each punctuation character in the users tweets, for each punctuation character
     in punctuation_marks. Also returns the punctuation type-to-token ratio of all of the users tweets """
-    all_punc = [c for tweet in user_tweets
+    all_punc = [c for tweet in tweet_feed
                 for c in pre.clean_text(tweet, remove_punc=False, remove_tags=True) if c in pre.punctuation]
     punc_ttr = len(Counter(all_punc)) / max(1, len(all_punc))
-    punc_counts = [[tweet.count(punctuation) for punctuation in punctuation_marks] for tweet in user_tweets]
+    punc_counts = [[tweet.count(punctuation) for punctuation in punctuation_marks] for tweet in tweet_feed]
     mean_punc_counts = np.mean(punc_counts, axis=0)
     return np.concatenate([mean_punc_counts, [punc_ttr]])
 
 
-def number_counts(user_tweets):
+def number_counts(tweet_feed: List[str]) -> List:
     """ Returns the following counts: number of numerical values in the users tweets (e.g. "7,000"), number of
     monetary values in the users tweets (e.g. "$90,000", "£9.35") """
     number_matcher = r"\d+(?:,\d+)*(?:\.\d+)?"
-    numbers = sum([len(re.findall(fr"(?:^| )(?<![£$€]){number_matcher}", tweet)) for tweet in user_tweets])
-    money = sum([len(re.findall(fr"[£$€]{number_matcher}", tweet)) for tweet in user_tweets])
-    return np.asarray([numbers, money])
+    numbers = sum([len(re.findall(fr"(?:^| )(?<![£$€]){number_matcher}", tweet)) for tweet in tweet_feed])
+    money = sum([len(re.findall(fr"[£$€]{number_matcher}", tweet)) for tweet in tweet_feed])
+    return [numbers, money]
 
 
-def average_personal_pronouns(user_tweets):
+def average_personal_pronouns(tweet_feed: List[str]) -> float:
     """ Returns the average number of personal pronouns per tweets """
     personal_pronouns_count = []
-    for tweet_words in pre.tweets_to_words(user_tweets, remove_tags=True):
+    for tweet_words in pre.tweets_to_words(tweet_feed, remove_tags=True):
         count = 0
         for tag in nltk.pos_tag(tweet_words):
             if tag[1] == 'PRP':
@@ -168,14 +169,14 @@ def average_personal_pronouns(user_tweets):
 
         personal_pronouns_count.append(count)
 
-    return np.mean(personal_pronouns_count)
+    return float(np.mean(personal_pronouns_count))
 
 
-def char_to_words_ratio(user_tweets):
+def char_to_words_ratio(tweet_feed: List[str]) -> float:
     """ Returns the ratio of characters to words in the users tweets """
     chars = 0
     words = 0
-    for tweet in user_tweets:
+    for tweet in tweet_feed:
         cleaned_tweet = pre.clean_text(tweet, remove_digits=False, remove_tags=True)
         chars += len(cleaned_tweet)
         words += len(cleaned_tweet.split())
@@ -184,23 +185,22 @@ def char_to_words_ratio(user_tweets):
     return chars / max(1, words)
 
 
-def quote_counts(user_tweets):
+def quote_counts(tweet_feed: List[str]) -> int:
     """ Returns the total and average number of quotes used by the user """
-    num_quotes = [len(re.findall("(?:^| )(?:“.*?”|‘.*?’|\".*?\"|\'.*?\')", tweet)) for tweet in user_tweets]
+    num_quotes = [len(re.findall("(?:^| )(?:“.*?”|‘.*?’|\".*?\"|\'.*?\')", tweet)) for tweet in tweet_feed]
     return sum(num_quotes)
 
 
-def capitalisation_counts(user_tweets):
-    """ Returns the following counts: average number of words with a capitalised first letter,
-    average number of fully capitalised words """
+def capitalisation_counts(tweet_feed: List[str]) -> List:
+    """
+    Returns the following counts: average number of words with a capitalised first letter,
+    average number of fully capitalised words
+    """
     first_capitalised = []
     fully_capitalised = []
-    for tweet in user_tweets:
+    for tweet in tweet_feed:
         cleaned_tweet = pre.clean_text(tweet, remove_tags=True)
         first_capitalised.append(len(re.findall(r"[A-Z][a-z]+", cleaned_tweet)))
         fully_capitalised.append(len(re.findall(r"[A-Z]{2,}[^\w]", cleaned_tweet)))
 
-    return np.asarray([
-        np.mean(first_capitalised),
-        np.mean(fully_capitalised),
-    ])
+    return [np.mean(first_capitalised), np.mean(fully_capitalised)]
