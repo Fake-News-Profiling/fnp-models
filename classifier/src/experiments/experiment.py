@@ -6,7 +6,7 @@ from typing import Optional
 import tensorflow as tf
 from kerastuner import HyperParameters, Objective
 from kerastuner.tuners.bayesian import BayesianOptimizationOracle
-from official.nlp.optimization import AdamWeightDecay
+from official.nlp import optimization
 from sklearn.decomposition import PCA
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.linear_model import LogisticRegression
@@ -23,6 +23,7 @@ from bert.models import tokenize_bert_input, bert_layers
 from experiments import allow_gpu_memory_growth
 from experiments.tuners import BayesianOptimizationCV, SklearnCV
 
+
 allow_gpu_memory_growth()
 
 
@@ -32,6 +33,7 @@ class ExperimentConfig:
     experiment_name: str
     hyperparameters: Optional[dict] = None
     max_trials: int = 30
+    num_cv_splits: int = 5
 
 
 class AbstractExperiment(ABC):
@@ -187,6 +189,7 @@ class AbstractTfExperiment(AbstractExperiment, ABC):
     def __init__(self, config: ExperimentConfig):
         super().__init__(config)
         self.tuner = BayesianOptimizationCV(
+            n_splits=config.num_cv_splits,
             preprocess=self.preprocess_cv_data,
             hypermodel=self.build_model,
             hyperparameters=self.hyperparameters,
@@ -218,32 +221,49 @@ class AbstractTfExperiment(AbstractExperiment, ABC):
 class AbstractBertExperiment(AbstractTfExperiment, ABC):
     """ Abstract base class for conducting a Keras Tuner tuning experiment with a BERT-base TensorFlow model """
 
-    @staticmethod
-    def compile_model_with_adamw(hp, model_inputs, model_outputs, learning_rate=None):
+    def compile_model_with_adamw(self, hp, model_inputs, model_outputs, learning_rate=None):
         """ Compile a model using AdamWeightDecay """
         if learning_rate is None:
             learning_rate = hp.get("learning_rate")
 
         model = tf.keras.Model(model_inputs, model_outputs)
+        if self.tuner.x_train_size is None:
+            optimizer = tf.optimizers.Adam(learning_rate=learning_rate)
+        else:
+            num_train_steps = hp.get("epochs") * self.tuner.x_train_size // hp.get("batch_size")
+            optimizer = optimization.create_optimizer(
+                init_lr=learning_rate,
+                num_train_steps=num_train_steps,
+                num_warmup_steps=int(0.1 * num_train_steps),
+                optimizer_type="adamw",
+            )
+            print("adamw:", num_train_steps, int(0.1 * num_train_steps))
+
         model.compile(
-            optimizer=AdamWeightDecay(learning_rate=learning_rate),
+            optimizer=optimizer,
             loss=tf.keras.losses.BinaryCrossentropy(from_logits=True),
             metrics=tf.metrics.BinaryAccuracy(),
         )
         return model
 
     @staticmethod
-    def single_dense_layer(inputs, dropout_rate, dense_activation, dense_kernel_reg,
-                           dense_bias_reg, dense_activity_reg, dense_units=1):
+    def single_dense_layer(inputs, dropout_rate, dense_activation, no_l2_reg=False, dense_kernel_reg=None,
+                           dense_bias_reg=None, dense_activity_reg=None, dense_units=1):
         dropout = tf.keras.layers.Dropout(dropout_rate)(inputs)
         batch = tf.keras.layers.BatchNormalization()(dropout)
-        dense_out = tf.keras.layers.Dense(
-            units=dense_units,
-            activation=dense_activation,
-            kernel_regularizer=tf.keras.regularizers.l2(dense_kernel_reg),
-            bias_regularizer=tf.keras.regularizers.l2(dense_bias_reg),
-            activity_regularizer=tf.keras.regularizers.l2(dense_activity_reg),
-        )(batch)
+        if no_l2_reg:
+            dense_out = tf.keras.layers.Dense(
+                units=dense_units,
+                activation=dense_activation,
+            )(batch)
+        else:
+            dense_out = tf.keras.layers.Dense(
+                units=dense_units,
+                activation=dense_activation,
+                kernel_regularizer=tf.keras.regularizers.l2(dense_kernel_reg),
+                bias_regularizer=tf.keras.regularizers.l2(dense_bias_reg),
+                activity_regularizer=tf.keras.regularizers.l2(dense_activity_reg),
+            )(batch)
         return dense_out
 
     @staticmethod
@@ -271,33 +291,36 @@ class AbstractBertExperiment(AbstractTfExperiment, ABC):
 
     @staticmethod
     def preprocess_data(hp, x_train, y_train, x_test, y_test):
-        data_transformers = {
-            "[remove_emojis]": [pre.remove_emojis, pre.replace_unicode, pre.replace_tags],
-            "[remove_emojis, remove_punctuation]": [
-                pre.remove_emojis, pre.replace_unicode, pre.remove_colons, pre.remove_punctuation_and_non_printables,
-                pre.replace_tags, pre.remove_hashtags],
-            "[remove_emojis, remove_tags]": [
-                pre.remove_emojis, pre.replace_unicode, partial(pre.replace_tags, remove=True)],
-            "[remove_emojis, remove_tags, remove_punctuation]": [
-                pre.remove_emojis, pre.replace_unicode, pre.remove_colons, pre.remove_punctuation_and_non_printables,
-                partial(pre.replace_tags, remove=True), pre.remove_hashtags],
-            "[tag_emojis]": [partial(pre.replace_emojis, with_desc=False), pre.replace_unicode, pre.replace_tags],
-            "[tag_emojis, remove_punctuation]": [
-                partial(pre.replace_emojis, with_desc=False), pre.replace_unicode, pre.remove_colons,
-                pre.remove_punctuation_and_non_printables, pre.replace_tags, pre.remove_hashtags],
-            "[replace_emojis]": [pre.replace_emojis, pre.replace_unicode, pre.replace_tags],
-            "[replace_emojis_no_sep]": [partial(pre.replace_emojis, sep=""), pre.replace_unicode, pre.replace_tags],
-            "[replace_emojis_no_sep, remove_tags]": [
-                partial(pre.replace_emojis, sep=""), pre.replace_unicode, partial(pre.replace_tags, remove=True)],
-            "[replace_emojis_no_sep, remove_tags, remove_punctuation]": [
-                partial(pre.replace_emojis, sep=""), pre.replace_unicode, pre.remove_colons,
-                pre.remove_punctuation_and_non_printables, partial(pre.replace_tags, remove=True), pre.remove_hashtags],
-        }[hp.get("Bert.preprocessing")]  # TODO - tag numbers?
+        preprocessing_choice = hp.get("Bert.preprocessing")
 
-        # Preprocess data
-        preprocessor = pre.BertTweetPreprocessor(
-            [pre.tag_indicators, pre.replace_xml_and_html] + data_transformers + [pre.remove_extra_spacing])
-        x_train = preprocessor.transform(x_train)
-        x_test = preprocessor.transform(x_test)
+        if preprocessing_choice != "none":
+            data_transformers = {
+                "[remove_emojis]": [pre.remove_emojis, pre.replace_unicode, pre.replace_tags],
+                "[remove_emojis, remove_punctuation]": [
+                    pre.remove_emojis, pre.replace_unicode, pre.remove_colons, pre.remove_punctuation_and_non_printables,
+                    pre.replace_tags, pre.remove_hashtags],
+                "[remove_emojis, remove_tags]": [
+                    pre.remove_emojis, pre.replace_unicode, partial(pre.replace_tags, remove=True)],
+                "[remove_emojis, remove_tags, remove_punctuation]": [
+                    pre.remove_emojis, pre.replace_unicode, pre.remove_colons, pre.remove_punctuation_and_non_printables,
+                    partial(pre.replace_tags, remove=True), pre.remove_hashtags],
+                "[tag_emojis]": [partial(pre.replace_emojis, with_desc=False), pre.replace_unicode, pre.replace_tags],
+                "[tag_emojis, remove_punctuation]": [
+                    partial(pre.replace_emojis, with_desc=False), pre.replace_unicode, pre.remove_colons,
+                    pre.remove_punctuation_and_non_printables, pre.replace_tags, pre.remove_hashtags],
+                "[replace_emojis]": [pre.replace_emojis, pre.replace_unicode, pre.replace_tags],
+                "[replace_emojis_no_sep]": [partial(pre.replace_emojis, sep=""), pre.replace_unicode, pre.replace_tags],
+                "[replace_emojis_no_sep, remove_tags]": [
+                    partial(pre.replace_emojis, sep=""), pre.replace_unicode, partial(pre.replace_tags, remove=True)],
+                "[replace_emojis_no_sep, remove_tags, remove_punctuation]": [
+                    partial(pre.replace_emojis, sep=""), pre.replace_unicode, pre.remove_colons,
+                    pre.remove_punctuation_and_non_printables, partial(pre.replace_tags, remove=True), pre.remove_hashtags],
+            }[preprocessing_choice]  # TODO - tag numbers?
+
+            # Preprocess data
+            preprocessor = pre.BertTweetPreprocessor(
+                [pre.tag_indicators, pre.replace_xml_and_html] + data_transformers + [pre.remove_extra_spacing])
+            x_train = preprocessor.transform(x_train)
+            x_test = preprocessor.transform(x_test)
 
         return hp, x_train, y_train, x_test, y_test

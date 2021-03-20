@@ -1,9 +1,11 @@
 import sys
 
-from bert import BertIndividualTweetTokenizer, BertTweetFeedTokenizer
-from data import parse_dataset
-from experiments.experiment import AbstractBertExperiment
+import tensorflow as tf
 
+from bert import BertIndividualTweetTokenizer, BertTweetFeedTokenizer
+from experiments.experiment import AbstractBertExperiment
+from experiments.handler import ExperimentHandler
+from experiments.models import CompileOnFitKerasModel
 
 """
 In this module, we experiment fine-tuning BERT on individual tweets or chunks of individual tweets.
@@ -27,12 +29,9 @@ class BertTweetLevelExperiment(AbstractBertExperiment):
             bert_output["pooled_output"],
             dropout_rate=hp.Float("Bert.dropout_rate", 0, 0.5),
             dense_activation=hp.Fixed("Bert.dense_activation", "linear"),
-            dense_kernel_reg=hp.Choice("Bert.dense_kernel_reg", [0., 0.0001, 0.001, 0.01]),
-            dense_bias_reg=hp.Choice("Bert.dense_bias_reg", [0., 0.0001, 0.001, 0.01]),
-            dense_activity_reg=hp.Fixed("Bert.dense_activity_reg", 0),
+            no_l2_reg=True,
         )
-
-        return self.compile_model_with_adamw(hp, bert_input, dense_out)
+        return CompileOnFitKerasModel(bert_input, dense_out, optimizer_learning_rate=hp.get("learning_rate"))
 
     @classmethod
     def preprocess_cv_data(cls, hp, x_train, y_train, x_test, y_test):
@@ -49,9 +48,10 @@ class BertTweetLevelFfnnExperiment(AbstractBertExperiment):
     (same as BertTweetLevelExperiment), using a feed-forward neural network to classify the BERT embeddings
     """
 
-    def build_model(self, hp):
+    def build_model(self, hp, *args, **kwargs):
         # Get BERT inputs and outputs
-        bert_input, bert_output = self.get_bert_layers(hp, trainable=hp.get("Bert.trainable"))
+        bert_trainable = hp.get("Bert.trainable")
+        bert_input, bert_output = self.get_bert_layers(hp, trainable=bert_trainable)
 
         # FFNN layers
         hidden_size = hp.get("Bert.hidden_size")
@@ -79,7 +79,14 @@ class BertTweetLevelFfnnExperiment(AbstractBertExperiment):
             dense_activity_reg=None,
         )
 
-        return self.compile_model_with_adamw(hp, bert_input, dense_out)
+        learning_rate = hp.get("learning_rate")
+        if bert_trainable or ("optimizer" in hp and hp.get("optimizer") == "adamw"):
+            # Use AdamW
+            return CompileOnFitKerasModel(bert_input, dense_out, optimizer_learning_rate=learning_rate)
+        else:
+            # Use Adam
+            return CompileOnFitKerasModel(
+                bert_input, dense_out, selected_optimizer=tf.optimizers.Adam(learning_rate=learning_rate))
 
     @classmethod
     def preprocess_cv_data(cls, hp, x_train, y_train, x_test, y_test):
@@ -93,86 +100,61 @@ class BertTweetLevelFfnnExperiment(AbstractBertExperiment):
 if __name__ == "__main__":
     """ Execute experiments in this module """
     dataset_dir = sys.argv[1]
-    experiment_dir = sys.argv[2]
-    x, y = parse_dataset(dataset_dir, "en")
 
     preprocessing_choices = [
-        "[remove_emojis]",
+        # "[remove_emojis]",
         "[remove_emojis, remove_punctuation]",
         "[remove_emojis, remove_tags]",
         "[remove_emojis, remove_tags, remove_punctuation]",
-        "[tag_emojis]",
+        # "[tag_emojis]",
         "[tag_emojis, remove_punctuation]",
-        "[replace_emojis]",
-        "[replace_emojis_no_sep]",
+        # "[replace_emojis]",
+        # "[replace_emojis_no_sep]",
         "[replace_emojis_no_sep, remove_tags]",
         "[replace_emojis_no_sep, remove_tags, remove_punctuation]",
+        "none",
     ]
+    experiments = [
+        (
+            # Bert (128) Individual tweet-level with varied preprocessing functions
+            BertTweetLevelExperiment,
+            {
+                "experiment_dir": "../training/bert_clf/tweet_level",
+                "experiment_name": "indiv_1",
+                "max_trials": 50,
+                "hyperparameters": {
+                    "epochs": 4,
+                    "batch_size": [8, 16, 32, 64, 80],
+                    "learning_rate": [2e-5, 5e-5],
+                    "Bert.encoder_url": "https://tfhub.dev/tensorflow/small_bert/bert_en_uncased_L-12_H-128_A-2/1",
+                    "Bert.hidden_size": 128,
+                    "Bert.preprocessing": "none",
+                    "Bert.type": "individual",
+                },
+            }
+        )
+    ]
+    with tf.device("/gpu:0"):
+        handler = ExperimentHandler(experiments)
+        handler.run_experiments(dataset_dir)
 
-    # BertTweetLevelExperiment using BERT (H-128) Feed
-    config = {
-        "max_trials": 50,
-        "hyperparameters": {
-            "epochs": 8,
-            "batch_size": [24, 32, 48, 64, 80],
-            "learning_rate": [2e-5, 3e-5, 5e-5],
-            "Bert.encoder_url": "https://tfhub.dev/tensorflow/small_bert/bert_en_uncased_L-12_H-128_A-2/1",
-            "Bert.hidden_size": 128,
-            "Bert.preprocessing": preprocessing_choices,
-            "Bert.type": "feed",
-        }
-    }
-    experiment = BertTweetLevelExperiment(experiment_dir, "tweet_level_feed_128_1", config)
-    experiment.run(x, y)
-
-    # BertTweetLevelExperiment using BERT (H-256) Feed
-    config = {
-        "max_trials": 10,
-        "hyperparameters": {
-            "epochs": 8,
-            "batch_size": [24, 32, 48, 64],
-            "learning_rate": [2e-5, 3e-5, 5e-5],
-            "Bert.encoder_url": "https://tfhub.dev/tensorflow/small_bert/bert_en_uncased_L-12_H-256_A-4/1",
-            "Bert.hidden_size": 256,
-            "Bert.preprocessing": "[remove_emojis, remove_tags]",
-            "Bert.type": "feed",
-        }
-    }
-    experiment = BertTweetLevelExperiment(experiment_dir, "tweet_level_feed_256_1", config)
-    experiment.run(x, y)
-
-    # BertTweetLevelExperiment using BERT (H-128) Individual
-    config = {
-        "max_trials": 50,
-        "hyperparameters": {
-            "epochs": 8,
-            "batch_size": [24, 32, 48, 64, 80],
-            "learning_rate": [2e-5, 3e-5, 5e-5],
-            "Bert.encoder_url": "https://tfhub.dev/tensorflow/small_bert/bert_en_uncased_L-12_H-128_A-2/1",
-            "Bert.hidden_size": 128,
-            "Bert.preprocessing": preprocessing_choices,
-            "Bert.type": "individual",
-        }
-    }
-    experiment = BertTweetLevelExperiment(experiment_dir, "tweet_level_indiv_128_1", config)
-    experiment.run(x, y)
-
-    # BertTweetLevelFfnnExperiment using BERT (H-128) Individual
-    config = {
-        "max_trials": 50,
-        "hyperparameters": {
-            "epochs": 8,
-            "batch_size": [24, 32, 48, 64, 80],
-            "learning_rate": [2e-5, 3e-5, 5e-5],
-            "Bert.encoder_url": "https://tfhub.dev/tensorflow/small_bert/bert_en_uncased_L-12_H-128_A-2/1",
-            "Bert.hidden_size": 128,
-            "Bert.preprocessing": preprocessing_choices,
-            "Bert.type": "individual",
-            "Bert.trainable": True,
-        }
-    }
-    experiment = BertTweetLevelFfnnExperiment(experiment_dir, "tweet_level_ffnn_indiv_128_1", config)
-    experiment.run(x, y)
+    # # BertTweetLevelFfnnExperiment using BERT (H-128) Individual
+    # config = {
+    #     "max_trials": 50,
+    #     "hyperparameters": {
+    #         "epochs": 8,
+    #         "batch_size": [24, 32, 48, 64, 80],
+    #         "learning_rate": [2e-5, 3e-5, 5e-5],
+    #         "Bert.encoder_url": "https://tfhub.dev/tensorflow/small_bert/bert_en_uncased_L-12_H-128_A-2/1",
+    #         "Bert.hidden_size": 128,
+    #         "Bert.preprocessing": preprocessing_choices,
+    #         "Bert.type": "individual",
+    #         "Bert.trainable": True,
+    #         "Bert.optimizer": "adamw",
+    #     }
+    # }
+    # experiment = BertTweetLevelFfnnExperiment(experiment_dir, "tweet_level_ffnn_indiv_128_1", config)
+    # experiment.run(x, y)
 
 """
 Current best:

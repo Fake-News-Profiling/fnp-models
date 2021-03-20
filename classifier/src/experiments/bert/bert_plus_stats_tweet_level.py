@@ -32,7 +32,7 @@ class BertPlusStatsEmbeddingTweetLevelExperiment(AbstractBertExperiment):
     tweet such that each input datapoint is of the form: "<stat_1> <stat_2> ... <stat_n> | <tweet>"
     """
 
-    def build_model(self, hp):
+    def build_model(self, hp, *args, **kwargs):
         # Get BERT inputs and outputs
         bert_input, bert_output = self.get_bert_layers(hp)
 
@@ -119,7 +119,7 @@ class BertPlusStatsTweetLevelExperiment(AbstractBertExperiment):
     * dense classifier input: concatenate(<user_i_tweet_j_statistical_data>, <user_i_tweet_j_embedding>)
     """
 
-    def build_model(self, hp):
+    def build_model(self, hp, *args, **kwargs):
         # Get BERT inputs and outputs
         bert_input, bert_output = self.get_bert_layers(hp)
         bert_input["tweet_level_stats"] = tf.keras.layers.Input(

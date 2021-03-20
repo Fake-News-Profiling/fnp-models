@@ -10,6 +10,7 @@ import pandas as pd
 from data import parse_dataset
 from experiments.experiment import AbstractExperiment, ExperimentConfig
 
+
 Experiment = Tuple[AbstractExperiment.__class__, Union[str, dict, ExperimentConfig]]
 
 
@@ -84,13 +85,13 @@ class ExperimentHandler:
         config_dir_path = os.path.join(config.experiment_dir, config.experiment_name)
         config_filepath = os.path.join(config_dir_path, "experiment_config.json")
         if not os.path.exists(config_dir_path):
-            os.mkdir(config_dir_path)
+            os.makedirs(config_dir_path, exist_ok=True)
         if os.path.exists(config_filepath):
             answer = input(
                 f"{config_filepath} already exists. Use this, overwrite, or exit? (use, overwrite, exit) ")
             if answer == "use":
                 with open(config_filepath, "r") as file:
-                    return json.load(file)
+                    return ExperimentConfig(**json.load(file))
             elif answer != "overwrite":
                 sys.exit(0)
 

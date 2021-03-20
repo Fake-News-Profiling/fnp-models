@@ -9,13 +9,14 @@ from kerastuner.tuners import Sklearn
 from sklearn.model_selection import StratifiedKFold
 
 
-""" 
-Academic Integrity Statement:
-The 'BayesianOptimizationCV.run_trial()' method uses code taken from:
+"""
+This module contains adapted KerasTuner Tuner classes, which have been updated to use cross-validation.
+
+The 'BayesianOptimizationCV' class uses code taken from:
 * kerastuner.engine.multi_execution_tuner.MultiExecutionTuner
 * kerastuner.tuners.sklearn_tuner.Sklearn
 
-The 'SklearnCV.run_trial()' method uses code taken from:
+The 'SklearnCV' class uses code taken from:
 * kerastuner.tuners.sklearn_tuner.Sklearn
 """
 
@@ -40,6 +41,7 @@ class BayesianOptimizationCV(BayesianOptimization, TunerCV):
         BayesianOptimization.__init__(self, *args, **kwargs)
         TunerCV.__init__(self, cv=StratifiedKFold(n_splits=n_splits, shuffle=True, random_state=1),
                          preprocess=preprocess)
+        self.x_train_size = None
 
     def run_trial(self, trial, *fit_args, **fit_kwargs):
         """ A hybrid method, between Sklearn Tuner and MultiExecutionTuner (using code from both) """
@@ -76,6 +78,7 @@ class BayesianOptimizationCV(BayesianOptimization, TunerCV):
             copied_fit_kwargs['callbacks'] = callbacks
 
             history = self._build_and_fit_model(trial, fit_args, copied_fit_kwargs)
+
             for metric, epoch_values in history.history.items():
                 if self.oracle.objective.direction == 'min':
                     best_value = np.min(epoch_values)
