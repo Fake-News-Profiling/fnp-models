@@ -27,9 +27,11 @@ class BertTweetLevelExperiment(AbstractBertExperiment):
         # Classifier layer
         dense_out = self.single_dense_layer(
             bert_output["pooled_output"],
-            dropout_rate=hp.Float("Bert.dropout_rate", 0, 0.5),
+            dropout_rate=hp.Choice("Bert.dropout_rate", [0, 0.1, 0.2]),
             dense_activation=hp.Fixed("Bert.dense_activation", "linear"),
-            no_l2_reg=True,
+            dense_kernel_reg=hp.Choice("Bert.dense_kernel_reg", [0., 0.0001, 0.001, 0.01]),
+            dense_bias_reg=hp.Choice("Bert.dense_bias_reg", [0., 0.0001, 0.001, 0.01]),
+            dense_activity_reg=None,
         )
         return CompileOnFitKerasModel(bert_input, dense_out, optimizer_learning_rate=hp.get("learning_rate"))
 
@@ -103,16 +105,16 @@ if __name__ == "__main__":
 
     preprocessing_choices = [
         # "[remove_emojis]",
-        "[remove_emojis, remove_punctuation]",
+        # "[remove_emojis, remove_punctuation]",
         "[remove_emojis, remove_tags]",
         "[remove_emojis, remove_tags, remove_punctuation]",
         # "[tag_emojis]",
-        "[tag_emojis, remove_punctuation]",
+        # "[tag_emojis, remove_punctuation]",
         # "[replace_emojis]",
         # "[replace_emojis_no_sep]",
         "[replace_emojis_no_sep, remove_tags]",
         "[replace_emojis_no_sep, remove_tags, remove_punctuation]",
-        "none",
+        # "none",
     ]
     experiments = [
         (
@@ -120,15 +122,15 @@ if __name__ == "__main__":
             BertTweetLevelExperiment,
             {
                 "experiment_dir": "../training/bert_clf/tweet_level",
-                "experiment_name": "indiv_1",
-                "max_trials": 50,
+                "experiment_name": "indiv_2",
+                "max_trials": 40,
                 "hyperparameters": {
-                    "epochs": 4,
-                    "batch_size": [8, 16, 32, 64, 80],
+                    "epochs": 6,
+                    "batch_size": [16, 32, 64, 80],
                     "learning_rate": [2e-5, 5e-5],
                     "Bert.encoder_url": "https://tfhub.dev/tensorflow/small_bert/bert_en_uncased_L-12_H-128_A-2/1",
                     "Bert.hidden_size": 128,
-                    "Bert.preprocessing": "none",
+                    "Bert.preprocessing": preprocessing_choices,
                     "Bert.type": "individual",
                 },
             }
