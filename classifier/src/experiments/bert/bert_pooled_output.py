@@ -4,14 +4,18 @@ import numpy as np
 import tensorflow as tf
 
 from bert import BertIndividualTweetTokenizer, BertTweetFeedTokenizer
-from data import parse_dataset
-from experiments.experiment import AbstractBertExperiment
+from experiments.experiment import AbstractBertExperiment, ExperimentConfig
+from experiments.handler import ExperimentHandler
+from experiments.models import CompileOnFitKerasModel
+from experiments.tuners import GridSearchCV
 
 
 class BertPooledOutputExperiment(AbstractBertExperiment):
     """
     Train a BERT model, using different methods to produce the pooled_output of BERT
     """
+    def __init__(self, config: ExperimentConfig):
+        super().__init__(config, tuner_class=GridSearchCV)
 
     def build_model(self, hp, *args, **kwargs):
         # Get BERT inputs and outputs
@@ -61,19 +65,17 @@ class BertPooledOutputExperiment(AbstractBertExperiment):
                 pooled_outputs = tf.reduce_sum(pooled_outputs, axis=0)
 
             # Pass pooled_outputs through a tanh layer (as they did in the original BERT paper)
-            dense_pooled = tf.keras.layers.Dense(hp.get("bert_size"), activation="tanh")(pooled_outputs)
+            dense_pooled = tf.keras.layers.Dense(hp.get("Bert.hidden_size"), activation="tanh")(pooled_outputs)
 
         # Classifier layer
         dense_out = self.single_dense_layer(
             dense_pooled,
-            dropout_rate=hp.Float("Bert.dropout_rate", 0, 0.5),
+            dropout_rate=hp.Fixed("Bert.dropout_rate", 0.1),
             dense_activation=hp.Fixed("Bert.dense_activation", "linear"),
-            dense_kernel_reg=hp.Choice("Bert.dense_kernel_reg", [0., 0.0001, 0.001, 0.01]),
-            dense_bias_reg=hp.Choice("Bert.dense_bias_reg", [0., 0.0001, 0.001, 0.01]),
-            dense_activity_reg=hp.Choice("Bert.dense_activity_reg", [0., 0.0001, 0.001, 0.01]),
+            no_l2_reg=True,
         )
 
-        return self.compile_model_with_adamw(hp, bert_input, dense_out)
+        return CompileOnFitKerasModel(bert_input, dense_out, optimizer_learning_rate=hp.get("learning_rate"))
 
     @classmethod
     def preprocess_cv_data(cls, hp, x_train, y_train, x_test, y_test):
@@ -87,20 +89,35 @@ class BertPooledOutputExperiment(AbstractBertExperiment):
 if __name__ == "__main__":
     """ Execute experiments in this module """
     dataset_dir = sys.argv[1]
-    experiment_dir = sys.argv[2]
-    x, y = parse_dataset(dataset_dir, "en")
 
-    # BertPooledOutputExperiment
-    config = {
-        "max_trials": 20,
-        "hyperparameters": {
-            "epochs": 8,
-            "batch_size": 64,
-            "learning_rate": [2e-5, 5e-5],
-            "Bert.encoder_url": "https://tfhub.dev/tensorflow/small_bert/bert_en_uncased_L-12_H-128_A-2/1",
-            "Bert.hidden_size": 128,
-            "Bert.preprocessing": "[remove_emojis, remove_tags]",
-        }
-    }
-    experiment = BertPooledOutputExperiment(experiment_dir, "pooled_output_1", config)
-    experiment.run(x, y)
+    # Best preprocessing functions found from BertTweetLevelExperiment
+    preprocessing_choices = [
+        "[remove_emojis, remove_tags]",
+        "[remove_emojis, remove_tags, remove_punctuation]",
+        "[replace_emojis_no_sep, remove_tags]",
+        "[replace_emojis_no_sep, remove_tags, remove_punctuation]",
+    ]
+
+    experiments = [
+        (
+            # Bert (128) Individual with different pooled output methods
+            BertPooledOutputExperiment,
+            {
+                "experiment_dir": "../training/bert_clf/pooled_output",
+                "experiment_name": "indiv_2",
+                "max_trials": 40,
+                "hyperparameters": {
+                    "epochs": 4,
+                    "batch_size": 64,
+                    "learning_rate": 5e-5,
+                    "Bert.encoder_url": "https://tfhub.dev/tensorflow/small_bert/bert_en_uncased_L-12_H-128_A-2/1",
+                    "Bert.hidden_size": 128,
+                    "Bert.preprocessing": "[remove_emojis, remove_tags, remove_punctuation]",
+                    "Bert.type": "individual",
+                },
+            }
+        )
+    ]
+    with tf.device("/gpu:0"):
+        handler = ExperimentHandler(experiments)
+        handler.run_experiments(dataset_dir)

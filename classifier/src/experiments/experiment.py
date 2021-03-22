@@ -186,9 +186,10 @@ class AbstractSklearnExperiment(AbstractExperiment, ABC):
 class AbstractTfExperiment(AbstractExperiment, ABC):
     """ Abstract base class for conducting a Keras Tuner tuning experiment with a TensorFlow model """
 
-    def __init__(self, config: ExperimentConfig):
+    def __init__(self, config: ExperimentConfig, tuner_class=BayesianOptimizationCV):
         super().__init__(config)
-        self.tuner = BayesianOptimizationCV(
+
+        self.tuner = tuner_class(
             n_splits=config.num_cv_splits,
             preprocess=self.preprocess_cv_data,
             hypermodel=self.build_model,
@@ -203,14 +204,13 @@ class AbstractTfExperiment(AbstractExperiment, ABC):
         if callbacks is None:
             callbacks = [
                 tf.keras.callbacks.TerminateOnNaN(),
-                tf.keras.callbacks.EarlyStopping("val_loss", patience=2),
+                # tf.keras.callbacks.EarlyStopping("val_loss", patience=2),
                 tf.keras.callbacks.TensorBoard(log_dir=self.experiment_directory + "/" + self.experiment_name + "/logs")
             ]
         if hasattr(self, "cv_data_transformer"):
             self.tuner.fit_data(x, y, self.cv_data_transformer)
 
-        with tf.device("/gpu:0"):
-            self.tuner.search(x=x, y=y, callbacks=callbacks, *args, **kwargs)
+        self.tuner.search(x=x, y=y, callbacks=callbacks, *args, **kwargs)
 
     @classmethod
     def preprocess_cv_data(cls, hp, x_train, y_train, x_test, y_test):
@@ -220,31 +220,6 @@ class AbstractTfExperiment(AbstractExperiment, ABC):
 
 class AbstractBertExperiment(AbstractTfExperiment, ABC):
     """ Abstract base class for conducting a Keras Tuner tuning experiment with a BERT-base TensorFlow model """
-
-    def compile_model_with_adamw(self, hp, model_inputs, model_outputs, learning_rate=None):
-        """ Compile a model using AdamWeightDecay """
-        if learning_rate is None:
-            learning_rate = hp.get("learning_rate")
-
-        model = tf.keras.Model(model_inputs, model_outputs)
-        if self.tuner.x_train_size is None:
-            optimizer = tf.optimizers.Adam(learning_rate=learning_rate)
-        else:
-            num_train_steps = hp.get("epochs") * self.tuner.x_train_size // hp.get("batch_size")
-            optimizer = optimization.create_optimizer(
-                init_lr=learning_rate,
-                num_train_steps=num_train_steps,
-                num_warmup_steps=int(0.1 * num_train_steps),
-                optimizer_type="adamw",
-            )
-            print("adamw:", num_train_steps, int(0.1 * num_train_steps))
-
-        model.compile(
-            optimizer=optimizer,
-            loss=tf.keras.losses.BinaryCrossentropy(from_logits=True),
-            metrics=tf.metrics.BinaryAccuracy(),
-        )
-        return model
 
     @staticmethod
     def single_dense_layer(inputs, dropout_rate, dense_activation, no_l2_reg=False, dense_kernel_reg=None,

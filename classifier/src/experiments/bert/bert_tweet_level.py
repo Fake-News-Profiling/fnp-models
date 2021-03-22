@@ -27,11 +27,9 @@ class BertTweetLevelExperiment(AbstractBertExperiment):
         # Classifier layer
         dense_out = self.single_dense_layer(
             bert_output["pooled_output"],
-            dropout_rate=hp.Choice("Bert.dropout_rate", [0, 0.1, 0.2]),
+            dropout_rate=hp.Choice("Bert.dropout_rate", [0., 0.1, 0.2]),
             dense_activation=hp.Fixed("Bert.dense_activation", "linear"),
-            dense_kernel_reg=hp.Choice("Bert.dense_kernel_reg", [0., 0.0001, 0.001, 0.01]),
-            dense_bias_reg=hp.Choice("Bert.dense_bias_reg", [0., 0.0001, 0.001, 0.01]),
-            dense_activity_reg=None,
+            no_l2_reg=True,
         )
         return CompileOnFitKerasModel(bert_input, dense_out, optimizer_learning_rate=hp.get("learning_rate"))
 
@@ -68,17 +66,17 @@ class BertTweetLevelFfnnExperiment(AbstractBertExperiment):
                 dense_activation=hp.Fixed("Bert.dense_mid_layer_activation", "relu"),
                 dense_kernel_reg=hp.Choice("Bert.dense_kernel_reg", [0., 0.0001, 0.001, 0.01]),
                 dense_bias_reg=hp.Choice("Bert.dense_bias_reg", [0., 0.0001, 0.001, 0.01]),
-                dense_activity_reg=None,
+                dense_activity_reg=0,
             )
 
         # Final classifier layer
         dense_out = self.single_dense_layer(
             prev_layer,
-            dropout_rate=hp.Float("Bert.dropout_rate", 0, 0.5),
-            dense_activation=hp.Fixed("Bert.dense_activation", "linear"),
+            dropout_rate=hp.Fixe("Bert.dropout_rate", 0, 0.5),
+            dense_activation=hp.Choice("Bert.dense_activation", ["relu", "linear"]),
             dense_kernel_reg=hp.Choice("Bert.dense_kernel_reg", [0., 0.0001, 0.001, 0.01]),
             dense_bias_reg=hp.Choice("Bert.dense_bias_reg", [0., 0.0001, 0.001, 0.01]),
-            dense_activity_reg=None,
+            dense_activity_reg=0,
         )
 
         learning_rate = hp.get("learning_rate")
@@ -116,7 +114,7 @@ if __name__ == "__main__":
         "[replace_emojis_no_sep, remove_tags, remove_punctuation]",
         # "none",
     ]
-    experiments = [
+    experiments = [  # TODO - Run to find best regularisation for linear layer
         (
             # Bert (128) Individual tweet-level with varied preprocessing functions
             BertTweetLevelExperiment,
@@ -134,6 +132,24 @@ if __name__ == "__main__":
                     "Bert.type": "individual",
                 },
             }
+        ), (
+            # Bert (128) Individual tweet-level with varied preprocessing functions
+            BertTweetLevelFfnnExperiment,
+            {
+                "experiment_dir": "../training/bert_clf/tweet_level_ffnn",
+                "experiment_name": "indiv_1",
+                "max_trials": 50,
+                "hyperparameters": {
+                    "epochs": 6,
+                    "batch_size": [16, 32, 64, 80],
+                    "learning_rate": [2e-5, 5e-5],
+                    "Bert.encoder_url": "https://tfhub.dev/tensorflow/small_bert/bert_en_uncased_L-12_H-128_A-2/1",
+                    "Bert.hidden_size": 128,
+                    "Bert.preprocessing": preprocessing_choices,
+                    "Bert.type": "individual",
+                    "Bert.trainable": False,
+                },
+            }
         )
     ]
     with tf.device("/gpu:0"):
@@ -145,13 +161,13 @@ if __name__ == "__main__":
     #     "max_trials": 50,
     #     "hyperparameters": {
     #         "epochs": 8,
-    #         "batch_size": [24, 32, 48, 64, 80],
-    #         "learning_rate": [2e-5, 3e-5, 5e-5],
+    #         "batch_size": [16, 32, 64, 80],
+    #         "learning_rate": [2e-5, 5e-5],
     #         "Bert.encoder_url": "https://tfhub.dev/tensorflow/small_bert/bert_en_uncased_L-12_H-128_A-2/1",
     #         "Bert.hidden_size": 128,
     #         "Bert.preprocessing": preprocessing_choices,
     #         "Bert.type": "individual",
-    #         "Bert.trainable": True,
+    #         "Bert.trainable": False,
     #         "Bert.optimizer": "adamw",
     #     }
     # }

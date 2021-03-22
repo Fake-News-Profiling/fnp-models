@@ -1,7 +1,8 @@
 import json
 import os
 import re
-from collections import defaultdict, Callable
+from typing import Callable, Generator
+from collections import defaultdict
 from functools import partial
 
 import numpy as np
@@ -14,8 +15,9 @@ from base import load_hyperparameters
 
 def plot_averaged_experiment_data(experiment_dir: str,
                                   trial_label_generator: Callable[[str, HyperParameters], str] = None,
-                                  trial_aggregator: Callable[HyperParameters, str] = None,
-                                  trial_filterer: Callable[HyperParameters, bool] = None):
+                                  trial_aggregator: Callable[[HyperParameters], str] = None,
+                                  aggregation_type: str = "mean",
+                                  trial_filterer: Callable[[str, HyperParameters], bool] = None):
     """
     Plot experiment data, where each trials cross-validation executions has been averaged.
 
@@ -25,6 +27,7 @@ def plot_averaged_experiment_data(experiment_dir: str,
     :param trial_aggregator: A function which generates a string from a trials hyperparameters. Trials with matching
     strings will have their metrics/results averaged in the graph (1 line plotted for all of them). By default, trials
     with the exact same hyperparameters are aggregated/combined
+    :param aggregation_type: mean (default), median, max, or min
     :param trial_filterer: A function which filters out trials, depending on their hyperparameters
     """
 
@@ -69,7 +72,13 @@ def plot_averaged_experiment_data(experiment_dir: str,
 
         for k2, v2 in v.items():
             if isinstance(v2, list):
-                aggregated_trial_data[k2] = list(map(np.mean, v2))
+                aggregator = {
+                    "mean": np.mean,
+                    "max": np.max,
+                    "min": np.min,
+                    "median": np.median,
+                }[aggregation_type]
+                aggregated_trial_data[k2] = list(map(aggregator, v2))
             else:
                 aggregated_trial_data[k2] = v2
 
@@ -94,20 +103,20 @@ def plot_averaged_experiment_data(experiment_dir: str,
     fig.legend(*axes[0][0].get_legend_handles_labels(), loc='upper center', bbox_to_anchor=(0.5, 1), ncol=3)
 
 
-def average_experiment_data(experiment_dir):
+def average_experiment_data(experiment_dir: str):
     """ Get averaged epoch data for each trial in this experiment """
     for trial_name in get_experiment_trials(experiment_dir):
         average_trial_data(experiment_dir, trial_name)
 
 
-def get_experiment_trials(experiment_dir):
+def get_experiment_trials(experiment_dir: str) -> Generator[str, None, None]:
     for file in os.listdir(experiment_dir):
         match = re.match(r"^trial_(.*)$", file)
         if match is not None:
             yield match.groups()[0]
 
 
-def average_trial_data(experiment_dir, trial_name):
+def average_trial_data(experiment_dir: str, trial_name: str):
     """ Create a JSON of averaged epoch data for this trial """
 
     log_filepath = os.path.join(experiment_dir, "logs", trial_name)
@@ -147,7 +156,8 @@ def average_trial_data(experiment_dir, trial_name):
     # Average across scalars_across_epochs
     averages = {}  # {"<train/validation>-<scalar>": [<value_on_epoch_1>, <value_on_epoch_2>, ...]}
     for k, v in scalars_across_epochs.items():
-        averages[k] = list(map(np.mean, v))
+        v_filtered = filter(lambda a: len(a) == len(v[0]), v)  # Remove epochs with early-stopping
+        averages[k] = list(map(np.mean, v_filtered))
 
     # Write out to trial directory
     with open(os.path.join(trial_filepath, "average_trial_data.json"), "w") as file:
