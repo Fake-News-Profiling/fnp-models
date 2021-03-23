@@ -25,11 +25,17 @@ The 'SklearnCV' class uses code taken from:
 """
 
 
+def default_preprocess(*args):
+    return args
+
+
 class TunerCV:
     def __init__(self, cv, preprocess=None):
+        if preprocess is None:
+            preprocess = default_preprocess
+        self.preprocess = preprocess
         self.cv = cv
         self.cv_data = None
-        self.preprocess = preprocess
 
     def fit_data(self, x_train, y_train, transformer_wrapper):
         """
@@ -178,9 +184,8 @@ class SklearnCV(Sklearn, TunerCV):
 
         split_data = self.cv_data if self.cv_data is not None else kfold_split_wrapper(self.cv, X, y)
         for split_num, (x_train, y_train, x_test, y_test) in enumerate(split_data):
-            if self.preprocess is not None:
-                x_train, y_train, x_test, y_test = self.preprocess(trial.hyperparameters, x_train, y_train, x_test,
-                                                                   y_test)
+            _, x_train, y_train, x_test, y_test = self.preprocess(
+                trial.hyperparameters, x_train, y_train, x_test, y_test)
 
             # Build and train model
             model = self.hypermodel.build(trial.hyperparameters)

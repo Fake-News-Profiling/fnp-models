@@ -42,15 +42,16 @@ class ExperimentHandler:
     def print_results(self, num_trials: int = 10):
         """ Print out the top `num_trials` trial results for each experiment """
         for experiment_cls, experiment_config in self.experiments:
-            experiment = self._load_experiment(experiment_cls, experiment_config)
+            experiment = self._load_experiment(experiment_cls, experiment_config, save_config=False)
             df = self._build_best_trials_df(experiment, num_trials)
-            print(("\n\nExperiment: %s/%s\n" + df.to_markdown) %
+            print(("\n\nExperiment: %s/%s\n" + df.to_markdown()) %
                   (experiment.config.experiment_dir, experiment.config.experiment_name))
 
     def _load_experiment(self,
                          experiment_cls: AbstractExperiment.__class__,
-                         experiment_config: Union[str, dict, ExperimentConfig]) -> AbstractExperiment:
-        config = self._load_experiment_config(experiment_config)
+                         experiment_config: Union[str, dict, ExperimentConfig],
+                         **kwargs) -> AbstractExperiment:
+        config = self._load_experiment_config(experiment_config, **kwargs)
         return experiment_cls(config)
 
     @staticmethod
@@ -68,7 +69,8 @@ class ExperimentHandler:
         return pd.DataFrame(results)
 
     @staticmethod
-    def _load_experiment_config(config: Union[str, dict, ExperimentConfig]) -> ExperimentConfig:
+    def _load_experiment_config(config: Union[str, dict, ExperimentConfig],
+                                save_config: bool = True) -> ExperimentConfig:
         """
         Loads the experiment config to an ExperimentConfig object, and saves it to the experiment directory
         """
@@ -82,24 +84,25 @@ class ExperimentHandler:
             config = ExperimentConfig(**config)
 
         # Save config to experiment directory
-        config_dir_path = os.path.join(config.experiment_dir, config.experiment_name)
-        config_filepath = os.path.join(config_dir_path, "experiment_config.json")
-        if not os.path.exists(config_dir_path):
-            os.makedirs(config_dir_path, exist_ok=True)
-        if os.path.exists(config_filepath):
-            answer = input(
-                f"{config_filepath} already exists. Use this, overwrite, or exit? (use, overwrite, exit) ")
-            if answer == "use":
-                with open(config_filepath, "r") as file:
-                    return ExperimentConfig(**json.load(file))
-            elif answer != "overwrite":
-                sys.exit(0)
+        if save_config:
+            config_dir_path = os.path.join(config.experiment_dir, config.experiment_name)
+            config_filepath = os.path.join(config_dir_path, "experiment_config.json")
+            if not os.path.exists(config_dir_path):
+                os.makedirs(config_dir_path, exist_ok=True)
+            if os.path.exists(config_filepath):
+                answer = input(
+                    f"{config_filepath} already exists. Use this, overwrite, or exit? (use, overwrite, exit) ")
+                if answer == "use":
+                    with open(config_filepath, "r") as file:
+                        return ExperimentConfig(**json.load(file))
+                elif answer != "overwrite":
+                    sys.exit(0)
 
-        with open(config_filepath, "w") as file:
-            config_dict = config.__dict__.copy()
-            if config_dict["hyperparameters"] is None:
-                config_dict.pop("hyperparameters")
+            with open(config_filepath, "w") as file:
+                config_dict = config.__dict__.copy()
+                if config_dict["hyperparameters"] is None:
+                    config_dict.pop("hyperparameters")
 
-            json.dump(config_dict, file, indent=2, sort_keys=True)
+                json.dump(config_dict, file, indent=2, sort_keys=True)
 
         return config

@@ -54,7 +54,7 @@ class VaderSentimentAnalysisWrapper(AbstractSentimentAnalysisWrapper):
 
 class StanzaSentimentAnalysisWrapper(AbstractSentimentAnalysisWrapper):
     def __init__(self):
-        analyser = stanza.Pipeline("en", "tokenize,sentiment")
+        analyser = stanza.Pipeline("en", processors="tokenize,sentiment")
         super().__init__(analyser)
 
     def sentiment(self, text: str) -> Sentiment:

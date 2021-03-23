@@ -6,7 +6,6 @@ from typing import Optional
 import tensorflow as tf
 from kerastuner import HyperParameters, Objective
 from kerastuner.tuners.bayesian import BayesianOptimizationOracle
-from official.nlp import optimization
 from sklearn.decomposition import PCA
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.linear_model import LogisticRegression
@@ -113,13 +112,12 @@ class AbstractSklearnExperiment(AbstractExperiment, ABC):
         )
 
     def run(self, x, y, callbacks=None, *args, **kwargs):
-        xt = self.input_data_transformer(x)
-        self.tuner.search(xt, y)
+        if hasattr(self, "cv_data_transformer"):
+            self.tuner.fit_data(x, y, self.cv_data_transformer)
+        elif hasattr(self, "input_data_transformer"):
+            x = self.input_data_transformer(x)
 
-    @abstractmethod
-    def input_data_transformer(self, x):
-        """ Transform the input data, before it is passed to `tuner.search()` """
-        pass
+        self.tuner.search(x, y)
 
     def build_model(self, hp):
         """ Build an Sklearn pipeline with a final estimator """
