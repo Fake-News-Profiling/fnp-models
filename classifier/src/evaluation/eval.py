@@ -7,7 +7,7 @@ from sklearn.metrics import precision_score, recall_score, f1_score
 from sklearn.model_selection import StratifiedKFold
 
 import evaluation.models as models
-from base import load_hyperparameters
+from base import ScopedHyperParameters
 from base.training import allow_gpu_memory_growth
 from data import load_data, parse_labels_to_floats
 
@@ -21,7 +21,7 @@ def evaluate(model, x, y, eval_metrics):
     return {name: fn(y, predictions) for name, fn in eval_metrics}
 
 
-def evaluate_models(x, y, eval_models, eval_metrics, cv_splits=5):
+def evaluate_models(x, y, eval_models, eval_metrics, cv_splits=5, save_filepath=None):
     """ Evaluate fake news profiling models, using K-fold Cross-Validation """
     kfold = StratifiedKFold(n_splits=cv_splits, shuffle=True, random_state=1)
 
@@ -55,16 +55,17 @@ def evaluate_models(x, y, eval_models, eval_metrics, cv_splits=5):
     cv_df = cv_df.sort_values(["Model", "CV split"])
     print(f"\n{cv_splits}-fold Cross-Validation results:\n", cv_df.to_markdown(), sep="", end="\n")
 
-    with open("src/evaluation/eval_results.txt", "a") as file:
-        file.write("\n")
-        cv_df.to_markdown(file)
+    if save_filepath is not None:
+        with open(save_filepath, "a") as file:
+            file.write("\n")
+            cv_df.to_markdown(file)
 
 
 def main():
     # Load data
     print("Loading data")
     tweet_train, label_train, tweet_val, label_val, tweet_test, label_test = load_data(
-        filepath="../../datasets/en_split_data.npy")
+        filepath="../datasets/en_split_data.npy")
     x = np.asarray([[tweet.text for tweet in tweet_feed] for tweet_feed in
                     np.concatenate([tweet_train, tweet_val, tweet_test])])
     y = parse_labels_to_floats(np.concatenate([label_train, label_val, label_test]))
@@ -73,37 +74,33 @@ def main():
     print("Beginning model evaluation")
     eval_models = [
         # Baselines
-        ("RandomModel", models.RandomModel, None),
-        ("TfIdfModel", models.TfIdfModel, None),
-        ("Buda20NgramEnsembleModel", models.Buda20NgramEnsembleModel, None),
+        ("RandomModel", models.baselines.RandomModel, None),
+        ("TfIdfModel", models.baselines.TfIdfModel, None),
+        ("SvmCharNGramsModel", models.baselines.SvmCharNGramsModel, None),
+        ("Buda20NgramEnsembleModel", models.baselines.Buda20NgramEnsembleModel, None),
 
         # Statistical models
         ("ReadabilityStatisticalModel", models.StatisticalModel,
-         load_hyperparameters("models/hyperparameters/readability_model.json", to_scoped_hyperparameters=True)),
+         ScopedHyperParameters.from_json("evaluation/models/hyperparameters/readability_model.json")),
         ("NerStatisticalModel", models.StatisticalModel,
-         load_hyperparameters("models/hyperparameters/ner_model.json", to_scoped_hyperparameters=True)),
+         ScopedHyperParameters.from_json("evaluation/models/hyperparameters/ner_model.json")),
         ("SentimentStatisticalModel", models.StatisticalModel,
-         load_hyperparameters("models/hyperparameters/sentiment_model.json", to_scoped_hyperparameters=True)),
-        ("CombinedStatisticalModel", models.StatisticalModel,
-         load_hyperparameters("models/hyperparameters/combined_statistical_model.json",
-                              to_scoped_hyperparameters=True)),
-        ("EnsembleStatisticalModel", models.ensemble_statistical_model, load_hyperparameters(
-            "models/hyperparameters/ensemble_statistical_model.json", to_scoped_hyperparameters=True)),
+         ScopedHyperParameters.from_json("evaluation/models/hyperparameters/sentiment_model.json")),
 
         # BERT-based models
-        ("BertPooledModel", models.BertPooledModel,
-         load_hyperparameters("models/hyperparameters/bert_model.json", to_scoped_hyperparameters=True)),
-        ("EnsembleBertPooledModel", models.ensemble_bert_pooled_model,
-         load_hyperparameters("models/hyperparameters/ensemble_bert_model.json", to_scoped_hyperparameters=True)),
-        ("Bert256PooledModel", models.BertPooledModel,
-         load_hyperparameters("models/hyperparameters/bert_model_256.json", to_scoped_hyperparameters=True)),
-        ("EnsembleBert256PooledModel", models.ensemble_bert_pooled_model,
-         load_hyperparameters("models/hyperparameters/ensemble_bert_model_256.json", to_scoped_hyperparameters=True)),
-        ("EnsembleBertPooledModelFfnnOut", models.ensemble_bert_pooled_model,
-         load_hyperparameters("models/hyperparameters/ensemble_bert_model_ffnn_out.json",
-                              to_scoped_hyperparameters=True)),
-        ("BertPooledModelFfnnOut", models.BertPooledModel,
-         load_hyperparameters("models/hyperparameters/bert_model_ffnn_out.json", to_scoped_hyperparameters=True)),
+        # ("BertPooledModel", models.BertPooledModel,
+        #  load_hyperparameters("models/hyperparameters/bert_model.json", to_scoped_hyperparameters=True)),
+        # ("EnsembleBertPooledModel", models.ensemble_bert_pooled_model,
+        #  load_hyperparameters("models/hyperparameters/ensemble_bert_model.json", to_scoped_hyperparameters=True)),
+        # ("Bert256PooledModel", models.BertPooledModel,
+        #  load_hyperparameters("models/hyperparameters/bert_model_256.json", to_scoped_hyperparameters=True)),
+        # ("EnsembleBert256PooledModel", models.ensemble_bert_pooled_model,
+        #  load_hyperparameters("models/hyperparameters/ensemble_bert_model_256.json", to_scoped_hyperparameters=True)),
+        # ("EnsembleBertPooledModelFfnnOut", models.ensemble_bert_pooled_model,
+        #  load_hyperparameters("models/hyperparameters/ensemble_bert_model_ffnn_out.json",
+        #                       to_scoped_hyperparameters=True)),
+        # ("BertPooledModelFfnnOut", models.BertPooledModel,
+        #  load_hyperparameters("models/hyperparameters/bert_model_ffnn_out.json", to_scoped_hyperparameters=True)),
         # ("Bert256PooledModelFfnnOut", models.BertPooledModel,
         #  load_hyperparameters("models/hyperparameters/bert_model_256_ffnn_out.json", to_scoped_hyperparameters=True)),
         # ("EnsembleBert256PooledModelFfnnOut", models.ensemble_bert_pooled_model,
@@ -118,7 +115,7 @@ def main():
         ("F1", f1_score),
     ]
     with tf.device("/gpu:0"):
-        evaluate_models(x, y, eval_models, metrics)
+        evaluate_models(x, y, eval_models, metrics, save_filepath="evaluation/eval_results.txt")
 
 
 if __name__ == "__main__":

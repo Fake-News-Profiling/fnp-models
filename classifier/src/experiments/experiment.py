@@ -6,7 +6,6 @@ from typing import Optional
 import tensorflow as tf
 from kerastuner import HyperParameters, Objective
 from kerastuner.tuners.bayesian import BayesianOptimizationOracle
-from official.nlp import optimization
 from sklearn.decomposition import PCA
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.linear_model import LogisticRegression
@@ -106,20 +105,19 @@ class AbstractSklearnExperiment(AbstractExperiment, ABC):
             ),
             hypermodel=self.build_model,
             scoring=make_scorer(log_loss, needs_proba=True),
-            metrics=[accuracy_score, f1_score],
+            metrics=[accuracy_score, f1_score, tf.keras.losses.binary_crossentropy],
             cv=StratifiedKFold(n_splits=5, shuffle=True, random_state=1),
             directory=self.experiment_directory,
             project_name=self.experiment_name,
         )
 
     def run(self, x, y, callbacks=None, *args, **kwargs):
-        xt = self.input_data_transformer(x)
-        self.tuner.search(xt, y)
+        if hasattr(self, "cv_data_transformer"):
+            self.tuner.fit_data(x, y, self.cv_data_transformer)
+        elif hasattr(self, "input_data_transformer"):
+            x = self.input_data_transformer(x)
 
-    @abstractmethod
-    def input_data_transformer(self, x):
-        """ Transform the input data, before it is passed to `tuner.search()` """
-        pass
+        self.tuner.search(x, y)
 
     def build_model(self, hp):
         """ Build an Sklearn pipeline with a final estimator """
@@ -157,7 +155,8 @@ class AbstractSklearnExperiment(AbstractExperiment, ABC):
         elif model_type == RandomForestClassifier.__name__:
             with hp.conditional_scope("Sklearn.model_type", RandomForestClassifier.__name__):
                 estimator = RandomForestClassifier(
-                    n_estimators=hp.Choice("Sklearn.RandomForestClassifier.n_estimators", [50, 100, 200, 300, 400]),
+                    n_estimators=hp.Choice("Sklearn.RandomForestClassifier.n_estimators",
+                                           [10, 20, 30, 40, 50, 100, 200, 300, 400]),
                     criterion=hp.Choice("Sklearn.RandomForestClassifier.criterion", ["gini", "entropy"]),
                     min_samples_split=hp.Int("Sklearn.RandomForestClassifier.min_samples_split", 2, 8),
                     min_samples_leaf=hp.Int("Sklearn.RandomForestClassifier.min_samples_leaf", 2, 6),
@@ -242,11 +241,12 @@ class AbstractBertExperiment(AbstractTfExperiment, ABC):
         return dense_out
 
     @staticmethod
-    def get_bert_layers(hp, trainable=True):
+    def get_bert_layers(hp, trainable=True, **kwargs):
         return bert_layers(
             hp.get("Bert.encoder_url"),
             trainable=trainable,
-            hidden_layer_size=hp.get("Bert.hidden_size")
+            hidden_layer_size=hp.get("Bert.hidden_size"),
+            **kwargs,
         )
 
     @staticmethod
@@ -262,7 +262,7 @@ class AbstractBertExperiment(AbstractTfExperiment, ABC):
             feed_overlap=hp.get("Bert.feed_data_overlap") if isinstance(tokenizer_class, BertTweetFeedTokenizer) else 0,
             **kwargs,
         )
-        return (hp, *tokenized)
+        return hp, *tokenized
 
     @staticmethod
     def preprocess_data(hp, x_train, y_train, x_test, y_test):

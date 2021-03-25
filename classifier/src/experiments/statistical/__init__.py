@@ -1,9 +1,12 @@
+from typing import Union
+
 from kerastuner import HyperParameters
 
 import statistical.data_extraction as ex
+from base import ScopedHyperParameters
 
 
-def get_ner_wrapper(hp: HyperParameters) -> ex.AbstractNerTaggerWrapper:
+def get_ner_wrapper(hp: Union[HyperParameters, ScopedHyperParameters]) -> ex.AbstractNerTaggerWrapper:
     ner_library = hp.get("Ner.library")
     if ner_library == "spacy":
         return ex.named_entity.SpacyNerTaggerWrapper(hp.get("Ner.spacy_pipeline"))
@@ -11,7 +14,7 @@ def get_ner_wrapper(hp: HyperParameters) -> ex.AbstractNerTaggerWrapper:
         raise ValueError("Invalid `Ner.library` name")
 
 
-def get_sentiment_wrapper(hp: HyperParameters) -> ex.AbstractSentimentAnalysisWrapper:
+def get_sentiment_wrapper(hp: Union[HyperParameters, ScopedHyperParameters]) -> ex.AbstractSentimentAnalysisWrapper:
     sentiment_library = hp.get("Sentiment.library")
     if sentiment_library == "vader":
         return ex.sentiment.VaderSentimentAnalysisWrapper()

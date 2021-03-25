@@ -22,46 +22,46 @@ class SklearnModel(AbstractModel):
 
         # Pick the Estimator
         estimator = None
-        model_type = self.hyperparameters.get("model_type")
+        model_type = self.hyperparameters["model_type"]
         if model_type == "LogisticRegression":
             estimator = LogisticRegression(
-                C=self.hyperparameters.get("C"),
-                solver=self.hyperparameters.get("solver"),
+                C=self.hyperparameters["C"],
+                solver=self.hyperparameters["solver"],
             )
         elif model_type == "SVC":
             estimator = SVC(
-                C=self.hyperparameters.get("C"),
-                kernel=self.hyperparameters.get("kernel"),
+                C=self.hyperparameters["C"],
+                kernel=self.hyperparameters["kernel"],
                 probability=True,
             )
         elif model_type == "RandomForestClassifier":
             estimator = RandomForestClassifier(
-                n_estimators=self.hyperparameters.get("n_estimators"),
-                criterion=self.hyperparameters.get("criterion"),
-                min_samples_split=self.hyperparameters.get("min_samples_split"),
-                min_samples_leaf=self.hyperparameters.get("min_samples_leaf"),
-                min_impurity_decrease=self.hyperparameters.get("min_impurity_decrease"),
+                n_estimators=self.hyperparameters["n_estimators"],
+                criterion=self.hyperparameters["criterion"],
+                min_samples_split=self.hyperparameters["min_samples_split"],
+                min_samples_leaf=self.hyperparameters["min_samples_leaf"],
+                min_impurity_decrease=self.hyperparameters["min_impurity_decrease"],
             )
         elif model_type == "XGBClassifier":
             estimator = XGBClassifier(
-                learning_rate=self.hyperparameters.get("learning_rate"),
-                gamma=self.hyperparameters.get("gamma"),
-                max_depth=self.hyperparameters.get("max_depth"),
-                min_child_weight=self.hyperparameters.get("min_child_weight"),
-                subsample=self.hyperparameters.get("subsample"),
-                colsample_bytree=self.hyperparameters.get("colsample_bytree"),
-                colsample_bylevel=self.hyperparameters.get("colsample_bylevel"),
-                colsample_bynode=self.hyperparameters.get("colsample_bynode"),
-                reg_lambda=self.hyperparameters.get("reg_lambda"),
-                reg_alpha=self.hyperparameters.get("reg_alpha"),
+                learning_rate=self.hyperparameters["learning_rate"],
+                gamma=self.hyperparameters["gamma"],
+                max_depth=self.hyperparameters["max_depth"],
+                min_child_weight=self.hyperparameters["min_child_weight"],
+                subsample=self.hyperparameters["subsample"],
+                colsample_bytree=self.hyperparameters["colsample_bytree"],
+                colsample_bylevel=self.hyperparameters["colsample_bylevel"],
+                colsample_bynode=self.hyperparameters["colsample_bynode"],
+                reg_lambda=self.hyperparameters["reg_lambda"],
+                reg_alpha=self.hyperparameters["reg_alpha"],
             )
         steps.append(("Estimator", estimator))
 
         # Use PCA if not using a Gradient Boosting Classifier (due to multi-collinearity)
-        if self.hyperparameters.get("model_type") != "XGBClassifier":
+        if self.hyperparameters["model_type"] != "XGBClassifier":
             steps.insert(0, ("PCA", PCA()))
 
-        if self.hyperparameters.get("ignore_preprocessing"):
+        if self.hyperparameters["ignore_preprocessing"]:
             self.model = estimator
         else:
             self.model = Pipeline(steps)

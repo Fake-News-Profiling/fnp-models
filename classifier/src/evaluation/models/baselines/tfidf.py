@@ -1,9 +1,8 @@
 import numpy as np
-from kerastuner import HyperParameters
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.linear_model import LogisticRegression
 
-from base import AbstractModel
+from base import AbstractModel, ScopedHyperParameters
 
 
 class TfIdfModel(AbstractModel):
@@ -11,10 +10,8 @@ class TfIdfModel(AbstractModel):
     A basic TF-IDF model which generates TF-IDF embeddings for each users tweets, average-pools the embeddings for
     each user and then trains a LogisticRegression classifier using these embeddings
     """
-    def __init__(self, hyperparameters: HyperParameters):
+    def __init__(self, hyperparameters: ScopedHyperParameters):
         super().__init__(hyperparameters)
-        self.name = self.__class__.__name__
-
         self.tfidf = TfidfVectorizer(strip_accents="unicode")
         self.model = LogisticRegression()
 

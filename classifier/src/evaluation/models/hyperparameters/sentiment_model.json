@@ -1,61 +1,21 @@
 {
-  "trial_id": "558b2620bd04caf02f07c1d332b28062",
-  "hyperparameters": {
-    "space":[],
-    "values": {
-      "data_type": "sentiment",
-      "SklearnModel.model_type": "XGBClassifier",
-      "SklearnModel.learning_rate": 0.08281490694154658,
-      "SklearnModel.gamma": 5.33342875724734,
-      "SklearnModel.max_depth": 3,
-      "SklearnModel.min_child_weight": 5,
-      "SklearnModel.subsample": 0.6012636685827967,
-      "SklearnModel.colsample_bytree": 0.6856786279458772,
-      "SklearnModel.colsample_bylevel": 0.8889056357774469,
-      "SklearnModel.colsample_bynode": 0.238765307044096,
-      "SklearnModel.reg_lambda": 0.4578715873994581,
-      "SklearnModel.reg_alpha": 0.14395547238532985,
-      "SklearnModel.ignore_preprocessing": false
-    }
+  "data_type": "sentiment",
+
+  "Sentiment": {
+    "library": "vader"
   },
-  "metrics": {
-    "metrics": {
-      "score": {
-        "direction": "min",
-        "observations": [
-          {
-            "value": [
-              1.018448111488603
-            ],
-            "step": 0
-          }
-        ]
-      },
-      "accuracy_score": {
-        "direction": "min",
-        "observations": [
-          {
-            "value": [
-              0.6407407407407406
-            ],
-            "step": 0
-          }
-        ]
-      },
-      "f1_score": {
-        "direction": "min",
-        "observations": [
-          {
-            "value": [
-              0.628389239384953
-            ],
-            "step": 0
-          }
-        ]
-      }
-    }
-  },
-  "score": 1.018448111488603,
-  "best_step": 0,
-  "status": "COMPLETED"
+  "Sklearn": {
+    "model_type": "XGBClassifier",
+    "learning_rate": 0.09094860748929857,
+    "gamma": 3.1462603308432358,
+    "max_depth": 4,
+    "min_child_weight": 6,
+    "subsample": 0.8624331402103134,
+    "colsample_bytree": 0.4691526918399977,
+    "colsample_bylevel": 0.923399846630764,
+    "colsample_bynode": 0.35461053085840577,
+    "reg_lambda": 0.693105742208086,
+    "reg_alpha": 0.23567339543813356,
+    "ignore_preprocessing": false
+  }
 }

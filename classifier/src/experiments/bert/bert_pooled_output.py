@@ -15,7 +15,7 @@ class BertPooledOutputExperiment(AbstractBertExperiment):
     Train a BERT model, using different methods to produce the pooled_output of BERT
     """
 
-    def build_model(self, hp, *args, **kwargs):
+    def build_model(self, hp):
         # Get BERT inputs and outputs
         bert_input, bert_output = self.get_bert_layers(hp)
 

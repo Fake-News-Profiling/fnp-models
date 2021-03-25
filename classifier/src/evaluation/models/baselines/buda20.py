@@ -79,7 +79,6 @@ class Buda20NgramEnsembleModel(AbstractModel):
 
     def fit(self, x, y):
         x_clean_v1, x_clean_v2, x_stats = self._clean_data(x)
-        print(len(x_clean_v1), len(y))
 
         # Train models
         self.lr_ngram.fit(x_clean_v1, y)

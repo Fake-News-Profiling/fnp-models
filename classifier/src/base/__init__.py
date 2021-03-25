@@ -1,60 +1,52 @@
 import json
 from abc import ABC, abstractmethod
-from typing import Union
+from typing import Union, Any, List
 
 from kerastuner import HyperParameters
 
 
 class ScopedHyperParameters:
     """ Defines hyper-parameters within a tree of scopes """
+
     def __init__(self):
-        super().__init__()
-        self.scope = {}
-        self.value = None
+        self._scope = {}
 
-    @staticmethod
-    def _add_to_scope(hyperparameters, scope_names, value):
-        if len(scope_names) == 0:
-            # Set the hyperparameters value
-            hyperparameters.value = value
+    @classmethod
+    def from_json(cls, filepath: str) -> "ScopedHyperParameters":
+        """ Create a ScopedHyperParameters instance, from a JSON file """
+        with open(filepath, "r") as file:
+            data = json.load(file)
+
+        return cls.from_dict(data)
+
+    @classmethod
+    def from_dict(cls, data: dict) -> "ScopedHyperParameters":
+        """ Create a ScopedHyperParameters instance, from a dict """
+        hp = ScopedHyperParameters()
+        for k, v in data.items():
+            if isinstance(v, dict):
+                hp._scope[k] = cls.from_dict(v)
+            else:
+                hp._scope[k] = v
+
+        return hp
+
+    def get(self, name: Union[str, List[str]]) -> Any:
+        """
+        Get a value or inner ScopedHyperParameters instance. Takes dot-separated string (or list of strings)
+        representing the path to the hyperparameter/scope to return.
+        """
+        if isinstance(name, list):
+            if len(name) == 1:
+                return self._scope[name[0]]
+
+            return self.get(name[0]).get(name[1:])
         else:
-            # Go in to the next scope
-            next_scope_name = scope_names[0]
-            if next_scope_name not in hyperparameters.scope:
-                hyperparameters.scope[next_scope_name] = ScopedHyperParameters()
+            names = name.split(".")
+            return self.get(names)
 
-            ScopedHyperParameters._add_to_scope(hyperparameters.scope[next_scope_name], scope_names[1:], value)
-
-    @staticmethod
-    def _get_from_scope(hyperparameters, scope_names):
-        if len(scope_names) == 0:
-            # Get the hyperparameters value
-            return hyperparameters.value
-        else:
-            # Go in to the next scope
-            return ScopedHyperParameters._get_from_scope(hyperparameters.scope[scope_names[0]], scope_names[1:])
-
-    @staticmethod
-    def from_hyperparameters(hyperparameters: HyperParameters, scoped_hyperparameters=None):
-        """ Convert Keras Tuner HyperParameters to a ScopedHyperParameters object """
-        if scoped_hyperparameters is None:
-            scoped_hyperparameters = ScopedHyperParameters()
-        for k, v in hyperparameters.values.items():
-            ScopedHyperParameters._add_to_scope(scoped_hyperparameters, str(k).split("."), v)
-
-        return scoped_hyperparameters
-
-    def add_hyperparameters(self, hyperparameters: HyperParameters):
-        """ Add hyper-parameters from a HyperParameters object to this ScopedHyperParameters object """
-        self.from_hyperparameters(hyperparameters, scoped_hyperparameters=self)
-
-    def get_scope(self, scope_name):
-        """ Return ScopedHyperParameters for the given scope name """
-        return self.scope[scope_name]
-
-    def get(self, hyperparameter_name: str):
-        """ Get a value for a hyper-parameter """
-        return self._get_from_scope(self, hyperparameter_name.split("."))
+    def __getitem__(self, item):
+        return self.get(item)
 
 
 class AbstractModel(ABC):
@@ -78,13 +70,8 @@ class AbstractModel(ABC):
         pass
 
 
-def load_hyperparameters(trial_filepath: str, to_scoped_hyperparameters: bool = False) -> Union[ScopedHyperParameters,
-                                                                                                HyperParameters]:
+def load_hyperparameters(trial_filepath: str) -> HyperParameters:
     """ Load a trials hyper-parameters from a JSON file """
     with open(trial_filepath) as trial_file:
         trial = json.load(trial_file)
-        hyperparameters = HyperParameters.from_config(trial["hyperparameters"])
-        if to_scoped_hyperparameters:
-            return ScopedHyperParameters.from_hyperparameters(hyperparameters)
-
-        return hyperparameters
+        return HyperParameters.from_config(trial["hyperparameters"])

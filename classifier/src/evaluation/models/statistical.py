@@ -2,6 +2,7 @@ import data.preprocess as pre
 from base import ScopedHyperParameters, AbstractModel
 from evaluation.models.ensemble import EnsembleModel
 from evaluation.models.sklearn import SklearnModel
+from experiments.statistical import get_ner_wrapper, get_sentiment_wrapper
 from statistical.data_extraction import readability_tweet_extractor, ner_tweet_extractor, sentiment_tweet_extractor, \
     combined_tweet_extractor
 
@@ -17,14 +18,21 @@ class StatisticalModel(AbstractModel):
 
         # Data preprocessing and extraction
         self.preprocessor = pre.BertTweetPreprocessor([pre.tag_indicators, pre.replace_xml_and_html])
-        self.extractor = {
-            "readability": readability_tweet_extractor(),
-            "ner": ner_tweet_extractor(),
-            "sentiment": sentiment_tweet_extractor(),
-            "combined": combined_tweet_extractor(),
-        }[self.hyperparameters.get("data_type")]
+        data_type = self.hyperparameters["data_type"]
 
-        self.sklearn_model = SklearnModel(hyperparameters.get_scope("SklearnModel"))
+        if data_type == "readability":
+            self.extractor = readability_tweet_extractor()
+        elif data_type == "ner":
+            self.extractor = ner_tweet_extractor(get_ner_wrapper(self.hyperparameters))
+        elif data_type == "sentiment":
+            self.extractor = sentiment_tweet_extractor(get_sentiment_wrapper(self.hyperparameters))
+        elif data_type == "combined":
+            self.extractor = combined_tweet_extractor(
+                get_ner_wrapper(self.hyperparameters), get_sentiment_wrapper(self.hyperparameters))
+        else:
+            raise ValueError("Invalid value in hyperparameters for 'data_type'")
+
+        self.sklearn_model = SklearnModel(self.hyperparameters["Sklearn"])
 
     def preprocess(self, x):
         return self.extractor.transform(
