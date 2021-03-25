@@ -36,6 +36,7 @@ class BertUserLevelClassifier(tf.keras.layers.Layer):
             inputs[:, i], training=training) for i in range(num_tweets_per_user)], axis=1)
 
     def call(self, inputs, training=None, mask=None):
+        print("BERT called")
         # inputs.shape == (batch_size, 100, 3)
         # Returns a tensor with shape (batch_size, 1)
         x_train = self._accumulate_bert_outputs(inputs, training=training)
@@ -55,7 +56,7 @@ class BertTrainedOnDownstreamLoss(AbstractBertExperiment):
     def build_model(self, hp):
         num_tweets_per_user = 100
         bert_clf = BertUserLevelClassifier(hp)
-        inputs = tf.keras.layers.Input((100, 3, 128), dtype=tf.int32)
+        inputs = tf.keras.layers.Input((num_tweets_per_user, 3, hp.get("Bert.hidden_size")), dtype=tf.int32)
         # [list(bert_clf.bert_inputs.copy().values()) for _ in range(num_tweets_per_user)]
         outputs = bert_clf(inputs)
         return CompileOnFitKerasModel(inputs, outputs, optimizer_learning_rate=hp.get("learning_rate"))
@@ -101,7 +102,7 @@ if __name__ == "__main__":
                 "max_trials": 10,
                 "hyperparameters": {
                     "epochs": 4,
-                    "batch_size": 32,
+                    "batch_size": 8,
                     "learning_rate": 2e-5,
                     "Bert.encoder_url": "https://tfhub.dev/tensorflow/small_bert/bert_en_uncased_L-12_H-128_A-2/1",
                     "Bert.hidden_size": 128,
@@ -110,6 +111,6 @@ if __name__ == "__main__":
             }
         )
     ]
-    with tf.device("/gpu:0"):
+    with tf.device("/device:GPU:0"):
         handler = ExperimentHandler(experiments)
         handler.run_experiments(dataset_dir)

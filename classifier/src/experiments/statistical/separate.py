@@ -39,19 +39,20 @@ if __name__ == "__main__":
     """ Execute experiments in this module """
     dataset_dir = sys.argv[1]
 
+    num = 7
     experiments = [
         (
             ReadabilityExperiment,
             {
                 "experiment_dir": "../training/statistical",
-                "experiment_name": "readability_7",
+                "experiment_name": f"readability_{num}",
                 "max_trials": 100,
             }
         ), (
             NerExperiment,
             {
                 "experiment_dir": "../training/statistical",
-                "experiment_name": "ner_spacy_sm_7",
+                "experiment_name": f"ner_spacy_sm_{num}",
                 "max_trials": 100,
                 "hyperparameters": {"Ner.library": "spacy", "Ner.spacy_pipeline": "en_core_web_sm"},
             }
@@ -59,7 +60,7 @@ if __name__ == "__main__":
             SentimentExperiment,
             {
                 "experiment_dir": "../training/statistical",
-                "experiment_name": "sentiment_vader_7",
+                "experiment_name": f"sentiment_vader_{num}",
                 "max_trials": 100,
                 "hyperparameters": {"Sentiment.library": "vader"}
             }
@@ -67,7 +68,7 @@ if __name__ == "__main__":
             SentimentExperiment,
             {
                 "experiment_dir": "../training/statistical",
-                "experiment_name": "sentiment_textblob_7",
+                "experiment_name": f"sentiment_textblob_{num}",
                 "max_trials": 100,
                 "hyperparameters": {"Sentiment.library": "textblob"}
             }
@@ -75,4 +76,4 @@ if __name__ == "__main__":
     ]
     handler = ExperimentHandler(experiments)
     # handler.run_experiments(dataset_dir)
-    handler.print_results()
+    handler.print_results(20)

@@ -105,7 +105,7 @@ class AbstractSklearnExperiment(AbstractExperiment, ABC):
             ),
             hypermodel=self.build_model,
             scoring=make_scorer(log_loss, needs_proba=True),
-            metrics=[accuracy_score, f1_score],
+            metrics=[accuracy_score, f1_score, tf.keras.losses.binary_crossentropy],
             cv=StratifiedKFold(n_splits=5, shuffle=True, random_state=1),
             directory=self.experiment_directory,
             project_name=self.experiment_name,
@@ -155,7 +155,8 @@ class AbstractSklearnExperiment(AbstractExperiment, ABC):
         elif model_type == RandomForestClassifier.__name__:
             with hp.conditional_scope("Sklearn.model_type", RandomForestClassifier.__name__):
                 estimator = RandomForestClassifier(
-                    n_estimators=hp.Choice("Sklearn.RandomForestClassifier.n_estimators", [50, 100, 200, 300, 400]),
+                    n_estimators=hp.Choice("Sklearn.RandomForestClassifier.n_estimators",
+                                           [10, 20, 30, 40, 50, 100, 200, 300, 400]),
                     criterion=hp.Choice("Sklearn.RandomForestClassifier.criterion", ["gini", "entropy"]),
                     min_samples_split=hp.Int("Sklearn.RandomForestClassifier.min_samples_split", 2, 8),
                     min_samples_leaf=hp.Int("Sklearn.RandomForestClassifier.min_samples_leaf", 2, 6),
