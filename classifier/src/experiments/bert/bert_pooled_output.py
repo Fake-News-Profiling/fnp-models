@@ -14,8 +14,6 @@ class BertPooledOutputExperiment(AbstractBertExperiment):
     """
     Train a BERT model, using different methods to produce the pooled_output of BERT
     """
-    def __init__(self, config: ExperimentConfig):
-        super().__init__(config, tuner_class=GridSearchCV)
 
     def build_model(self, hp, *args, **kwargs):
         # Get BERT inputs and outputs
@@ -72,7 +70,9 @@ class BertPooledOutputExperiment(AbstractBertExperiment):
             dense_pooled,
             dropout_rate=hp.Fixed("Bert.dropout_rate", 0.1),
             dense_activation=hp.Fixed("Bert.dense_activation", "linear"),
-            no_l2_reg=True,
+            dense_kernel_reg=hp.Fixed("Bert.dense_kernel_reg", 0.),
+            dense_bias_reg=hp.Fixed("Bert.dense_bias_reg", 0.),
+            dense_activity_reg=0,
         )
 
         return CompileOnFitKerasModel(bert_input, dense_out, optimizer_learning_rate=hp.get("learning_rate"))
@@ -104,16 +104,20 @@ if __name__ == "__main__":
             BertPooledOutputExperiment,
             {
                 "experiment_dir": "../training/bert_clf/pooled_output",
-                "experiment_name": "indiv_2",
-                "max_trials": 40,
+                "experiment_name": "indiv_3",
+                "max_trials": 50,
                 "hyperparameters": {
                     "epochs": 4,
-                    "batch_size": 64,
-                    "learning_rate": 5e-5,
+                    "batch_size": [32, 64, 80, 128],
+                    "learning_rate": [2e-5, 5e-5],
                     "Bert.encoder_url": "https://tfhub.dev/tensorflow/small_bert/bert_en_uncased_L-12_H-128_A-2/1",
                     "Bert.hidden_size": 128,
-                    "Bert.preprocessing": "[remove_emojis, remove_tags, remove_punctuation]",
+                    "Bert.preprocessing": preprocessing_choices,
                     "Bert.type": "individual",
+                    "selected_encoder_outputs": ["default", "first_layer", "2nd_to_last_hidden_layer"],
+                    "Bert.dropout_rate": [0., 0.1, 0.2],
+                    "Bert.dense_kernel_reg": [0., 0.001, 0.01],
+                    "Bert.dense_bias_reg": [0., 0.001, 0.01],
                 },
             }
         )
@@ -121,3 +125,4 @@ if __name__ == "__main__":
     with tf.device("/gpu:0"):
         handler = ExperimentHandler(experiments)
         handler.run_experiments(dataset_dir)
+        handler.plot_experiment(0, trial_label_generator=lambda t, hp: f"{hp.get('selected_encoder_outputs')}")

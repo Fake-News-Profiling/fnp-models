@@ -147,9 +147,8 @@ class GridSearchOracle(Oracle):
 
             return {'status': TrialStatus.RUNNING, 'values': hp.values}
 
-        except Exception as e:
+        except Exception:
             # Ran all possible trials in space
-            print(e.__traceback__)
             return {'status': TrialStatus.STOPPED, 'values': None}
 
 

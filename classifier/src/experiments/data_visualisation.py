@@ -101,6 +101,8 @@ def plot_averaged_experiment_data(experiment_dir: str,
             plot(axes[1][1], data["validation-epoch_binary_accuracy"], "validation-epoch_binary_accuracy")
 
     fig.legend(*axes[0][0].get_legend_handles_labels(), loc='upper center', bbox_to_anchor=(0.5, 1), ncol=3)
+    fig.suptitle(experiment_dir, verticalalignment="bottom")
+    plt.show()
 
 
 def average_experiment_data(experiment_dir: str):

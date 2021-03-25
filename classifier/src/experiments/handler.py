@@ -8,8 +8,8 @@ import numpy as np
 import pandas as pd
 
 from data import parse_dataset
-from experiments.experiment import AbstractExperiment, ExperimentConfig
-
+from experiments.experiment import AbstractExperiment, ExperimentConfig, AbstractTfExperiment
+from experiments.data_visualisation import plot_averaged_experiment_data
 
 Experiment = Tuple[AbstractExperiment.__class__, Union[str, dict, ExperimentConfig]]
 
@@ -46,6 +46,18 @@ class ExperimentHandler:
             df = self._build_best_trials_df(experiment, num_trials)
             print(("\n\nExperiment: %s/%s\n" + df.to_markdown) %
                   (experiment.config.experiment_dir, experiment.config.experiment_name))
+
+    def plot_results(self):
+        """ Plot performance graphs for each TensorFlow experiment """
+        for i in range(len(self.experiments)):
+            self.plot_experiment(i)
+
+    def plot_experiment(self, experiment_index: int, **kwargs):
+        experiment_cls, experiment_config = self.experiments[experiment_index]
+
+        if issubclass(experiment_cls, AbstractTfExperiment):
+            experiment = self._load_experiment_config(experiment_config)
+            plot_averaged_experiment_data(os.path.join(experiment.experiment_dir, experiment.experiment_name), **kwargs)
 
     def _load_experiment(self,
                          experiment_cls: AbstractExperiment.__class__,

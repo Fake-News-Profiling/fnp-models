@@ -72,7 +72,7 @@ class BertTweetLevelFfnnExperiment(AbstractBertExperiment):
         # Final classifier layer
         dense_out = self.single_dense_layer(
             prev_layer,
-            dropout_rate=hp.Fixe("Bert.dropout_rate", 0, 0.5),
+            dropout_rate=hp.Fixed("Bert.dropout_rate", 0, 0.5),
             dense_activation=hp.Choice("Bert.dense_activation", ["relu", "linear"]),
             dense_kernel_reg=hp.Choice("Bert.dense_kernel_reg", [0., 0.0001, 0.001, 0.01]),
             dense_bias_reg=hp.Choice("Bert.dense_bias_reg", [0., 0.0001, 0.001, 0.01]),
