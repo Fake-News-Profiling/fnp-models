@@ -121,5 +121,5 @@ if __name__ == "__main__":
         )
     ]
     handler = ExperimentHandler(experiments)
-    handler.run_experiments(dataset_dir)
+    # handler.run_experiments(dataset_dir)
     handler.print_results(num_trials=20)

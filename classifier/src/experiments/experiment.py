@@ -240,11 +240,12 @@ class AbstractBertExperiment(AbstractTfExperiment, ABC):
         return dense_out
 
     @staticmethod
-    def get_bert_layers(hp, trainable=True):
+    def get_bert_layers(hp, trainable=True, **kwargs):
         return bert_layers(
             hp.get("Bert.encoder_url"),
             trainable=trainable,
-            hidden_layer_size=hp.get("Bert.hidden_size")
+            hidden_layer_size=hp.get("Bert.hidden_size"),
+            **kwargs,
         )
 
     @staticmethod
@@ -260,7 +261,7 @@ class AbstractBertExperiment(AbstractTfExperiment, ABC):
             feed_overlap=hp.get("Bert.feed_data_overlap") if isinstance(tokenizer_class, BertTweetFeedTokenizer) else 0,
             **kwargs,
         )
-        return (hp, *tokenized)
+        return hp, *tokenized
 
     @staticmethod
     def preprocess_data(hp, x_train, y_train, x_test, y_test):
