@@ -1,5 +1,4 @@
-from typing import List
-
+import numpy as np
 from tensorflow_hub import KerasLayer
 import tensorflow as tf
 from tensorflow.keras import Model
@@ -70,3 +69,36 @@ def build_base_bert(encoder_url, trainable, hidden_layer_size, tokenizer_class):
     model = Model(inputs, output["pooled_output"])
 
     return model, tokenizer
+
+
+def extract_bert_pooled_output(encoder_out, pooling_layer, pooling_strategy="default"):
+    encoder_outputs = encoder_out["encoder_outputs"]
+
+    if pooling_strategy == "default":
+        return encoder_out["pooled_output"]
+    else:
+        encoder_outputs = encoder_outputs[{
+            "first_layer": np.s_[:1],
+            "2nd_to_last_hidden_layer": np.s_[-2:-1],
+            "last_hidden_layer": np.s_[-1:],
+            "sum_all_but_last_hidden_layers": np.s_[:-1],
+            "sum_all_hidden_layers": np.s_[:],
+            "sum_4_2nd_to_last_hidden_layers": np.s_[-5:-1],
+            "sum_last_4_hidden_layers": np.s_[:-4],
+            "concat_4_2nd_to_last_hidden_layers": np.s_[-5:-1],
+            "concat_last_4_hidden_layers": np.s_[:-4],
+        }[pooling_strategy]]
+
+        # Pool `encoder_outputs` by summing or concatenating
+        if pooling_strategy.startswith("concat"):
+            # Concatenate layer outputs, and extract the concatenated '[CLF]' embeddings
+            # pooled_outputs.shape == (batch_size, len(encoder_outputs) * hidden_size)
+            pooled_output = tf.concat(encoder_outputs, axis=-1)[:, 0, :]
+        else:
+            # Extract the '[CLF]' embeddings of each layer, and then sum them
+            pooled_outputs = tf.convert_to_tensor(encoder_outputs)[:, :, 0, :]
+            # pooled_outputs.shape == (batch_size, hidden_size)
+            pooled_output = tf.reduce_sum(pooled_outputs, axis=0)
+
+        # Pass pooled_outputs through a tanh layer (as they did in the original BERT paper)
+        return pooling_layer(pooled_output)

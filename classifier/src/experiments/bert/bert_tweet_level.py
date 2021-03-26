@@ -132,47 +132,30 @@ if __name__ == "__main__":
                     "Bert.type": "individual",
                 },
             }
-        ), (
-            # Bert (128) Individual tweet-level with varied preprocessing functions
-            BertTweetLevelFfnnExperiment,
-            {
-                "experiment_dir": "../training/bert_clf/tweet_level_ffnn",
-                "experiment_name": "indiv_1",
-                "max_trials": 50,
-                "hyperparameters": {
-                    "epochs": 6,
-                    "batch_size": [16, 32, 64, 80],
-                    "learning_rate": [2e-5, 5e-5],
-                    "Bert.encoder_url": "https://tfhub.dev/tensorflow/small_bert/bert_en_uncased_L-12_H-128_A-2/1",
-                    "Bert.hidden_size": 128,
-                    "Bert.preprocessing": preprocessing_choices,
-                    "Bert.type": "individual",
-                    "Bert.trainable": False,
-                },
-            }
+            # ), (
+            #     # Bert (128) Individual tweet-level with varied preprocessing functions
+            #     BertTweetLevelFfnnExperiment,
+            #     {
+            #         "experiment_dir": "../training/bert_clf/tweet_level_ffnn",
+            #         "experiment_name": "indiv_1",
+            #         "max_trials": 50,
+            #         "hyperparameters": {
+            #             "epochs": 6,
+            #             "batch_size": [16, 32, 64, 80],
+            #             "learning_rate": [2e-5, 5e-5],
+            #             "Bert.encoder_url": "https://tfhub.dev/tensorflow/small_bert/bert_en_uncased_L-12_H-128_A-2/1"
+            #             ,
+            #             "Bert.hidden_size": 128,
+            #             "Bert.preprocessing": preprocessing_choices,
+            #             "Bert.type": "individual",
+            #             "Bert.trainable": False,
+            #         },
+            #     }
         )
     ]
     with tf.device("/gpu:0"):
         handler = ExperimentHandler(experiments)
         handler.run_experiments(dataset_dir)
-
-    # # BertTweetLevelFfnnExperiment using BERT (H-128) Individual
-    # config = {
-    #     "max_trials": 50,
-    #     "hyperparameters": {
-    #         "epochs": 8,
-    #         "batch_size": [16, 32, 64, 80],
-    #         "learning_rate": [2e-5, 5e-5],
-    #         "Bert.encoder_url": "https://tfhub.dev/tensorflow/small_bert/bert_en_uncased_L-12_H-128_A-2/1",
-    #         "Bert.hidden_size": 128,
-    #         "Bert.preprocessing": preprocessing_choices,
-    #         "Bert.type": "individual",
-    #         "Bert.trainable": False,
-    #         "Bert.optimizer": "adamw",
-    #     }
-    # }
-    # experiment = BertTweetLevelFfnnExperiment(experiment_dir, "tweet_level_ffnn_indiv_128_1", config)
-    # experiment.run(x, y)
 
 """
 Current best:

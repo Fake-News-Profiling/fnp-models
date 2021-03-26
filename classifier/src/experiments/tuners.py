@@ -53,6 +53,7 @@ class TensorFlowCVTuner(MultiExecutionTuner, TunerCV):
         TunerCV.__init__(self, cv=StratifiedKFold(n_splits=n_splits, shuffle=True, random_state=1),
                          preprocess=preprocess)
         self.x_train_size = None
+        self.num_folds = n_splits
 
     def run_trial(self, trial, *fit_args, **fit_kwargs):
         """ A hybrid method, between Sklearn Tuner and MultiExecutionTuner (using code from both) """
@@ -73,6 +74,9 @@ class TensorFlowCVTuner(MultiExecutionTuner, TunerCV):
         split_data = self.cv_data if self.cv_data is not None else kfold_split_wrapper(
             self.cv, fit_kwargs["x"], fit_kwargs["y"])
         for split_num, (x_train, y_train, x_test, y_test) in enumerate(split_data):
+            if split_num == self.num_folds:
+                break
+
             _, x_train, y_train, x_test, y_test = self.preprocess(
                 trial.hyperparameters, x_train, y_train, x_test, y_test)
 
@@ -125,6 +129,7 @@ class GridSearchOracle(Oracle):
             hyperparameters=hyperparameters,
         )
         self.hp_names = self.hp_choice_permutations = None
+        self.re_run = False
 
     def generate_search_space(self):
         hp_names = []
@@ -136,7 +141,8 @@ class GridSearchOracle(Oracle):
             else:
                 choices.append([hp.value])
 
-        return hp_names, itertools.product(*choices)
+        choice_permutations = itertools.product(*choices)[0 if self.re_run else len(self.trials):]
+        return hp_names, choice_permutations
 
     def _populate_space(self, trial_id):
         if self.hp_names is None and self.hp_choice_permutations is None:

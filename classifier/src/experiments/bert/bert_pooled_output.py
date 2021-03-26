@@ -1,9 +1,9 @@
 import sys
 
-import numpy as np
 import tensorflow as tf
 
 from bert import BertIndividualTweetTokenizer, BertTweetFeedTokenizer
+from bert.models import extract_bert_pooled_output
 from experiments.experiment import AbstractBertExperiment, ExperimentConfig
 from experiments.handler import ExperimentHandler
 from experiments.models import CompileOnFitKerasModel
@@ -14,6 +14,8 @@ class BertPooledOutputExperiment(AbstractBertExperiment):
     """
     Train a BERT model, using different methods to produce the pooled_output of BERT
     """
+    def __init__(self, config: ExperimentConfig):
+        super().__init__(config, tuner_class=GridSearchCV)
 
     def build_model(self, hp):
         # Get BERT inputs and outputs
@@ -22,52 +24,13 @@ class BertPooledOutputExperiment(AbstractBertExperiment):
         # `bert_output["encoder_outputs"]` is a list of tensors of outputs of each encoder in the BERT encoder stack.
         # First we select which encoder outputs to use, and then apply a pooling strategy to them.
         # encoder_outputs.shape == (num_encoders, batch_size, seq_len, hidden_size)
-        encoder_outputs = bert_output["encoder_outputs"]
-        selected_encoder_outputs = hp.Choice("selected_encoder_outputs", [
-            "default",
-            "first_layer",
-            "2nd_to_last_hidden_layer",
-            "last_hidden_layer",
-            "sum_all_but_last_hidden_layers",
-            "sum_all_hidden_layers",
-            "sum_4_2nd_to_last_hidden_layers",
-            "sum_last_4_hidden_layers",
-            "concat_4_2nd_to_last_hidden_layers",
-            "concat_last_4_hidden_layers",
-        ])
-
-        if selected_encoder_outputs == "default":
-            dense_pooled = bert_output["pooled_output"]
-        else:
-            encoder_outputs = encoder_outputs[{
-                "first_layer": np.s_[:1],
-                "2nd_to_last_hidden_layer": np.s_[-2:-1],
-                "last_hidden_layer": np.s_[-1:],
-                "sum_all_but_last_hidden_layers": np.s_[:-1],
-                "sum_all_hidden_layers": np.s_[:],
-                "sum_4_2nd_to_last_hidden_layers": np.s_[-5:-1],
-                "sum_last_4_hidden_layers": np.s_[:-4],
-                "concat_4_2nd_to_last_hidden_layers": np.s_[-5:-1],
-                "concat_last_4_hidden_layers": np.s_[:-4],
-            }[selected_encoder_outputs]]
-
-            # Pool `encoder_outputs` by summing or concatenating
-            if selected_encoder_outputs.startswith("concat"):
-                # Concatenate layer outputs, and extract the concatenated '[CLF]' embeddings
-                # pooled_outputs.shape == (batch_size, len(encoder_outputs) * hidden_size)
-                pooled_outputs = tf.concat(encoder_outputs, axis=-1)[:, 0, :]
-            else:
-                # Extract the '[CLF]' embeddings of each layer, and then sum them
-                pooled_outputs = tf.convert_to_tensor(encoder_outputs)[:, :, 0, :]
-                # pooled_outputs.shape == (batch_size, hidden_size)
-                pooled_outputs = tf.reduce_sum(pooled_outputs, axis=0)
-
-            # Pass pooled_outputs through a tanh layer (as they did in the original BERT paper)
-            dense_pooled = tf.keras.layers.Dense(hp.get("Bert.hidden_size"), activation="tanh")(pooled_outputs)
+        selected_encoder_outputs = hp.get("selected_encoder_outputs")
+        pooling_layer = tf.keras.layers.Dense(hp.get("Bert.hidden_size"), activation="tanh")
+        pooled_output = extract_bert_pooled_output(bert_output, pooling_layer, selected_encoder_outputs, )
 
         # Classifier layer
         dense_out = self.single_dense_layer(
-            dense_pooled,
+            pooled_output,
             dropout_rate=hp.Fixed("Bert.dropout_rate", 0.1),
             dense_activation=hp.Fixed("Bert.dense_activation", "linear"),
             dense_kernel_reg=hp.Fixed("Bert.dense_kernel_reg", 0.),
@@ -94,8 +57,18 @@ if __name__ == "__main__":
     preprocessing_choices = [
         "[remove_emojis, remove_tags]",
         "[remove_emojis, remove_tags, remove_punctuation]",
-        "[replace_emojis_no_sep, remove_tags]",
-        "[replace_emojis_no_sep, remove_tags, remove_punctuation]",
+    ]
+    encoder_output_choices = [
+        "default",
+        "first_layer",
+        "2nd_to_last_hidden_layer",
+        "last_hidden_layer",
+        "sum_all_but_last_hidden_layers",
+        "sum_all_hidden_layers",
+        "sum_4_2nd_to_last_hidden_layers",
+        "sum_last_4_hidden_layers",
+        "concat_4_2nd_to_last_hidden_layers",
+        "concat_last_4_hidden_layers",
     ]
 
     experiments = [
@@ -104,25 +77,56 @@ if __name__ == "__main__":
             BertPooledOutputExperiment,
             {
                 "experiment_dir": "../training/bert_clf/pooled_output",
-                "experiment_name": "indiv_3",
+                "experiment_name": "indiv_1",
                 "max_trials": 50,
                 "hyperparameters": {
-                    "epochs": 4,
-                    "batch_size": [32, 64, 80, 128],
+                    "epochs": 8,
+                    "batch_size": [32, 80, 128],
                     "learning_rate": [2e-5, 5e-5],
                     "Bert.encoder_url": "https://tfhub.dev/tensorflow/small_bert/bert_en_uncased_L-12_H-128_A-2/1",
                     "Bert.hidden_size": 128,
-                    "Bert.preprocessing": preprocessing_choices,
+                    "Bert.preprocessing": ["[remove_emojis, remove_tags]",
+                                           "[remove_emojis, remove_tags, remove_punctuation]",
+                                           "[replace_emojis_no_sep, remove_tags]"],
                     "Bert.type": "individual",
-                    "selected_encoder_outputs": ["default", "first_layer", "2nd_to_last_hidden_layer"],
-                    "Bert.dropout_rate": [0., 0.1, 0.2],
-                    "Bert.dense_kernel_reg": [0., 0.001, 0.01],
-                    "Bert.dense_bias_reg": [0., 0.001, 0.01],
+                    "selected_encoder_outputs": ["default", "2nd_to_last_hidden_layer"],
+                    "Bert.dropout_rate": 0.1,
+                    "Bert.dense_kernel_reg": 0.,
+                    "Bert.dense_bias_reg": 0.01
                 },
             }
         )
     ]
     with tf.device("/gpu:0"):
         handler = ExperimentHandler(experiments)
-        handler.run_experiments(dataset_dir)
-        handler.plot_experiment(0, trial_label_generator=lambda t, hp: f"{hp.get('selected_encoder_outputs')}")
+        # handler.run_experiments(dataset_dir)
+        handler.plot_experiment(
+            0,
+            trial_label_generator=lambda t, hp: f"{hp.get('selected_encoder_outputs')}",
+            trial_aggregator=lambda hp: f"{hp.get('selected_encoder_outputs')}",
+        )
+        # handler.plot_experiment(
+        #     0,
+        #     trial_label_generator=lambda t, hp: f"{hp.get('Bert.preprocessing')}",
+        #     trial_aggregator=lambda hp: f"{hp.get('Bert.preprocessing')}",
+        # )
+        # handler.plot_experiment(
+        #     0,
+        #     trial_label_generator=lambda t, hp: f"{hp.get('batch_size')}",
+        #     trial_aggregator=lambda hp: f"{hp.get('batch_size')}",
+        # )
+        # handler.plot_experiment(
+        #     0,
+        #     trial_label_generator=lambda t, hp: f"{hp.get('Bert.dense_kernel_reg')}",
+        #     trial_aggregator=lambda hp: f"{hp.get('Bert.dense_kernel_reg')}",
+        # )
+        # handler.plot_experiment(
+        #     0,
+        #     trial_label_generator=lambda t, hp: f"{hp.get('Bert.dense_bias_reg')}",
+        #     trial_aggregator=lambda hp: f"{hp.get('Bert.dense_bias_reg')}",
+        # )
+        # handler.plot_experiment(
+        #     0,
+        #     trial_label_generator=lambda t, hp: f"{hp.get('learning_rate')}",
+        #     trial_aggregator=lambda hp: f"{hp.get('learning_rate')}",
+        # )

@@ -56,7 +56,7 @@ class ExperimentHandler:
         experiment_cls, experiment_config = self.experiments[experiment_index]
 
         if issubclass(experiment_cls, AbstractTfExperiment):
-            experiment = self._load_experiment_config(experiment_config)
+            experiment = self._load_experiment_config(experiment_config, save_config=False)
             plot_averaged_experiment_data(os.path.join(experiment.experiment_dir, experiment.experiment_name), **kwargs)
 
     def _load_experiment(self,

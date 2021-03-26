@@ -262,7 +262,7 @@ class AbstractBertExperiment(AbstractTfExperiment, ABC):
             feed_overlap=hp.get("Bert.feed_data_overlap") if isinstance(tokenizer_class, BertTweetFeedTokenizer) else 0,
             **kwargs,
         )
-        return hp, *tokenized
+        return (hp, *tokenized)
 
     @staticmethod
     def preprocess_data(hp, x_train, y_train, x_test, y_test):
