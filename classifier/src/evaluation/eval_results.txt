@@ -1,4 +1,3 @@
-
 |    | CV split   | Model                       |    Loss |   Accuracy |   Precision |   Recall |       F1 |
 |---:|:-----------|:----------------------------|--------:|-----------:|------------:|---------:|---------:|
 |  2 | 1          | Buda20NgramEnsembleModel    | 4.87234 |   0.683333 |    0.703704 | 0.633333 | 0.666667 |
@@ -31,15 +30,247 @@
 | 23 | 4          | SentimentStatisticalModel   | 6.15164 |   0.6      |    0.6      | 0.6      | 0.6      |
 | 29 | 5          | SentimentStatisticalModel   | 3.58693 |   0.766667 |    0.75     | 0.8      | 0.774194 |
 | 35 | Average    | SentimentStatisticalModel   | 5.22736 |   0.66     |    0.647599 | 0.693333 | 0.668977 |
-|  1 | 1          | TfIdfModel                  | 6.66274 |   0.566667 |    0.5625   | 0.6      | 0.580645 |
-|  7 | 2          | TfIdfModel                  | 6.39496 |   0.583333 |    0.553191 | 0.866667 | 0.675325 |
-| 13 | 3          | TfIdfModel                  | 5.88538 |   0.616667 |    0.581395 | 0.833333 | 0.684932 |
-| 19 | 4          | TfIdfModel                  | 6.40261 |   0.583333 |    0.567568 | 0.7      | 0.626866 |
-| 25 | 5          | TfIdfModel                  | 6.40261 |   0.583333 |    0.567568 | 0.7      | 0.626866 |
-| 31 | Average    | TfIdfModel                  | 6.34966 |   0.586667 |    0.566444 | 0.74     | 0.638927 |
 |  0 | 1          | SvmCharNGramsModel          | 5.64359 |   0.633333 |    0.666667 | 0.533333 | 0.592593 |
 |  1 | 2          | SvmCharNGramsModel          | 5.6283  |   0.633333 |    0.590909 | 0.866667 | 0.702703 |
 |  2 | 3          | SvmCharNGramsModel          | 4.61067 |   0.7      |    0.676471 | 0.766667 | 0.71875  |
 |  3 | 4          | SvmCharNGramsModel          | 5.64206 |   0.633333 |    0.653846 | 0.566667 | 0.607143 |
 |  4 | 5          | SvmCharNGramsModel          | 5.64053 |   0.633333 |    0.642857 | 0.6      | 0.62069  |
 |  5 | Average    | SvmCharNGramsModel          | 5.43303 |   0.646667 |    0.64615  | 0.666667 | 0.648376 |
+|  1 | 1          | TfIdfModel                  | 6.66274 |   0.566667 |    0.5625   | 0.6      | 0.580645 |
+|  7 | 2          | TfIdfModel                  | 6.39496 |   0.583333 |    0.553191 | 0.866667 | 0.675325 |
+| 13 | 3          | TfIdfModel                  | 5.88538 |   0.616667 |    0.581395 | 0.833333 | 0.684932 |
+| 19 | 4          | TfIdfModel                  | 6.40261 |   0.583333 |    0.567568 | 0.7      | 0.626866 |
+| 25 | 5          | TfIdfModel                  | 6.40261 |   0.583333 |    0.567568 | 0.7      | 0.626866 |
+| 31 | Average    | TfIdfModel                  | 6.34966 |   0.586667 |    0.566444 | 0.74     | 0.638927 |
+|    | CV split   | Model                       |    Loss |   Accuracy |   Precision |   Recall |       F1 |
+|---:|:-----------|:----------------------------|--------:|-----------:|------------:|---------:|---------:|
+|  3 | 1          | Buda20NgramEnsembleModel    | 5.12484 |   0.666667 |    0.65625  | 0.7      | 0.677419 |
+| 10 | 2          | Buda20NgramEnsembleModel    | 3.0697  |   0.8      |    0.736842 | 0.933333 | 0.823529 |
+| 17 | 3          | Buda20NgramEnsembleModel    | 4.61373 |   0.7      |    0.7      | 0.7      | 0.7      |
+| 24 | 4          | Buda20NgramEnsembleModel    | 3.59151 |   0.766667 |    0.807692 | 0.7      | 0.75     |
+| 31 | 5          | Buda20NgramEnsembleModel    | 4.3597  |   0.716667 |    0.740741 | 0.666667 | 0.701754 |
+| 38 | Average    | Buda20NgramEnsembleModel    | 4.1519  |   0.73     |    0.728305 | 0.74     | 0.730541 |
+|  5 | 1          | NerStatisticalModel         | 4.86775 |   0.683333 |    0.666667 | 0.733333 | 0.698413 |
+| 12 | 2          | NerStatisticalModel         | 3.84859 |   0.75     |    0.8      | 0.666667 | 0.727273 |
+| 19 | 3          | NerStatisticalModel         | 4.86775 |   0.683333 |    0.666667 | 0.733333 | 0.698413 |
+| 26 | 4          | NerStatisticalModel         | 5.38497 |   0.65     |    0.666667 | 0.6      | 0.631579 |
+| 33 | 5          | NerStatisticalModel         | 6.15164 |   0.6      |    0.6      | 0.6      | 0.6      |
+| 40 | Average    | NerStatisticalModel         | 5.02414 |   0.673333 |    0.68     | 0.666667 | 0.671135 |
+|  0 | 1          | RandomModel                 | 7.94663 |   0.483333 |    0.482759 | 0.466667 | 0.474576 |
+|  7 | 2          | RandomModel                 | 8.45468 |   0.45     |    0.457143 | 0.533333 | 0.492308 |
+| 14 | 3          | RandomModel                 | 7.9451  |   0.483333 |    0.483871 | 0.5      | 0.491803 |
+| 21 | 4          | RandomModel                 | 6.40719 |   0.583333 |    0.580645 | 0.6      | 0.590164 |
+| 28 | 5          | RandomModel                 | 7.43399 |   0.516667 |    0.517241 | 0.5      | 0.508475 |
+| 35 | Average    | RandomModel                 | 7.63752 |   0.503333 |    0.504332 | 0.52     | 0.511465 |
+|  4 | 1          | ReadabilityStatisticalModel | 7.17691 |   0.533333 |    0.533333 | 0.533333 | 0.533333 |
+| 11 | 2          | ReadabilityStatisticalModel | 5.38497 |   0.65     |    0.666667 | 0.6      | 0.631579 |
+| 18 | 3          | ReadabilityStatisticalModel | 5.90067 |   0.616667 |    0.652174 | 0.5      | 0.566038 |
+| 25 | 4          | ReadabilityStatisticalModel | 5.89761 |   0.616667 |    0.62963  | 0.566667 | 0.596491 |
+| 32 | 5          | ReadabilityStatisticalModel | 5.89608 |   0.616667 |    0.62069  | 0.6      | 0.610169 |
+| 39 | Average    | ReadabilityStatisticalModel | 6.05125 |   0.606667 |    0.620499 | 0.56     | 0.587522 |
+|  6 | 1          | SentimentStatisticalModel   | 6.40719 |   0.583333 |    0.580645 | 0.6      | 0.590164 |
+| 13 | 2          | SentimentStatisticalModel   | 5.89761 |   0.616667 |    0.62963  | 0.566667 | 0.596491 |
+| 20 | 3          | SentimentStatisticalModel   | 5.12331 |   0.666667 |    0.647059 | 0.733333 | 0.6875   |
+| 27 | 4          | SentimentStatisticalModel   | 4.3597  |   0.716667 |    0.740741 | 0.666667 | 0.701754 |
+| 34 | 5          | SentimentStatisticalModel   | 5.639   |   0.633333 |    0.633333 | 0.633333 | 0.633333 |
+| 41 | Average    | SentimentStatisticalModel   | 5.48536 |   0.643333 |    0.646282 | 0.64     | 0.641849 |
+|  2 | 1          | SvmCharNGramsModel          | 6.14858 |   0.6      |    0.588235 | 0.666667 | 0.625    |
+|  9 | 2          | SvmCharNGramsModel          | 4.86623 |   0.683333 |    0.657143 | 0.766667 | 0.707692 |
+| 16 | 3          | SvmCharNGramsModel          | 4.86928 |   0.683333 |    0.677419 | 0.7      | 0.688525 |
+| 23 | 4          | SvmCharNGramsModel          | 4.61526 |   0.7      |    0.714286 | 0.666667 | 0.689655 |
+| 30 | 5          | SvmCharNGramsModel          | 4.35817 |   0.716667 |    0.724138 | 0.7      | 0.711864 |
+| 37 | Average    | SvmCharNGramsModel          | 4.9715  |   0.676667 |    0.672244 | 0.7      | 0.684547 |
+|  1 | 1          | TfIdfModel                  | 7.42635 |   0.516667 |    0.512821 | 0.666667 | 0.57971  |
+|  8 | 2          | TfIdfModel                  | 5.3758  |   0.65     |    0.615385 | 0.8      | 0.695652 |
+| 15 | 3          | TfIdfModel                  | 4.35053 |   0.716667 |    0.666667 | 0.866667 | 0.753623 |
+| 22 | 4          | TfIdfModel                  | 5.37733 |   0.65     |    0.621622 | 0.766667 | 0.686567 |
+| 29 | 5          | TfIdfModel                  | 6.66122 |   0.566667 |    0.558824 | 0.633333 | 0.59375  |
+| 36 | Average    | TfIdfModel                  | 5.83825 |   0.62     |    0.595063 | 0.746667 | 0.661861 |
+|    | CV split   | Model                       |    Loss |   Accuracy |   Precision |   Recall |       F1 |
+|---:|:-----------|:----------------------------|--------:|-----------:|------------:|---------:|---------:|
+|  3 | 1          | Buda20NgramEnsembleModel    | 4.6122  |   0.7      |    0.6875   | 0.733333 | 0.709677 |
+| 10 | 2          | Buda20NgramEnsembleModel    | 2.82332 |   0.816667 |    0.88     | 0.733333 | 0.8      |
+| 17 | 3          | Buda20NgramEnsembleModel    | 4.61831 |   0.7      |    0.75     | 0.6      | 0.666667 |
+| 24 | 4          | Buda20NgramEnsembleModel    | 4.6122  |   0.7      |    0.6875   | 0.733333 | 0.709677 |
+| 31 | 5          | Buda20NgramEnsembleModel    | 4.10109 |   0.733333 |    0.733333 | 0.733333 | 0.733333 |
+| 38 | Average    | Buda20NgramEnsembleModel    | 4.15343 |   0.73     |    0.747667 | 0.706667 | 0.723871 |
+|  5 | 1          | NerStatisticalModel         | 4.10262 |   0.733333 |    0.75     | 0.7      | 0.724138 |
+| 12 | 2          | NerStatisticalModel         | 4.86928 |   0.683333 |    0.677419 | 0.7      | 0.688525 |
+| 19 | 3          | NerStatisticalModel         | 6.15317 |   0.6      |    0.607143 | 0.566667 | 0.586207 |
+| 26 | 4          | NerStatisticalModel         | 6.9183  |   0.55     |    0.545455 | 0.6      | 0.571429 |
+| 33 | 5          | NerStatisticalModel         | 4.86623 |   0.683333 |    0.657143 | 0.766667 | 0.707692 |
+| 40 | Average    | NerStatisticalModel         | 5.38192 |   0.65     |    0.647432 | 0.666667 | 0.655598 |
+|  0 | 1          | RandomModel                 | 7.94357 |   0.483333 |    0.484848 | 0.533333 | 0.507937 |
+|  7 | 2          | RandomModel                 | 7.17538 |   0.533333 |    0.53125  | 0.566667 | 0.548387 |
+| 14 | 3          | RandomModel                 | 8.46538 |   0.45     |    0.428571 | 0.3      | 0.352941 |
+| 21 | 4          | RandomModel                 | 7.17997 |   0.533333 |    0.538462 | 0.466667 | 0.5      |
+| 28 | 5          | RandomModel                 | 8.20524 |   0.466667 |    0.461538 | 0.4      | 0.428571 |
+| 35 | Average    | RandomModel                 | 7.79391 |   0.493333 |    0.488934 | 0.453333 | 0.467567 |
+|  4 | 1          | ReadabilityStatisticalModel | 6.40872 |   0.583333 |    0.586207 | 0.566667 | 0.576271 |
+| 11 | 2          | ReadabilityStatisticalModel | 3.84554 |   0.75     |    0.758621 | 0.733333 | 0.745763 |
+| 18 | 3          | ReadabilityStatisticalModel | 5.13248 |   0.666667 |    0.727273 | 0.533333 | 0.615385 |
+| 25 | 4          | ReadabilityStatisticalModel | 5.89608 |   0.616667 |    0.62069  | 0.6      | 0.610169 |
+| 32 | 5          | ReadabilityStatisticalModel | 4.86775 |   0.683333 |    0.666667 | 0.733333 | 0.698413 |
+| 39 | Average    | ReadabilityStatisticalModel | 5.23011 |   0.66     |    0.671891 | 0.633333 | 0.6492   |
+|  6 | 1          | SentimentStatisticalModel   | 4.35665 |   0.716667 |    0.709677 | 0.733333 | 0.721311 |
+| 13 | 2          | SentimentStatisticalModel   | 5.89303 |   0.616667 |    0.606061 | 0.666667 | 0.634921 |
+| 20 | 3          | SentimentStatisticalModel   | 5.38345 |   0.65     |    0.655172 | 0.633333 | 0.644068 |
+| 27 | 4          | SentimentStatisticalModel   | 5.63289 |   0.633333 |    0.605263 | 0.766667 | 0.676471 |
+| 34 | 5          | SentimentStatisticalModel   | 3.84554 |   0.75     |    0.758621 | 0.733333 | 0.745763 |
+| 41 | Average    | SentimentStatisticalModel   | 5.02231 |   0.673333 |    0.666959 | 0.706667 | 0.684507 |
+|  2 | 1          | SvmCharNGramsModel          | 5.63442 |   0.633333 |    0.611111 | 0.733333 | 0.666667 |
+|  9 | 2          | SvmCharNGramsModel          | 5.38192 |   0.65     |    0.645161 | 0.666667 | 0.655738 |
+| 16 | 3          | SvmCharNGramsModel          | 5.38039 |   0.65     |    0.636364 | 0.7      | 0.666667 |
+| 23 | 4          | SvmCharNGramsModel          | 5.89303 |   0.616667 |    0.606061 | 0.666667 | 0.634921 |
+| 30 | 5          | SvmCharNGramsModel          | 4.10415 |   0.733333 |    0.769231 | 0.666667 | 0.714286 |
+| 37 | Average    | SvmCharNGramsModel          | 5.27878 |   0.656667 |    0.653585 | 0.686667 | 0.667655 |
+|  1 | 1          | TfIdfModel                  | 5.88691 |   0.616667 |    0.585366 | 0.8      | 0.676056 |
+|  8 | 2          | TfIdfModel                  | 5.3758  |   0.65     |    0.615385 | 0.8      | 0.695652 |
+| 15 | 3          | TfIdfModel                  | 5.88844 |   0.616667 |    0.589744 | 0.766667 | 0.666667 |
+| 22 | 4          | TfIdfModel                  | 6.91677 |   0.55     |    0.542857 | 0.633333 | 0.584615 |
+| 29 | 5          | TfIdfModel                  | 5.8915  |   0.616667 |    0.6      | 0.7      | 0.646154 |
+| 36 | Average    | TfIdfModel                  | 5.99189 |   0.61     |    0.58667  | 0.74     | 0.653829 |
+|    | CV split   | Model                       |    Loss |   Accuracy |   Precision |   Recall |       F1 |
+|---:|:-----------|:----------------------------|--------:|-----------:|------------:|---------:|---------:|
+|  3 | 1          | Buda20NgramEnsembleModel    | 4.10415 |   0.733333 |    0.769231 | 0.666667 | 0.714286 |
+| 10 | 2          | Buda20NgramEnsembleModel    | 4.10262 |   0.733333 |    0.75     | 0.7      | 0.724138 |
+| 17 | 3          | Buda20NgramEnsembleModel    | 4.35512 |   0.716667 |    0.69697  | 0.766667 | 0.730159 |
+| 24 | 4          | Buda20NgramEnsembleModel    | 3.84095 |   0.75     |    0.714286 | 0.833333 | 0.769231 |
+| 31 | 5          | Buda20NgramEnsembleModel    | 4.87387 |   0.683333 |    0.72     | 0.6      | 0.654545 |
+| 38 | Average    | Buda20NgramEnsembleModel    | 4.25534 |   0.723333 |    0.730097 | 0.713333 | 0.718472 |
+|  5 | 1          | NerStatisticalModel         | 4.87234 |   0.683333 |    0.703704 | 0.633333 | 0.666667 |
+| 12 | 2          | NerStatisticalModel         | 5.12484 |   0.666667 |    0.65625  | 0.7      | 0.677419 |
+| 19 | 3          | NerStatisticalModel         | 5.12484 |   0.666667 |    0.65625  | 0.7      | 0.677419 |
+| 26 | 4          | NerStatisticalModel         | 5.12789 |   0.666667 |    0.678571 | 0.633333 | 0.655172 |
+| 33 | 5          | NerStatisticalModel         | 3.84401 |   0.75     |    0.741935 | 0.766667 | 0.754098 |
+| 40 | Average    | NerStatisticalModel         | 4.81878 |   0.686667 |    0.687342 | 0.686667 | 0.686155 |
+|  0 | 1          | RandomModel                 | 7.17385 |   0.533333 |    0.529412 | 0.6      | 0.5625   |
+|  7 | 2          | RandomModel                 | 7.9451  |   0.483333 |    0.483871 | 0.5      | 0.491803 |
+| 14 | 3          | RandomModel                 | 7.9451  |   0.483333 |    0.483871 | 0.5      | 0.491803 |
+| 21 | 4          | RandomModel                 | 7.94357 |   0.483333 |    0.484848 | 0.533333 | 0.507937 |
+| 28 | 5          | RandomModel                 | 6.66274 |   0.566667 |    0.5625   | 0.6      | 0.580645 |
+| 35 | Average    | RandomModel                 | 7.53407 |   0.51     |    0.5089   | 0.546667 | 0.526938 |
+|  4 | 1          | ReadabilityStatisticalModel | 4.36123 |   0.716667 |    0.76     | 0.633333 | 0.690909 |
+| 11 | 2          | ReadabilityStatisticalModel | 6.15317 |   0.6      |    0.607143 | 0.566667 | 0.586207 |
+| 18 | 3          | ReadabilityStatisticalModel | 5.12636 |   0.666667 |    0.666667 | 0.666667 | 0.666667 |
+| 25 | 4          | ReadabilityStatisticalModel | 6.15011 |   0.6      |    0.59375  | 0.633333 | 0.612903 |
+| 32 | 5          | ReadabilityStatisticalModel | 6.15928 |   0.6      |    0.65     | 0.433333 | 0.52     |
+| 39 | Average    | ReadabilityStatisticalModel | 5.59003 |   0.636667 |    0.655512 | 0.586667 | 0.615337 |
+|  6 | 1          | SentimentStatisticalModel   | 5.38345 |   0.65     |    0.655172 | 0.633333 | 0.644068 |
+| 13 | 2          | SentimentStatisticalModel   | 6.40261 |   0.583333 |    0.567568 | 0.7      | 0.626866 |
+| 20 | 3          | SentimentStatisticalModel   | 2.30763 |   0.85     |    0.862069 | 0.833333 | 0.847458 |
+| 27 | 4          | SentimentStatisticalModel   | 5.3758  |   0.65     |    0.615385 | 0.8      | 0.695652 |
+| 34 | 5          | SentimentStatisticalModel   | 7.1815  |   0.533333 |    0.541667 | 0.433333 | 0.481481 |
+| 41 | Average    | SentimentStatisticalModel   | 5.3302  |   0.653333 |    0.648372 | 0.68     | 0.659105 |
+|  2 | 1          | SvmCharNGramsModel          | 5.64053 |   0.633333 |    0.642857 | 0.6      | 0.62069  |
+|  9 | 2          | SvmCharNGramsModel          | 6.14705 |   0.6      |    0.583333 | 0.7      | 0.636364 |
+| 16 | 3          | SvmCharNGramsModel          | 5.63594 |   0.633333 |    0.617647 | 0.7      | 0.65625  |
+| 23 | 4          | SvmCharNGramsModel          | 5.64053 |   0.633333 |    0.642857 | 0.6      | 0.62069  |
+| 30 | 5          | SvmCharNGramsModel          | 5.12789 |   0.666667 |    0.678571 | 0.633333 | 0.655172 |
+| 37 | Average    | SvmCharNGramsModel          | 5.63839 |   0.633333 |    0.633053 | 0.646667 | 0.637833 |
+|  1 | 1          | TfIdfModel                  | 6.14552 |   0.6      |    0.578947 | 0.733333 | 0.647059 |
+|  8 | 2          | TfIdfModel                  | 5.88691 |   0.616667 |    0.585366 | 0.8      | 0.676056 |
+| 15 | 3          | TfIdfModel                  | 6.91219 |   0.55     |    0.536585 | 0.733333 | 0.619718 |
+| 22 | 4          | TfIdfModel                  | 5.37733 |   0.65     |    0.621622 | 0.766667 | 0.686567 |
+| 29 | 5          | TfIdfModel                  | 4.35817 |   0.716667 |    0.724138 | 0.7      | 0.711864 |
+| 36 | Average    | TfIdfModel                  | 5.73603 |   0.626667 |    0.609332 | 0.746667 | 0.668253 |
+|    | CV split   | Model                       |    Loss |   Accuracy |   Precision |   Recall |       F1 |
+|---:|:-----------|:----------------------------|--------:|-----------:|------------:|---------:|---------:|
+|  3 | 1          | Buda20NgramEnsembleModel    | 5.12942 |   0.666667 |    0.692308 | 0.6      | 0.642857 |
+| 10 | 2          | Buda20NgramEnsembleModel    | 4.61067 |   0.7      |    0.676471 | 0.766667 | 0.71875  |
+| 17 | 3          | Buda20NgramEnsembleModel    | 3.07735 |   0.8      |    0.821429 | 0.766667 | 0.793103 |
+| 24 | 4          | Buda20NgramEnsembleModel    | 3.84248 |   0.75     |    0.727273 | 0.8      | 0.761905 |
+| 31 | 5          | Buda20NgramEnsembleModel    | 4.10109 |   0.733333 |    0.733333 | 0.733333 | 0.733333 |
+| 38 | Average    | Buda20NgramEnsembleModel    | 4.1522  |   0.73     |    0.730163 | 0.733333 | 0.72999  |
+|  5 | 1          | NerStatisticalModel         | 6.15775 |   0.6      |    0.636364 | 0.466667 | 0.538462 |
+| 12 | 2          | NerStatisticalModel         | 4.6122  |   0.7      |    0.6875   | 0.733333 | 0.709677 |
+| 19 | 3          | NerStatisticalModel         | 5.12636 |   0.666667 |    0.666667 | 0.666667 | 0.666667 |
+| 26 | 4          | NerStatisticalModel         | 4.61373 |   0.7      |    0.7      | 0.7      | 0.7      |
+| 33 | 5          | NerStatisticalModel         | 4.86928 |   0.683333 |    0.677419 | 0.7      | 0.688525 |
+| 40 | Average    | NerStatisticalModel         | 5.07587 |   0.67     |    0.67359  | 0.653333 | 0.660666 |
+|  0 | 1          | RandomModel                 | 7.69108 |   0.5      |    0.5      | 0.466667 | 0.482759 |
+|  7 | 2          | RandomModel                 | 7.94663 |   0.483333 |    0.482759 | 0.466667 | 0.474576 |
+| 14 | 3          | RandomModel                 | 7.94357 |   0.483333 |    0.484848 | 0.533333 | 0.507937 |
+| 21 | 4          | RandomModel                 | 8.20524 |   0.466667 |    0.461538 | 0.4      | 0.428571 |
+| 28 | 5          | RandomModel                 | 6.40719 |   0.583333 |    0.580645 | 0.6      | 0.590164 |
+| 35 | Average    | RandomModel                 | 7.63874 |   0.503333 |    0.501958 | 0.493333 | 0.496801 |
+|  4 | 1          | ReadabilityStatisticalModel | 6.929   |   0.55     |    0.578947 | 0.366667 | 0.44898  |
+| 11 | 2          | ReadabilityStatisticalModel | 5.12636 |   0.666667 |    0.666667 | 0.666667 | 0.666667 |
+| 18 | 3          | ReadabilityStatisticalModel | 5.3865  |   0.65     |    0.68     | 0.566667 | 0.618182 |
+| 25 | 4          | ReadabilityStatisticalModel | 5.89608 |   0.616667 |    0.62069  | 0.6      | 0.610169 |
+| 32 | 5          | ReadabilityStatisticalModel | 5.38498 |   0.65     |    0.666667 | 0.6      | 0.631579 |
+| 39 | Average    | ReadabilityStatisticalModel | 5.74459 |   0.626667 |    0.642594 | 0.56     | 0.595115 |
+|  6 | 1          | SentimentStatisticalModel   | 6.41025 |   0.583333 |    0.592593 | 0.533333 | 0.561404 |
+| 13 | 2          | SentimentStatisticalModel   | 5.37733 |   0.65     |    0.621622 | 0.766667 | 0.686567 |
+| 20 | 3          | SentimentStatisticalModel   | 5.3865  |   0.65     |    0.68     | 0.566667 | 0.618182 |
+| 27 | 4          | SentimentStatisticalModel   | 4.10262 |   0.733333 |    0.75     | 0.7      | 0.724138 |
+| 34 | 5          | SentimentStatisticalModel   | 4.61526 |   0.7      |    0.714286 | 0.666667 | 0.689655 |
+| 41 | Average    | SentimentStatisticalModel   | 5.17839 |   0.663333 |    0.6717   | 0.646667 | 0.655989 |
+|  2 | 1          | SvmCharNGramsModel          | 5.13095 |   0.666667 |    0.708333 | 0.566667 | 0.62963  |
+|  9 | 2          | SvmCharNGramsModel          | 7.42329 |   0.516667 |    0.511628 | 0.733333 | 0.60274  |
+| 16 | 3          | SvmCharNGramsModel          | 5.37886 |   0.65     |    0.628571 | 0.733333 | 0.676923 |
+| 23 | 4          | SvmCharNGramsModel          | 5.12331 |   0.666667 |    0.647059 | 0.733333 | 0.6875   |
+| 30 | 5          | SvmCharNGramsModel          | 3.84554 |   0.75     |    0.758621 | 0.733333 | 0.745763 |
+| 37 | Average    | SvmCharNGramsModel          | 5.38039 |   0.65     |    0.650842 | 0.7      | 0.668511 |
+|  1 | 1          | TfIdfModel                  | 5.89303 |   0.616667 |    0.606061 | 0.666667 | 0.634921 |
+|  8 | 2          | TfIdfModel                  | 6.39802 |   0.583333 |    0.55814  | 0.8      | 0.657534 |
+| 15 | 3          | TfIdfModel                  | 6.6551  |   0.566667 |    0.547619 | 0.766667 | 0.638889 |
+| 22 | 4          | TfIdfModel                  | 5.11872 |   0.666667 |    0.625    | 0.833333 | 0.714286 |
+| 29 | 5          | TfIdfModel                  | 4.35359 |   0.716667 |    0.685714 | 0.8      | 0.738462 |
+| 36 | Average    | TfIdfModel                  | 5.68369 |   0.63     |    0.604507 | 0.773333 | 0.676818 |
+
+---- Aggregated DATA OF ABOVE 5 CV SPLITS ----
+``` Used code:
+with open("src/evaluation/eval_results.txt", "r") as file:
+    data = {}
+    content = file.read()
+    lines = content.split("\n")
+    for line in lines[:-1]:
+        if len(line) == 0:
+            break
+        if "Average" not in line and "CV split" not in line and "---" not in line:
+            cols = list(map(lambda l: l.strip(), filter(lambda l: len(l) > 0, line.split("|"))))[2:]
+            if cols[0] not in data:
+                data[cols[0]] = {"Loss": [], "Accuracy": [], "Precision": [], "Recall": [], "F1": []}
+            data[cols[0]]["Loss"].append(cols[1])
+            data[cols[0]]["Accuracy"].append(cols[2])
+            data[cols[0]]["Precision"].append(cols[3])
+            data[cols[0]]["Recall"].append(cols[4])
+            data[cols[0]]["F1"].append(cols[5])
+
+    data2 = {"Model": [], "Operation": [], "Loss": [], "Accuracy": [], "Precision": [], "Recall": [], "F1": []}
+    for k, v in data.items():
+        for operation in [np.mean, np.max, np.min]:
+            data2["Model"].append(k)
+            data2["Operation"].append(operation.__name__)
+            for k2, v2 in v.items():
+                data2[k2].append(operation(list(map(float, v2))))
+
+    import pandas as pd
+    print(pd.DataFrame(data2).to_markdown())
+
+```
+|    | Model                       | Operation   |    Loss |   Accuracy |   Precision |   Recall |       F1 |
+|---:|:----------------------------|:------------|--------:|-----------:|------------:|---------:|---------:|
+|  0 | Buda20NgramEnsembleModel    | mean        | 4.1219  |   0.732    |    0.738087 | 0.725333 | 0.729061 |
+|  1 | Buda20NgramEnsembleModel    | amax        | 5.12942 |   0.816667 |    0.88     | 0.933333 | 0.823529 |
+|  2 | Buda20NgramEnsembleModel    | amin        | 2.82332 |   0.666667 |    0.65625  | 0.6      | 0.642857 |
+|  3 | NerStatisticalModel         | mean        | 4.99286 |   0.675333 |    0.675566 | 0.68     | 0.67596  |
+|  4 | NerStatisticalModel         | amax        | 6.9183  |   0.816667 |    0.827586 | 0.8      | 0.813559 |
+|  5 | NerStatisticalModel         | amin        | 2.82026 |   0.55     |    0.545455 | 0.466667 | 0.538462 |
+|  6 | RandomModel                 | mean        | 7.74109 |   0.496667 |    0.495075 | 0.490667 | 0.491493 |
+|  7 | RandomModel                 | amax        | 9.99718 |   0.583333 |    0.580645 | 0.6      | 0.590164 |
+|  8 | RandomModel                 | amin        | 6.40719 |   0.35     |    0.344828 | 0.3      | 0.338983 |
+|  9 | ReadabilityStatisticalModel | mean        | 5.70272 |   0.629333 |    0.644026 | 0.581333 | 0.608669 |
+| 10 | ReadabilityStatisticalModel | amax        | 7.17691 |   0.75     |    0.76     | 0.733333 | 0.745763 |
+| 11 | ReadabilityStatisticalModel | amin        | 3.84554 |   0.533333 |    0.533333 | 0.366667 | 0.44898  |
+| 12 | SentimentStatisticalModel   | mean        | 5.24873 |   0.658667 |    0.656182 | 0.673333 | 0.662085 |
+| 13 | SentimentStatisticalModel   | amax        | 7.1815  |   0.85     |    0.862069 | 0.833333 | 0.847458 |
+| 14 | SentimentStatisticalModel   | amin        | 2.30763 |   0.533333 |    0.541667 | 0.433333 | 0.481481 |
+| 15 | SvmCharNGramsModel          | mean        | 5.34042 |   0.652667 |    0.651175 | 0.68     | 0.661385 |
+| 16 | SvmCharNGramsModel          | amax        | 7.42329 |   0.75     |    0.769231 | 0.866667 | 0.745763 |
+| 17 | SvmCharNGramsModel          | amin        | 3.84554 |   0.516667 |    0.511628 | 0.533333 | 0.592593 |
+| 18 | TfIdfModel                  | mean        | 5.9199  |   0.614667 |    0.592403 | 0.749333 | 0.659937 |
+| 19 | TfIdfModel                  | amax        | 7.42635 |   0.716667 |    0.724138 | 0.866667 | 0.753623 |
+| 20 | TfIdfModel                  | amin        | 4.35053 |   0.516667 |    0.512821 | 0.6      | 0.57971  |
+

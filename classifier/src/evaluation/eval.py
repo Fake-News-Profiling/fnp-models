@@ -23,7 +23,7 @@ def evaluate(model, x, y, eval_metrics):
 
 def evaluate_models(x, y, eval_models, eval_metrics, cv_splits=5, save_filepath=None):
     """ Evaluate fake news profiling models, using K-fold Cross-Validation """
-    kfold = StratifiedKFold(n_splits=cv_splits, shuffle=True, random_state=1)
+    kfold = StratifiedKFold(n_splits=cv_splits, shuffle=True)
 
     # Fit and evaluate models using Cross-Validation on the training set
     cv_metrics = defaultdict(list)
@@ -115,6 +115,8 @@ def main():
         ("F1", f1_score),
     ]
     with tf.device("/gpu:0"):
+        evaluate_models(x, y, eval_models, metrics, save_filepath="evaluation/eval_results.txt")
+        evaluate_models(x, y, eval_models, metrics, save_filepath="evaluation/eval_results.txt")
         evaluate_models(x, y, eval_models, metrics, save_filepath="evaluation/eval_results.txt")
 
 
