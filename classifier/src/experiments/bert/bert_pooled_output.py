@@ -77,7 +77,7 @@ if __name__ == "__main__":
             BertPooledOutputExperiment,
             {
                 "experiment_dir": "../training/bert_clf/pooled_output",
-                "experiment_name": "indiv_1",
+                "experiment_name": "indiv_4",
                 "max_trials": 50,
                 "hyperparameters": {
                     "epochs": 8,
@@ -101,32 +101,32 @@ if __name__ == "__main__":
         handler = ExperimentHandler(experiments)
         # handler.run_experiments(dataset_dir)
         handler.plot_experiment(
-            0,
+            (BertPooledOutputExperiment, "../training/bert_clf/pooled_output/indiv_1"),
             trial_label_generator=lambda t, hp: f"{hp.get('selected_encoder_outputs')}",
             trial_aggregator=lambda hp: f"{hp.get('selected_encoder_outputs')}",
         )
-        # handler.plot_experiment(
-        #     0,
-        #     trial_label_generator=lambda t, hp: f"{hp.get('Bert.preprocessing')}",
-        #     trial_aggregator=lambda hp: f"{hp.get('Bert.preprocessing')}",
-        # )
-        # handler.plot_experiment(
-        #     0,
-        #     trial_label_generator=lambda t, hp: f"{hp.get('batch_size')}",
-        #     trial_aggregator=lambda hp: f"{hp.get('batch_size')}",
-        # )
-        # handler.plot_experiment(
-        #     0,
-        #     trial_label_generator=lambda t, hp: f"{hp.get('Bert.dense_kernel_reg')}",
-        #     trial_aggregator=lambda hp: f"{hp.get('Bert.dense_kernel_reg')}",
-        # )
-        # handler.plot_experiment(
-        #     0,
-        #     trial_label_generator=lambda t, hp: f"{hp.get('Bert.dense_bias_reg')}",
-        #     trial_aggregator=lambda hp: f"{hp.get('Bert.dense_bias_reg')}",
-        # )
-        # handler.plot_experiment(
-        #     0,
-        #     trial_label_generator=lambda t, hp: f"{hp.get('learning_rate')}",
-        #     trial_aggregator=lambda hp: f"{hp.get('learning_rate')}",
-        # )
+        handler.plot_experiment(
+            (BertPooledOutputExperiment, "../training/bert_clf/pooled_output/indiv_1"),
+            trial_label_generator=lambda t, hp: f"{hp.get('Bert.preprocessing')}",
+            trial_aggregator=lambda hp: f"{hp.get('Bert.preprocessing')}",
+        )
+        handler.plot_experiment(
+            (BertPooledOutputExperiment, "../training/bert_clf/pooled_output/indiv_1"),
+            trial_label_generator=lambda t, hp: f"{hp.get('batch_size')}",
+            trial_aggregator=lambda hp: f"{hp.get('batch_size')}",
+        )
+        handler.plot_experiment(
+            (BertPooledOutputExperiment, "../training/bert_clf/pooled_output/indiv_1"),
+            trial_label_generator=lambda t, hp: f"{hp.get('Bert.dense_kernel_reg')}",
+            trial_aggregator=lambda hp: f"{hp.get('Bert.dense_kernel_reg')}",
+        )
+        handler.plot_experiment(
+            (BertPooledOutputExperiment, "../training/bert_clf/pooled_output/indiv_1"),
+            trial_label_generator=lambda t, hp: f"{hp.get('Bert.dense_bias_reg')}",
+            trial_aggregator=lambda hp: f"{hp.get('Bert.dense_bias_reg')}",
+        )
+        handler.plot_experiment(
+            (BertPooledOutputExperiment, "../training/bert_clf/pooled_output/indiv_1"),
+            trial_label_generator=lambda t, hp: f"{hp.get('learning_rate')}",
+            trial_aggregator=lambda hp: f"{hp.get('learning_rate')}",
+        )

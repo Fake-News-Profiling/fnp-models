@@ -141,7 +141,10 @@ class GridSearchOracle(Oracle):
             else:
                 choices.append([hp.value])
 
-        choice_permutations = itertools.product(*choices)[0 if self.re_run else len(self.trials):]
+        choice_permutations = itertools.product(*choices)
+        for _ in range(len(self.trials)):
+            choice_permutations.__next__()
+
         return hp_names, choice_permutations
 
     def _populate_space(self, trial_id):

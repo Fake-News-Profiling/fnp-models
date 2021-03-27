@@ -209,7 +209,7 @@ class AbstractTfExperiment(AbstractExperiment, ABC):
         if hasattr(self, "cv_data_transformer"):
             self.tuner.fit_data(x, y, self.cv_data_transformer)
 
-        self.tuner.search(x=x, y=y, callbacks=callbacks, *args, **kwargs)
+        self.tuner.search(x=x, y=y, callbacks=callbacks, verbose=2, *args, **kwargs)
 
     @classmethod
     def preprocess_cv_data(cls, hp, x_train, y_train, x_test, y_test):
