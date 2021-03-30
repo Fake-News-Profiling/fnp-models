@@ -49,6 +49,8 @@ def plot_averaged_experiment_data(experiment_dir: str,
         hyperparameters = load_hyperparameters(os.path.join(trial_filepath, "trial.json"))
         data["hyperparameters"] = hyperparameters
         data["trial_name"] = trial_name
+        if trial_filterer is not None and not trial_filterer(trial_name, hyperparameters):
+            continue
 
         # Aggregate trials
         aggregated_trial_data = experiment_data[
@@ -78,27 +80,26 @@ def plot_averaged_experiment_data(experiment_dir: str,
                     "min": np.min,
                     "median": np.median,
                 }[aggregation_type]
-                aggregated_trial_data[k2] = list(map(aggregator, v2))
+                aggregated_trial_data[k2] = list(map(aggregator, filter(lambda d: len(d) == len(v2[0]), v2)))
             else:
                 aggregated_trial_data[k2] = v2
 
     # Plot data
+    num_epochs = min(map(len, map(lambda d: d["train-epoch_loss"], aggregated_experiment_data.values())))
     for data in aggregated_experiment_data.values():
         trial_name = data["trial_name"]
 
-        # Filter out trials
-        if trial_filterer is None or not trial_filterer(trial_name, data["hyperparameters"]):
-            def plot(ax, y, y_label):
-                ax.plot(range(1, len(y)+1), y,
-                        label=trial_name if trial_label_generator is None else
-                        trial_label_generator(trial_name, data["hyperparameters"]))
-                ax.set_xlabel("Epochs")
-                ax.set_ylabel(y_label)
+        def plot(ax, y, y_label):
+            ax.plot(range(1, len(y)+1), y,
+                    label=trial_name if trial_label_generator is None else
+                    trial_label_generator(trial_name, data["hyperparameters"]))
+            ax.set_xlabel("Epochs")
+            ax.set_ylabel(y_label)
 
-            plot(axes[0][0], data["train-epoch_loss"], "train-epoch_loss")
-            plot(axes[0][1], data["validation-epoch_loss"], "validation-epoch_loss")
-            plot(axes[1][0], data["train-epoch_binary_accuracy"], "train-epoch_binary_accuracy")
-            plot(axes[1][1], data["validation-epoch_binary_accuracy"], "validation-epoch_binary_accuracy")
+        plot(axes[0][0], data["train-epoch_loss"][:num_epochs], "train-epoch_loss")
+        plot(axes[0][1], data["validation-epoch_loss"][:num_epochs], "validation-epoch_loss")
+        plot(axes[1][0], data["train-epoch_binary_accuracy"][:num_epochs], "train-epoch_binary_accuracy")
+        plot(axes[1][1], data["validation-epoch_binary_accuracy"][:num_epochs], "validation-epoch_binary_accuracy")
 
     fig.legend(*axes[0][0].get_legend_handles_labels(), loc='upper center', bbox_to_anchor=(0.5, 1), ncol=3)
     fig.suptitle(experiment_dir, verticalalignment="bottom")

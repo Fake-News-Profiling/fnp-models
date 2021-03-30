@@ -52,16 +52,15 @@ class ExperimentHandler:
         for i in range(len(self.experiments)):
             self.plot_experiment(i)
 
-    def plot_experiment(self, experiment: Union[int, Tuple[AbstractExperiment.__class__, str]], **kwargs):
-        if isinstance(experiment, int):
-            experiment_cls, experiment_config = self.experiments[experiment]
-        elif isinstance(experiment, tuple):
-            experiment_cls, experiment_config = experiment
-        else:
-            raise ValueError("Invalid value for `experiment`")
+    def plot_experiment_i(self, experiment_index: int, **kwargs):
+        self.plot_experiment(self.experiments[experiment_index], **kwargs)
+
+    @classmethod
+    def plot_experiment(cls, experiment: Tuple[AbstractExperiment.__class__, str], **kwargs):
+        experiment_cls, experiment_config = experiment
 
         if issubclass(experiment_cls, AbstractTfExperiment):
-            experiment = self._load_experiment_config(experiment_config, save_config=False)
+            experiment = cls._load_experiment_config(experiment_config, save_config=False)
             plot_averaged_experiment_data(os.path.join(experiment.experiment_dir, experiment.experiment_name), **kwargs)
 
     def _load_experiment(self,

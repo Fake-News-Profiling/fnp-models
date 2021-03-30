@@ -12,10 +12,11 @@ class CompileOnFitKerasModel(tf.keras.Model):
     allowing it to use the data length in scheduling optimizers (such as AdamWeightDecay).
     """
 
-    def __init__(self, *args, selected_optimizer=None, optimizer_learning_rate=None, **kwargs):
+    def __init__(self, *args, selected_optimizer=None, optimizer_learning_rate=None, adamw_end_lr=0.0, **kwargs):
         super().__init__(*args, **kwargs)
         self.selected_optimizer = selected_optimizer
         self.optimizer_learning_rate = optimizer_learning_rate
+        self.adamw_end_lr = adamw_end_lr
 
     def fit(self, *args, **kwargs):
         optimizer = self.selected_optimizer
@@ -25,6 +26,7 @@ class CompileOnFitKerasModel(tf.keras.Model):
                 init_lr=self.optimizer_learning_rate,
                 num_train_steps=num_train_steps,
                 num_warmup_steps=int(0.1 * num_train_steps),
+                end_lr=self.adamw_end_lr,
                 optimizer_type="adamw",
             )
             print("adamw:", num_train_steps, int(0.1 * num_train_steps))
