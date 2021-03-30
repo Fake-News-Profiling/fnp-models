@@ -9,8 +9,7 @@ from sklearn.model_selection import StratifiedKFold
 import evaluation.models as models
 from base import ScopedHyperParameters
 from base.training import allow_gpu_memory_growth
-from data import load_data, parse_labels_to_floats
-
+from data import load_data, parse_labels_to_floats, parse_dataset
 
 allow_gpu_memory_growth()
 
@@ -64,11 +63,7 @@ def evaluate_models(x, y, eval_models, eval_metrics, cv_splits=5, save_filepath=
 def main():
     # Load data
     print("Loading data")
-    tweet_train, label_train, tweet_val, label_val, tweet_test, label_test = load_data(
-        filepath="../datasets/en_split_data.npy")
-    x = np.asarray([[tweet.text for tweet in tweet_feed] for tweet_feed in
-                    np.concatenate([tweet_train, tweet_val, tweet_test])])
-    y = parse_labels_to_floats(np.concatenate([label_train, label_val, label_test]))
+    x, y = parse_dataset("../datasets", "en", training=False)
 
     # Evaluate models
     print("Beginning model evaluation")

@@ -24,9 +24,9 @@ def _parse_author_tweets(xml_filepaths):
         file_path_components = filepath.split("\\")
         file = file_path_components[len(file_path_components) - 1]
 
-        author = file[0:len(file) - 4]
+        author_id = file[0:len(file) - 4]
         tweets = [document.text for document in documents]
-        author_tweets[author] = tweets
+        author_tweets[author_id] = tweets
 
     return author_tweets
 
@@ -34,12 +34,11 @@ def _parse_author_tweets(xml_filepaths):
 def _parse_author_truths(truth_filepath):
     """Returns a dictionary of authors to their truth values 1/0"""
     author_truths = {}
-    with open(truth_filepath, 'r') as fp:
-        line = fp.readline()
-        while line:
-            author, truth = line.rstrip().split(":::")
-            author_truths[author] = truth
-            line = fp.readline()
+    with open(truth_filepath, "r") as file:
+        lines = file.readlines()
+        for line in lines:
+            author_id, truth = line.rstrip().split(":::")
+            author_truths[author_id] = truth
 
     return author_truths
 
@@ -49,7 +48,7 @@ def _filter_files(datasets_path, files, file_type):
     return list(map(lambda f: os.path.join(datasets_path, f), filtered))
 
 
-def parse_dataset(datasets_path, language, to_pandas=False, to_raw_strings=True):
+def parse_dataset(datasets_path, language, to_pandas=False, to_raw_strings=True, training=True):
     """
     Keyword arguments:
     datasets_path -- path to the datasets directory
@@ -60,10 +59,14 @@ def parse_dataset(datasets_path, language, to_pandas=False, to_raw_strings=True)
     """
     language_path = os.path.join(datasets_path, language)
 
-    # Get each file in the directory and filter by .xml and .txt extensions.
+    # Load test authors
+    with open(os.path.join(language_path, "test_authors.txt"), "r") as file:
+        test_authors = set(file.read().splitlines())
+
+    # Get each file in the directory and filter by .xml and .txt extensions
     files = os.listdir(language_path)
     xml_filepaths = _filter_files(language_path, files, ".xml")
-    truth_filepath = _filter_files(language_path, files, ".txt")[0]
+    truth_filepath = os.path.join(language_path, "truth.txt")
 
     # Parse the files.
     author_tweets = _parse_author_tweets(xml_filepaths)
@@ -72,9 +75,12 @@ def parse_dataset(datasets_path, language, to_pandas=False, to_raw_strings=True)
     if to_pandas:
         # Convert to a pandas DataFrame
         data = []
-        for key, value in author_tweets.items():
-            d = {"author_id": key, "truth_value": author_truths[key]}
-            for i, tweet in enumerate(value, start=1):
+        for author_id, tweet_feed in author_tweets.items():
+            if training and author_id in test_authors:
+                continue
+
+            d = {"author_id": author_id, "truth_value": author_truths[author_id]}
+            for i, tweet in enumerate(tweet_feed, start=1):
                 d["tweet_" + str(i)] = tweet
 
             data.append(d)
@@ -85,6 +91,9 @@ def parse_dataset(datasets_path, language, to_pandas=False, to_raw_strings=True)
         tweet_data = []
         label_data = []
         for author_id, tweet_feed in author_tweets.items():
+            if training and author_id in test_authors:
+                continue
+
             tweet_data.append([tweet if to_raw_strings else Tweet(author_id, tweet, str(i))
                                for i, tweet in enumerate(tweet_feed, start=1)])
             label_data.append(author_truths[author_id])
