@@ -10,6 +10,7 @@ from textblob import TextBlob
 
 import statistical.data_extraction.preprocessing as pre
 
+
 """ Sentiment model data extraction functions """
 
 

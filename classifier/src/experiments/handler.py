@@ -52,8 +52,13 @@ class ExperimentHandler:
         for i in range(len(self.experiments)):
             self.plot_experiment(i)
 
-    def plot_experiment(self, experiment_index: int, **kwargs):
-        experiment_cls, experiment_config = self.experiments[experiment_index]
+    def plot_experiment(self, experiment: Union[int, Tuple[AbstractExperiment.__class__, str]], **kwargs):
+        if isinstance(experiment, int):
+            experiment_cls, experiment_config = self.experiments[experiment]
+        elif isinstance(experiment, tuple):
+            experiment_cls, experiment_config = experiment
+        else:
+            raise ValueError("Invalid value for `experiment`")
 
         if issubclass(experiment_cls, AbstractTfExperiment):
             experiment = self._load_experiment_config(experiment_config, save_config=False)
@@ -87,6 +92,9 @@ class ExperimentHandler:
         Loads the experiment config to an ExperimentConfig object, and saves it to the experiment directory
         """
         if isinstance(config, str):
+            if not config.endswith(".json"):
+                config = os.path.join(config, "experiment_config.json")
+
             # Load config from filepath
             with open(config, "r") as file:
                 config = json.load(file)

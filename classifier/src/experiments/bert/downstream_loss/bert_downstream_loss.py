@@ -4,12 +4,14 @@ import tensorflow as tf
 
 from bert import BertIndividualTweetTokenizer
 from bert.models import bert_tokenizer, extract_bert_pooled_output
+from experiments import allow_gpu_memory_growth
 from experiments.experiment import AbstractBertExperiment, ExperimentConfig
 from experiments.handler import ExperimentHandler
 from experiments.models import CompileOnFitKerasModel
 from experiments.tuners import GridSearchCV
 
-TWEET_FEED_LEN = 25
+
+TWEET_FEED_LEN = 10
 
 
 class BertUserLevelClassifier(tf.keras.layers.Layer):
@@ -18,14 +20,17 @@ class BertUserLevelClassifier(tf.keras.layers.Layer):
         self.hyperparameters = hp
         self.bert_inputs, _, self.bert_encoder = AbstractBertExperiment.get_bert_layers(
             self.hyperparameters, return_encoder=True)
-        self.bert_pooled_output_pooling = tf.keras.layers.Dense(
-            self.hyperparameters.get("Bert.hidden_size"), activation="tanh")
+        if self.hyperparameters.get("selected_encoder_outputs") != "default":
+            self.bert_pooled_output_pooling = tf.keras.layers.Dense(
+                self.hyperparameters.get("Bert.hidden_size"), activation="tanh")
+        else:
+            self.bert_pooled_output_pooling = None
         self.pooling = self._make_pooler()
         self.dropout = tf.keras.layers.Dropout(self.hyperparameters.Fixed("Bert.dropout_rate", 0.1))
         self.linear = tf.keras.layers.Dense(1, activation=self.hyperparameters.Fixed("Bert.dense_activation", "linear"))
 
     def _make_pooler(self):
-        # Returns a pooler which handles input of shape (batch_size, TWEET_FEED_LEN, Bert.hidden_size)
+        # Returns a pooler of type: (batch_size, TWEET_FEED_LEN, Bert.hidden_size) => (batch_size, Bert.hidden_size)
         pooler = self.hyperparameters.Choice("Bert.pooler", ["max", "average", "concat"])
 
         if pooler == "max":
@@ -33,7 +38,7 @@ class BertUserLevelClassifier(tf.keras.layers.Layer):
         elif pooler == "average":
             return tf.keras.layers.GlobalAveragePooling1D()
         elif pooler == "concat":
-            return tf.keras.layers.Concatenate()
+            return tf.keras.layers.Flatten()  # Flattens (concatenates) the last layer
         else:
             raise ValueError("Invalid value for `Bert.pooler`")
 
@@ -125,6 +130,7 @@ class BertTrainedOnDownstreamLoss(AbstractBertExperiment):
 if __name__ == "__main__":
     """ Execute experiments in this module """
     dataset_dir = sys.argv[1]
+    allow_gpu_memory_growth()
 
     # Best preprocessing functions found from BertTweetLevelExperiment
     preprocessing_choices = [
@@ -146,7 +152,7 @@ if __name__ == "__main__":
             BertTrainedOnDownstreamLoss,
             {
                 "experiment_dir": "../training/bert_clf/downstream_loss",
-                "experiment_name": "indiv_1",
+                "experiment_name": "indiv_2",
                 "max_trials": 36,
                 "hyperparameters": {
                     "epochs": 16,
@@ -155,7 +161,7 @@ if __name__ == "__main__":
                     "Bert.encoder_url": "https://tfhub.dev/tensorflow/small_bert/bert_en_uncased_L-12_H-128_A-2/1",
                     "Bert.hidden_size": 128,
                     "Bert.preprocessing": preprocessing_choices,
-                    "selected_encoder_outputs": encoder_output_choices,
+                    "selected_encoder_outputs": "default",
                 },
             }
         )

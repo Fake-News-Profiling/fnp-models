@@ -1,5 +1,6 @@
 import sys
 
+import numpy as np
 import tensorflow as tf
 
 from bert import BertIndividualTweetTokenizer, BertTweetFeedTokenizer
@@ -155,7 +156,27 @@ if __name__ == "__main__":
     ]
     with tf.device("/gpu:0"):
         handler = ExperimentHandler(experiments)
-        handler.run_experiments(dataset_dir)
+        # handler.run_experiments(dataset_dir)
+        handler.plot_experiment(
+            (BertTweetLevelExperiment, "../training/bert_clf/tweet_level/indiv_1"),
+            trial_label_generator=lambda t, hp: f"{hp.get('Bert.preprocessing')}",
+            trial_aggregator=lambda hp: f"{hp.get('Bert.preprocessing')}",
+        )
+        handler.plot_experiment(
+            (BertTweetLevelExperiment, "../training/bert_clf/tweet_level/indiv_1"),
+            trial_label_generator=lambda t, hp: f"{hp.get('batch_size')}",
+            trial_aggregator=lambda hp: f"{hp.get('batch_size')}",
+        )
+        handler.plot_experiment(
+            (BertTweetLevelExperiment, "../training/bert_clf/tweet_level/indiv_1"),
+            trial_label_generator=lambda t, hp: f"{hp.get('Bert.preprocessing')} - batch: {hp.get('batch_size')}",
+            trial_aggregator=lambda hp: f"{hp.get('Bert.preprocessing')} - batch: {hp.get('batch_size')}",
+        )
+        handler.plot_experiment(
+            (BertTweetLevelExperiment, "../training/bert_clf/tweet_level/indiv_1"),
+            trial_label_generator=lambda t, hp: f"{np.round(hp.get('Bert.dropout_rate') * 10) / 10}",
+            trial_aggregator=lambda hp: f"{np.round(hp.get('Bert.dropout_rate') * 10) / 10}",
+        )
 
 """
 Current best:

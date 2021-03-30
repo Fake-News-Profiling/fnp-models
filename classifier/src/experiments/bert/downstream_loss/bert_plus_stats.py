@@ -4,11 +4,14 @@ import numpy as np
 import tensorflow as tf
 
 import data.preprocess as pre
-from experiments.bert.downstream_loss.bert_downstream_loss import BertTrainedOnDownstreamLoss
+from experiments.bert.downstream_loss.bert_downstream_loss import BertTrainedOnDownstreamLoss, BertUserLevelClassifier
 from experiments.handler import ExperimentHandler
+from experiments.models import CompileOnFitKerasModel
 from statistical.data_extraction import tweet_level_extractor
 from statistical.data_extraction.sentiment import VaderSentimentAnalysisWrapper
 
+
+TWEET_FEED_LEN = 10
 tweet_level_stats_extractor = tweet_level_extractor(VaderSentimentAnalysisWrapper())
 
 
@@ -18,15 +21,67 @@ def extract_tweet_level_stats(x_train, x_test):
     x_train_stats_pre = stats_preprocessor.transform(x_train)
     x_test_stats_pre = stats_preprocessor.transform(x_test)
 
-    x_train_stats = list(map(tweet_level_stats_extractor.transform, x_train_stats_pre))
-    x_test_stats = list(map(tweet_level_stats_extractor.transform, x_test_stats_pre))
+    x_train_stats = tf.convert_to_tensor(list(map(tweet_level_stats_extractor.transform, x_train_stats_pre)))
+    x_test_stats = tf.convert_to_tensor(list(map(tweet_level_stats_extractor.transform, x_test_stats_pre)))
     return x_train_stats, x_test_stats
+
+
+class BertPlusStatsUserLevelClassifier(BertUserLevelClassifier):
+    def call(self, inputs, training=None, mask=None):
+        # inputs.shape == [(batch_size, TWEET_FEED_LEN, 3, Bert.hidden_size),
+        #                  (batch_size, TWEET_FEED_LEN, NUM_STATS_FEATURES)]
+        # Returns a tensor with shape (batch_size, 1)
+        bert_data = inputs[0]
+        stats_data = inputs[1]
+        x_train = self._accumulate_bert_outputs(bert_data, training=training)
+        # x_train.shape == (batch_size, TWEET_FEED_LEN, Bert.hidden_size)
+        x_train = tf.concat([stats_data, x_train], axis=-1)
+        # x_train.shape == (batch_size, TWEET_FEED_LEN, Bert.hidden_size + NUM_STATS_FEATURES)
+        x_train = self.pooling(x_train)
+        # x_train.shape == (batch_size, Bert.hidden_size + NUM_STATS_FEATURES)
+        x_train = self.dropout(x_train, training=training)
+        return self.linear(x_train)
+
+
+class BertPlusStatsExperiment(BertTrainedOnDownstreamLoss):
+    """
+    Train a BERT model on individual tweets, where downstream user loss is used to train BERT. Individual tweet stats
+    are concatenated with BERT pooled_output to train a final linear dense classifier
+    """
+
+    def build_model(self, hp):
+        bert_input = tf.keras.layers.Input(
+            (TWEET_FEED_LEN, 3, hp.get("Bert.hidden_size")), dtype=tf.int32, name="BERT_input")
+        stats_input = tf.keras.layers.Input(
+            (TWEET_FEED_LEN, len(tweet_level_stats_extractor.feature_names)), dtype=tf.float32, name="stats_input")
+        inputs = [bert_input, stats_input]
+
+        outputs = BertPlusStatsUserLevelClassifier(hp)(inputs)
+        return CompileOnFitKerasModel(inputs, outputs, optimizer_learning_rate=hp.get("learning_rate"))
+
+    def cv_data_transformer(self, x_train, y_train, x_test, y_test):
+        _, x_train_bert, y_train, x_test_bert, y_test = super(BertPlusStatsExperiment, self).preprocess_cv_data(
+            self.hyperparameters, x_train, y_train, x_test, y_test)
+        x_train_stats, x_test_stats = extract_tweet_level_stats(x_train, x_test)
+
+        def process_stats(x):
+            x = tf.cast(x, dtype=tf.float32)
+            return tf.reshape(x, shape=(-1, TWEET_FEED_LEN, len(tweet_level_stats_extractor.feature_names)))
+
+        x_train_stats = process_stats(x_train_stats)
+        x_test_stats = process_stats(x_test_stats)
+        return [x_train_bert, x_train_stats], y_train, [x_test_bert, x_test_stats], y_test
+
+    @classmethod
+    def preprocess_cv_data(cls, hp, x_train, y_train, x_test, y_test):
+        return hp, x_train, y_train, x_test, y_test
 
 
 class BertPlusStatsEmbeddingExperiment(BertTrainedOnDownstreamLoss):
     """
-    Train a BERT model on individual tweets, where statistical tweet-level data has also been concatenated to each
-    tweet such that each input datapoint is of the form: "<stat_1> <stat_2> ... <stat_n> | <tweet>"
+    Train a BERT model on individual tweets, where downstream user loss is used to train BERT. Individual tweets are
+    concatenated with statistical features, so inputted tweets are of the form:
+    "<stat_1> <stat_2> ... <stat_n> | <tweet>"
     """
 
     def cv_data_transformer(self, x_train, y_train, x_test, y_test):
@@ -63,10 +118,25 @@ if __name__ == "__main__":
 
     experiments = [
         (
-            # Bert (128) Individual with different pooled output methods
-            BertTrainedOnDownstreamLoss,
+        #     BertTrainedOnDownstreamLoss,
+        #     {
+        #         "experiment_dir": "../training/bert_clf/downstream_loss_stats_embeddings",
+        #         "experiment_name": "indiv_1",
+        #         "max_trials": 1,
+        #         "hyperparameters": {
+        #             "epochs": 16,
+        #             "batch_size": 8,
+        #             "learning_rate": 2e-5,
+        #             "Bert.encoder_url": "https://tfhub.dev/tensorflow/small_bert/bert_en_uncased_L-12_H-128_A-2/1",
+        #             "Bert.hidden_size": 128,
+        #             "Bert.preprocessing": "[remove_emojis, remove_tags, remove_punctuation]",
+        #             "selected_encoder_outputs": "default",
+        #         },
+        #     }
+        # ), (
+            BertPlusStatsExperiment,
             {
-                "experiment_dir": "../training/bert_clf/downstream_loss",
+                "experiment_dir": "../training/bert_clf/downstream_loss_plus_stats",
                 "experiment_name": "indiv_1",
                 "max_trials": 1,
                 "hyperparameters": {
