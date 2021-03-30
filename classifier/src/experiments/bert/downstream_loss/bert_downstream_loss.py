@@ -11,7 +11,7 @@ from experiments.models import CompileOnFitKerasModel
 from experiments.tuners import GridSearchCV
 
 
-TWEET_FEED_LEN = 100
+TWEET_FEED_LEN = 10
 
 
 class BertUserLevelClassifier(tf.keras.layers.Layer):
@@ -164,20 +164,20 @@ if __name__ == "__main__":
                     "epochs": 10,
                     "batch_size": 8,
                     "learning_rate": [2e-5, 5e-5],
-                    "Bert.encoder_url": "https://tfhub.dev/tensorflow/small_bert/bert_en_uncased_L-6_H-128_A-2/1",
+                    "Bert.encoder_url": "https://tfhub.dev/tensorflow/small_bert/bert_en_uncased_L-12_H-128_A-2/1",
                     "Bert.hidden_size": 128,
-                    "Bert.preprocessing": "[remove_emojis, remove_tags]",
+                    "Bert.preprocessing": "",
                     "selected_encoder_outputs": "default",
-                    "Bert.pooler": "max",
-                    "Bert.dropout_rate": 0.1,#[0., 0.1, 0.2],
-                    "Bert.dense_kernel_reg": 0#[0., 0.001, 0.01],
+                    "Bert.pooler": "",
+                    "Bert.dropout_rate": [0.1, 0.2],
+                    "Bert.dense_kernel_reg": [0., 0.001, 0.01],
                 },
             }
         )
     ]
     with tf.device("/gpu:0"):
         handler = ExperimentHandler(experiments)
-        handler.run_experiments(dataset_dir)
+        # handler.run_experiments(dataset_dir)
 
         # Plot preprocessing
         ExperimentHandler.plot_experiment(
