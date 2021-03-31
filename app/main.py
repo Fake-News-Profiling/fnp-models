@@ -1,25 +1,23 @@
 import argparse
-import sys
+import os
 
-from backend.api_handlers.twitter_handler import TwitterHandler
-from backend.classifier_handlers.classifier_wrappers import BertTimelineClassifierWrapper
-from backend.classifier_handlers.profiler import FakeNewsProfiler
-from frontend.reporter import ReportBuilder
+from data.data_handler import DataHandler
+from services.user_profiler.user_profiler_service import UserProfilerService
+from template.template_handler import UserProfilerTemplateHandler
 
 
 def parse_program_args():
     """ Parse the inputted program arguments """
     arg_parser = argparse.ArgumentParser()
-    arg_parser.add_argument("--api_key", "-k", help="The Twitter API key", type=str)
-    arg_parser.add_argument("--api_secret", "-s", help="The Twitter API secret", type=str)
     arg_parser.add_argument(
-        "--classifier_weights",
-        "-w",
-        help="Filepath to the classifiers weights checkpoint - a file ending in .ckpt",
+        "--data_config", "-d", help="Filepath to the data handler configuration file", type=str
+    )
+    arg_parser.add_argument(
+        "--services_config", "-s", help="Filepath to the services configuration file", type=str
     )
     args = vars(arg_parser.parse_args())
 
-    if not (args["api_key"] and args["api_secret"] and args["classifier_weights"]):
+    if not (args["data_config"] and args["services_config"]):
         raise Exception(
             "Invalid command-line arguments. Use '--help' to see which arguments the program should be run with."
         )
@@ -27,27 +25,25 @@ def parse_program_args():
 
 
 def main():
-    # Parse command-line args
     args = parse_program_args()
-    profiler = FakeNewsProfiler(
-        twitter_handler=TwitterHandler(args["api_key"], args["api_secret"]),
-        classifier_handler=BertTimelineClassifierWrapper(args["classifier_weights"]),
-    )
-    reporter = ReportBuilder(profiler)
 
-    # Start taking user input
+    user_profiler_service = UserProfilerService(
+        args["services_config"],
+        DataHandler(args["data_config"]),
+    )
+    template_handler = UserProfilerTemplateHandler()
+
     print("Starting up the program. Type 'exit' at any time to stop.")
     while True:
         username = input("Enter the Twitter username of the user to profile: ")
         if username == "exit":
-            break
-        if len(username) == 0:
-            continue
+            return 0
 
         try:
-            reporter.generate_report(username)
-        except Exception as err:
-            print(f"An error occurred: {err}")
+            data = user_profiler_service.profile_twitter_user_from_tweet_feed(username)
+            template_handler.generate_report(f"{username}_report", data)
+        except Exception as ex:
+            print(f"An error occurred: {ex}")
 
 
 if __name__ == "__main__":
