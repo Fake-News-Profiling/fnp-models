@@ -1,8 +1,7 @@
-# IDE
-/.vscode/
-
-# Pycache
-/__pycache__/
-
-# Program outputs
+.vscode/
+__pycache__/
 /reports/
+
+# Configs
+data_config.toml
+service_config.toml

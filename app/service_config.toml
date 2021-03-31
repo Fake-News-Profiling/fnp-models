@@ -1,0 +1,7 @@
+[models]
+
+    [models.bert_tweet_feed]
+    load_path = "app/saved_models/tweet_feed/bert_tweet_feed/cp.ckpt"
+
+    [models.lr_tweet_feed]
+    load_path = "app/saved_models/tweet_feed/lr_tweet_feed/logistic_regressor.joblib"
