@@ -130,6 +130,7 @@ class GridSearchOracle(Oracle):
         )
         self.hp_names = self.hp_choice_permutations = None
         self.re_run = False
+        self.num_completed_trials = -1
 
     def generate_search_space(self):
         hp_names = []
@@ -142,8 +143,12 @@ class GridSearchOracle(Oracle):
                 choices.append([hp.value])
 
         choice_permutations = itertools.product(*choices)
-        for _ in range(len(self.trials)):
-            choice_permutations.__next__()
+        # for _ in range(len(self.trials) if self.num_completed_trials == -1 else self.num_completed_trials):
+        #     choice_permutations.__next__()
+
+        choice_permutations = list(choice_permutations)  # TODO REMOVE ME
+        choice_permutations.reverse()
+        choice_permutations = (i for i in choice_permutations)
 
         return hp_names, choice_permutations
 

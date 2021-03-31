@@ -1,7 +1,7 @@
 import json
 import os
 import re
-from typing import Callable, Generator
+from typing import Callable, Generator, Tuple, List
 from collections import defaultdict
 from functools import partial
 
@@ -15,23 +15,54 @@ from base import load_hyperparameters
 
 def plot_averaged_experiment_data(experiment_dir: str,
                                   trial_label_generator: Callable[[str, HyperParameters], str] = None,
-                                  trial_aggregator: Callable[[HyperParameters], str] = None,
-                                  aggregation_type: str = "mean",
-                                  trial_filterer: Callable[[str, HyperParameters], bool] = None):
+                                  **kwargs):
     """
     Plot experiment data, where each trials cross-validation executions has been averaged.
 
     :param experiment_dir: Directory of the experiment being plotted
     :param trial_label_generator: A function which, given the trial name and hyperparameters, returns a label for
     that trial
+    """
+    data, num_epochs = fetch_and_aggregate_experiment_data(experiment_dir, **kwargs)
+
+    # Plot data
+    fig, axes = plt.subplots(nrows=2, ncols=2)
+    for data in data:
+        trial_name = data["trial_name"]
+
+        def plot(ax, y, y_label):
+            ax.plot(range(1, len(y)+1), y,
+                    label=trial_name if trial_label_generator is None else
+                    trial_label_generator(trial_name, data["hyperparameters"]),
+                    marker='o')
+            ax.set_xlabel("Epochs")
+            ax.set_ylabel(y_label)
+
+        plot(axes[0][0], data["train-epoch_loss"][:num_epochs], "train-epoch_loss")
+        plot(axes[0][1], data["validation-epoch_loss"][:num_epochs], "validation-epoch_loss")
+        plot(axes[1][0], data["train-epoch_binary_accuracy"][:num_epochs], "train-epoch_binary_accuracy")
+        plot(axes[1][1], data["validation-epoch_binary_accuracy"][:num_epochs], "validation-epoch_binary_accuracy")
+
+    fig.legend(*axes[0][0].get_legend_handles_labels(), loc='upper center', bbox_to_anchor=(0.5, 1), ncol=3)
+    fig.suptitle(experiment_dir, verticalalignment="bottom")
+    plt.show()
+
+
+def fetch_and_aggregate_experiment_data(experiment_dir: str,
+                                        trial_aggregator: Callable[[HyperParameters], str] = None,
+                                        aggregation_type: str = "mean",
+                                        trial_filterer: Callable[[str, HyperParameters], bool] = None,
+                                        ) -> Tuple[List[dict], int]:
+    """
+    Fetch and aggregate experiment data.
+
+    :param experiment_dir: Directory of the experiment being plotted
     :param trial_aggregator: A function which generates a string from a trials hyperparameters. Trials with matching
     strings will have their metrics/results averaged in the graph (1 line plotted for all of them). By default, trials
     with the exact same hyperparameters are aggregated/combined
     :param aggregation_type: mean (default), median, max, or min
     :param trial_filterer: A function which filters out trials, depending on their hyperparameters
     """
-
-    fig, axes = plt.subplots(nrows=2, ncols=2)
     experiment_data = defaultdict(partial(defaultdict, list))
 
     # Collect data from each trial in the experiment
@@ -49,6 +80,8 @@ def plot_averaged_experiment_data(experiment_dir: str,
         hyperparameters = load_hyperparameters(os.path.join(trial_filepath, "trial.json"))
         data["hyperparameters"] = hyperparameters
         data["trial_name"] = trial_name
+        if trial_filterer is not None and not trial_filterer(trial_name, hyperparameters):
+            continue
 
         # Aggregate trials
         aggregated_trial_data = experiment_data[
@@ -78,31 +111,12 @@ def plot_averaged_experiment_data(experiment_dir: str,
                     "min": np.min,
                     "median": np.median,
                 }[aggregation_type]
-                aggregated_trial_data[k2] = list(map(aggregator, v2))
+                aggregated_trial_data[k2] = list(map(aggregator, filter(lambda d: len(d) == len(v2[0]), v2)))
             else:
                 aggregated_trial_data[k2] = v2
 
-    # Plot data
-    for data in aggregated_experiment_data.values():
-        trial_name = data["trial_name"]
-
-        # Filter out trials
-        if trial_filterer is None or not trial_filterer(trial_name, data["hyperparameters"]):
-            def plot(ax, y, y_label):
-                ax.plot(range(1, len(y)+1), y,
-                        label=trial_name if trial_label_generator is None else
-                        trial_label_generator(trial_name, data["hyperparameters"]))
-                ax.set_xlabel("Epochs")
-                ax.set_ylabel(y_label)
-
-            plot(axes[0][0], data["train-epoch_loss"], "train-epoch_loss")
-            plot(axes[0][1], data["validation-epoch_loss"], "validation-epoch_loss")
-            plot(axes[1][0], data["train-epoch_binary_accuracy"], "train-epoch_binary_accuracy")
-            plot(axes[1][1], data["validation-epoch_binary_accuracy"], "validation-epoch_binary_accuracy")
-
-    fig.legend(*axes[0][0].get_legend_handles_labels(), loc='upper center', bbox_to_anchor=(0.5, 1), ncol=3)
-    fig.suptitle(experiment_dir, verticalalignment="bottom")
-    plt.show()
+    num_epochs = min(map(len, map(lambda d: d["train-epoch_loss"], aggregated_experiment_data.values())))
+    return list(aggregated_experiment_data.values()), num_epochs
 
 
 def average_experiment_data(experiment_dir: str):

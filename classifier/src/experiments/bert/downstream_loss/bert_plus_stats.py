@@ -5,6 +5,7 @@ import tensorflow as tf
 
 import data.preprocess as pre
 from experiments.bert.downstream_loss.bert_downstream_loss import BertTrainedOnDownstreamLoss, BertUserLevelClassifier
+from experiments.experiment import ExperimentConfig
 from experiments.handler import ExperimentHandler
 from experiments.models import CompileOnFitKerasModel
 from statistical.data_extraction import tweet_level_extractor
@@ -40,7 +41,7 @@ class BertPlusStatsUserLevelClassifier(BertUserLevelClassifier):
         x_train = self.pooling(x_train)
         # x_train.shape == (batch_size, Bert.hidden_size + NUM_STATS_FEATURES)
         x_train = self.dropout(x_train, training=training)
-        return self.linear(x_train)
+        return x_train
 
 
 class BertPlusStatsExperiment(BertTrainedOnDownstreamLoss):
@@ -49,6 +50,10 @@ class BertPlusStatsExperiment(BertTrainedOnDownstreamLoss):
     are concatenated with BERT pooled_output to train a final linear dense classifier
     """
 
+    def __init__(self, config: ExperimentConfig):
+        super().__init__(config)
+        self.tuner.num_folds = 5
+
     def build_model(self, hp):
         bert_input = tf.keras.layers.Input(
             (TWEET_FEED_LEN, 3, hp.get("Bert.hidden_size")), dtype=tf.int32, name="BERT_input")
@@ -56,8 +61,13 @@ class BertPlusStatsExperiment(BertTrainedOnDownstreamLoss):
             (TWEET_FEED_LEN, len(tweet_level_stats_extractor.feature_names)), dtype=tf.float32, name="stats_input")
         inputs = [bert_input, stats_input]
 
-        outputs = BertPlusStatsUserLevelClassifier(hp)(inputs)
-        return CompileOnFitKerasModel(inputs, outputs, optimizer_learning_rate=hp.get("learning_rate"))
+        bert_outputs = BertPlusStatsUserLevelClassifier(hp)(inputs)
+        linear = tf.keras.layers.Dense(
+            1,
+            activation=hp.Fixed("Bert.dense_activation", "linear"),
+            kernel_regularizer=tf.keras.regularizers.l2(hp.get("Bert.dense_kernel_reg")),
+        )(bert_outputs)
+        return CompileOnFitKerasModel(inputs, linear, optimizer_learning_rate=hp.get("learning_rate"))
 
     def cv_data_transformer(self, x_train, y_train, x_test, y_test):
         _, x_train_bert, y_train, x_test_bert, y_test = super(BertPlusStatsExperiment, self).preprocess_cv_data(
@@ -83,6 +93,10 @@ class BertPlusStatsEmbeddingExperiment(BertTrainedOnDownstreamLoss):
     concatenated with statistical features, so inputted tweets are of the form:
     "<stat_1> <stat_2> ... <stat_n> | <tweet>"
     """
+
+    def __init__(self, config: ExperimentConfig):
+        super().__init__(config)
+        self.tuner.num_folds = 5
 
     def cv_data_transformer(self, x_train, y_train, x_test, y_test):
         # Extract tweet-level statistical features
@@ -118,29 +132,29 @@ if __name__ == "__main__":
 
     experiments = [
         (
-        #     BertTrainedOnDownstreamLoss,
-        #     {
-        #         "experiment_dir": "../training/bert_clf/downstream_loss_stats_embeddings",
-        #         "experiment_name": "indiv_1",
-        #         "max_trials": 1,
-        #         "hyperparameters": {
-        #             "epochs": 16,
-        #             "batch_size": 8,
-        #             "learning_rate": 2e-5,
-        #             "Bert.encoder_url": "https://tfhub.dev/tensorflow/small_bert/bert_en_uncased_L-12_H-128_A-2/1",
-        #             "Bert.hidden_size": 128,
-        #             "Bert.preprocessing": "[remove_emojis, remove_tags, remove_punctuation]",
-        #             "selected_encoder_outputs": "default",
-        #         },
-        #     }
-        # ), (
+            BertPlusStatsEmbeddingExperiment,
+            {
+                "experiment_dir": "../training/bert_clf/downstream_loss_plus_stats_embedding",
+                "experiment_name": "indiv_1",
+                "max_trials": 1,
+                "hyperparameters": {
+                    "epochs": 8,
+                    "batch_size": 8,
+                    "learning_rate": 2e-5,
+                    "Bert.encoder_url": "https://tfhub.dev/tensorflow/small_bert/bert_en_uncased_L-12_H-128_A-2/1",
+                    "Bert.hidden_size": 128,
+                    "Bert.preprocessing": "[remove_emojis, remove_tags, remove_punctuation]",
+                    "selected_encoder_outputs": "default",
+                },
+            }
+        ), (
             BertPlusStatsExperiment,
             {
                 "experiment_dir": "../training/bert_clf/downstream_loss_plus_stats",
                 "experiment_name": "indiv_1",
                 "max_trials": 1,
                 "hyperparameters": {
-                    "epochs": 16,
+                    "epochs": 8,
                     "batch_size": 8,
                     "learning_rate": 2e-5,
                     "Bert.encoder_url": "https://tfhub.dev/tensorflow/small_bert/bert_en_uncased_L-12_H-128_A-2/1",
