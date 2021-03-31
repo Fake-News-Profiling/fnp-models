@@ -1,7 +1,7 @@
+# Cached data
 .vscode/
 __pycache__/
 /reports/
 
 # Configs
-data_config.toml
-service_config.toml
+service_config.json

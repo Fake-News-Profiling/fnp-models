@@ -4,10 +4,10 @@ from jinja2 import Environment, FileSystemLoader
 
 
 class UserProfilerTemplateHandler:
-    """ Compiles data into a user fake news spreader profile report """
+    """ Compiles data into a Twitter user fake news spreader report """
 
     def __init__(self):
-        template_env = Environment(loader=FileSystemLoader("app/template/templates"))
+        template_env = Environment(loader=FileSystemLoader("template/templates"))
         self.template = template_env.get_template("report_template.html")
 
     def generate_report(self, filename: str, data: dict, open_in_web_browser=True):

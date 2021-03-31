@@ -2,13 +2,12 @@ from typing import List
 from dataclasses import dataclass
 from twython import Twython
 
-from data.data_configs import TwitterApiConfig
+from data import TwitterApiConfig
 
 
 @dataclass
 class Tweet:
     """ Stores the contents of a Twitter 'tweet' """
-
     username: str
     text: str
     id: str
@@ -39,7 +38,8 @@ class TwitterApiHandler:
 
         return tweets
 
-    def _extract_tweet_contents(self, username: str, tweet: dict) -> Tweet:
+    @staticmethod
+    def _extract_tweet_contents(username: str, tweet: dict) -> Tweet:
         """ Extract the contents of a raw tweet """
         return Tweet(
             username=username,

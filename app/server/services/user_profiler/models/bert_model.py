@@ -9,7 +9,7 @@ from tensorflow.keras.models import Model
 
 from models.model import AbstractDataProcessor
 from models.bert_tokenizer import AbstractBertTokenizer
-import services.user_profiler.models.tweet_funcs as tw
+import services.user_profiler.models.tweet_funcs as tweetf
 
 
 class BertTweetFeedDataPreprocessor(AbstractDataProcessor):
@@ -18,16 +18,16 @@ class BertTweetFeedDataPreprocessor(AbstractDataProcessor):
     def __init__(self, transformers: List[Callable] = None):
         if transformers is None:
             transformers = [
-                tw.tag_indicators,
-                tw.replace_xml_and_html,
-                tw.replace_emojis,
-                tw.remove_punctuation,
-                tw.replace_tags,
-                tw.remove_hashtag_chars,
-                tw.replace_accented_chars,
-                tw.tag_numbers,
-                tw.remove_stopwords,
-                tw.remove_extra_spacing,
+                tweetf.tag_indicators,
+                tweetf.replace_xml_and_html,
+                tweetf.replace_emojis,
+                tweetf.remove_punctuation,
+                tweetf.replace_tags,
+                tweetf.remove_hashtag_chars,
+                tweetf.replace_accented_chars,
+                tweetf.tag_numbers,
+                tweetf.remove_stopwords,
+                tweetf.remove_extra_spacing,
             ]
         self.transformers = transformers
 
@@ -105,6 +105,6 @@ class LogisticRegressionTweetFeedClassifier(AbstractDataProcessor):
         prediction = self.model.predict(X_sorted)[0]
         probability = self.model.predict_proba(X_sorted)[0, 1] * 100  # probability of class 1 (fake news spreader)
         return {
-            "is_fake_news_spreader": prediction == 1,
+            "is_fake_news_spreader": bool(prediction == 1),
             "fake_news_spreader_proba": probability,
         }
