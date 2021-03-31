@@ -1,5 +1,5 @@
-from models.model import AbstractDataProcessor, ModelPipeline
 from services import ServiceConfig
+from models.model import AbstractDataProcessor, ModelPipeline
 from services.user_profiler.models.bert_model import (
     BertTweetFeedDataPreprocessor,
     BertTweetFeedTokenizer,

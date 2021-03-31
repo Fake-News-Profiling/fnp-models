@@ -1,15 +1,11 @@
-from dacite import from_dict
-import toml
-
-from data.data_configs import DataHandlerConfig
+from data import DataHandlerConfig
 from data.twitter_api_handler import TwitterApiHandler
 
 
 class DataHandler:
     """ Loads all data/api handlers """
 
-    def __init__(self, path_to_config: str):
-        config = from_dict(DataHandlerConfig, toml.load(path_to_config))
+    def __init__(self, config: DataHandlerConfig):
         self.twitter_api_handler = TwitterApiHandler(config.twitter_api) if config.twitter_api else None
 
     def get_twitter_api(self) -> TwitterApiHandler:
@@ -27,5 +23,4 @@ class DataHandler:
 
 class NotLoadedError(RuntimeError):
     """ A requested data/api handler was not loaded """
-
     pass

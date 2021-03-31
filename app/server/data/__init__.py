@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from typing import Optional
 
 
 @dataclass
@@ -13,4 +14,4 @@ class TwitterApiConfig:
 class DataHandlerConfig:
     """ Represents a configuration file for a DataHandler instance """
 
-    twitter_api: TwitterApiConfig
+    twitter_api: Optional[TwitterApiConfig]
