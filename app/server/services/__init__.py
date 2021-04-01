@@ -25,9 +25,10 @@ class ServiceConfig:
 class AbstractService(ABC):
     route_methods = {}
 
-    def __init__(self, config_dict: dict):
+    def __init__(self, config_dict: dict, endpoint_root: str):
         self.config = from_dict(ServiceConfig, config_dict)
         self.data_handler = DataHandler(self.config.data_handler)
+        self.endpoint_root = endpoint_root.replace('_', '-')
 
     def register_with_server(self, app: Flask):
         """ Register all methods of this class which start with 'route_' """
@@ -39,7 +40,7 @@ class AbstractService(ABC):
                     options["methods"] = self.route_methods[attribute]
 
                 route = attribute.replace('route_', '').lower().replace("_", "-")
-                url = f"/{self.__class__.__name__.lower().replace('_', '-')}/{route}"
+                url = f"/{self.endpoint_root}/{route}"
                 logging.info("Registering route", url)
                 app.add_url_rule(
                     url,
