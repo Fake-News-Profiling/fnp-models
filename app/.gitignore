@@ -1,8 +1,7 @@
-# IDE
-/.vscode/
-
-# Pycache
-/__pycache__/
-
-# Program outputs
+# Cached data
+.vscode/
+__pycache__/
 /reports/
+
+# Configs
+service_config.json

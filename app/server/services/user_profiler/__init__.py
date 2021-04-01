@@ -1,0 +1,1 @@
+from services.user_profiler.user_profiler_service import UserProfilerService
