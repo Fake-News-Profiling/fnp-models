@@ -4,9 +4,6 @@ from functools import partial
 from typing import Any, List
 
 import numpy as np
-import stanza
-from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
-from textblob import TextBlob
 
 import statistical.data_extraction.preprocessing as pre
 
@@ -30,67 +27,6 @@ class AbstractSentimentAnalysisWrapper(ABC):
     def sentiment(self, text: str) -> Sentiment:
         """ Return the sentiment scores of this text: compound, neutral, positive, and negative sentiments """
         pass
-
-
-class VaderSentimentAnalysisWrapper(AbstractSentimentAnalysisWrapper):
-    def __init__(self):
-        analyser = SentimentIntensityAnalyzer()
-        super().__init__(analyser)
-
-    def sentiment(self, text: str) -> Sentiment:
-        scores = self.analyser.polarity_scores(text)
-        compound = scores["compound"]
-        if compound >= 0.05:
-            classification = "positive"
-        elif compound <= -0.05:
-            classification = "negative"
-        else:
-            classification = "neutral"
-
-        return Sentiment(
-            compound=compound,
-            classification=classification
-        )
-
-
-class StanzaSentimentAnalysisWrapper(AbstractSentimentAnalysisWrapper):
-    def __init__(self):
-        analyser = stanza.Pipeline("en", processors="tokenize,sentiment")
-        super().__init__(analyser)
-
-    def sentiment(self, text: str) -> Sentiment:
-        compound = float(np.mean([sentence.sentiment - 1 for sentence in self.analyser(text).sentences]))
-        if compound >= 0.25:
-            classification = "positive"
-        elif compound <= -0.25:
-            classification = "negative"
-        else:
-            classification = "neutral"
-
-        return Sentiment(
-            compound=compound,
-            classification=classification
-        )
-
-
-class TextBlobSentimentAnalysisWrapper(AbstractSentimentAnalysisWrapper):
-    def __init__(self):
-        analyser = TextBlob
-        super().__init__(analyser)
-
-    def sentiment(self, text: str) -> Sentiment:
-        compound = self.analyser(text).polarity
-        if compound >= 0.05:
-            classification = "positive"
-        elif compound <= -0.05:
-            classification = "negative"
-        else:
-            classification = "neutral"
-
-        return Sentiment(
-            compound=compound,
-            classification=classification
-        )
 
 
 def sentiment_tweet_extractor(sentiment_wrapper: AbstractSentimentAnalysisWrapper) -> pre.TweetStatsExtractor:

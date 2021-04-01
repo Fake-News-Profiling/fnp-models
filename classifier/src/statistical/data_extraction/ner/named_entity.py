@@ -2,8 +2,6 @@ from abc import ABC, abstractmethod
 from functools import partial
 from typing import List, Tuple, Any
 
-import spacy
-
 import statistical.data_extraction.preprocessing as pre
 
 
@@ -24,18 +22,6 @@ class AbstractNerTaggerWrapper(ABC):
         [(<entity_text>, <entity_label>) ...]
         """
         pass
-
-
-class SpacyNerTaggerWrapper(AbstractNerTaggerWrapper):
-    def __init__(self, spacy_pipeline: str):
-        tagger = spacy.load(spacy_pipeline)
-        labels = ["PERSON", "NORP", "FAC", "ORG", "GPE", "LOC", "PRODUCT", "EVENT", "WORK_OF_ART", "LAW", "LANGUAGE",
-                  "DATE", "TIME", "PERCENT", "MONEY", "QUANTITY", "ORDINAL", "CARDINAL"]
-        super().__init__(tagger, labels)
-
-    def tag(self, text: str) -> List[Tuple[str, str]]:
-        text_entities = self.tagger(text).ents
-        return [(entity.text, entity.label_) for entity in text_entities]
 
 
 def ner_tweet_extractor(ner_wrapper: AbstractNerTaggerWrapper) -> pre.TweetStatsExtractor:

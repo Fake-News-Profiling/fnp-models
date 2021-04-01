@@ -143,12 +143,8 @@ class GridSearchOracle(Oracle):
                 choices.append([hp.value])
 
         choice_permutations = itertools.product(*choices)
-        # for _ in range(len(self.trials) if self.num_completed_trials == -1 else self.num_completed_trials):
-        #     choice_permutations.__next__()
-
-        choice_permutations = list(choice_permutations)  # TODO REMOVE ME
-        choice_permutations.reverse()
-        choice_permutations = (i for i in choice_permutations)
+        for _ in range(len(self.trials) if self.num_completed_trials == -1 else self.num_completed_trials):
+            choice_permutations.__next__()
 
         return hp_names, choice_permutations
 

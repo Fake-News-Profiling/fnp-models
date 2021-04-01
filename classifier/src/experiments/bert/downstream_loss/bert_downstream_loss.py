@@ -91,16 +91,16 @@ class BertTrainedOnDownstreamLoss(AbstractBertExperiment):
         return CompileOnFitKerasModel(inputs, linear, optimizer_learning_rate=hp.get("learning_rate"))
 
     @classmethod
-    def preprocess_cv_data(cls, hp, x_train, y_train, x_test, y_test):
-        return cls.tokenize_cv_data(*cls.preprocess_data(hp, x_train, y_train, x_test, y_test))
+    def preprocess_cv_data(cls, hp, x_train, y_train, x_test, y_test, shuffle_data=True):
+        return cls.tokenize_cv_data(*cls.preprocess_data(hp, x_train, y_train, x_test, y_test), shuffle=shuffle_data)
 
     @staticmethod
-    def tokenize_x(hp, tokenizer, x):
-        x_tok = tf.convert_to_tensor(
-            [
-                # Shuffle each users tweet feed
-                tf.random.shuffle([list(tokenizer.tokenize_input([[tweet]]).values()) for tweet in tweet_feed])
-                for tweet_feed in x])
+    def tokenize_x(hp, tokenizer, x, shuffle=True):
+        def tokenize_tweet_feed(tweet_feed):
+            data = [list(tokenizer.tokenize_input([[tweet]]).values()) for tweet in tweet_feed]
+            return tf.random.shuffle(data) if shuffle else data
+
+        x_tok = tf.convert_to_tensor(list(map(tokenize_tweet_feed, x)))
         x_chunked = tf.reshape(x_tok, shape=(-1, TWEET_FEED_LEN, 3, hp.get("Bert.hidden_size")))
         # shape(-1, 100, 3, 128) => shape(-1, TWEET_FEED_LEN, 3, 128)
         return x_chunked
@@ -110,20 +110,22 @@ class BertTrainedOnDownstreamLoss(AbstractBertExperiment):
         return tf.convert_to_tensor([v for v in y for _ in range(100 // TWEET_FEED_LEN)])
 
     @classmethod
-    def tokenize_cv_data(cls, hp, x_train, y_train, x_test, y_test):
+    def tokenize_cv_data(cls, hp, x_train, y_train, x_test, y_test, shuffle=True):
         tokenizer = bert_tokenizer(hp.get("Bert.encoder_url"), hp.get("Bert.hidden_size"), BertIndividualTweetTokenizer)
 
         def tokenize(x, y, shuffle_seed=1):
             # Tokenize data
-            x_tok = cls.tokenize_x(hp, tokenizer, x)
+            x_tok = cls.tokenize_x(hp, tokenizer, x, shuffle=shuffle)
             y_tok = cls.tokenize_y(y)
 
             # Shuffle data
-            tf.random.set_seed(shuffle_seed)
-            x_shuffled = tf.random.shuffle(x_tok, seed=shuffle_seed)
-            tf.random.set_seed(shuffle_seed)
-            y_shuffled = tf.random.shuffle(y_tok, seed=shuffle_seed)
-            return x_shuffled, y_shuffled
+            if shuffle:
+                tf.random.set_seed(shuffle_seed)
+                x_tok = tf.random.shuffle(x_tok, seed=shuffle_seed)
+                tf.random.set_seed(shuffle_seed)
+                y_tok = tf.random.shuffle(y_tok, seed=shuffle_seed)
+
+            return x_tok, y_tok
 
         x_train, y_train = tokenize(x_train, y_train)
         x_test = cls.tokenize_x(hp, tokenizer, x_test)
@@ -181,7 +183,7 @@ if __name__ == "__main__":
 
         # Plot preprocessing
         ExperimentHandler.plot_experiment(
-            (BertTrainedOnDownstreamLoss, "../training/bert_clf/downstream_loss/indiv_2"),
+            (BertTrainedOnDownstreamLoss, "../training/bert_clf/downstream_loss/preprocessing"),
             trial_label_generator=lambda t, hp: hp.get('Bert.preprocessing'),
             trial_aggregator=lambda hp: hp.get('Bert.preprocessing'),
             trial_filterer=lambda t, hp:
@@ -190,7 +192,7 @@ if __name__ == "__main__":
 
         # Plot BERT pooled_output strategy
         ExperimentHandler.plot_experiment(
-            (BertTrainedOnDownstreamLoss, "../training/bert_clf/downstream_loss/indiv_2"),
+            (BertTrainedOnDownstreamLoss, "../training/bert_clf/downstream_loss/preprocessing"),
             trial_label_generator=lambda t, hp: hp.get('selected_encoder_outputs'),
             trial_aggregator=lambda hp: hp.get('selected_encoder_outputs'),
             trial_filterer=lambda t, hp:
@@ -199,7 +201,7 @@ if __name__ == "__main__":
 
         # Plot BERT tweet embeddings pooler
         ExperimentHandler.plot_experiment(
-            (BertTrainedOnDownstreamLoss, "../training/bert_clf/downstream_loss/indiv_2"),
+            (BertTrainedOnDownstreamLoss, "../training/bert_clf/downstream_loss/preprocessing"),
             trial_label_generator=lambda t, hp: hp.get('Bert.pooler'),
             trial_aggregator=lambda hp: hp.get('Bert.pooler'),
             trial_filterer=lambda t, hp:
@@ -220,7 +222,7 @@ if __name__ == "__main__":
             return f"{hp.get('selected_encoder_outputs')} - {hp.get('Bert.preprocessing')} - {hp.get('Bert.pooler')}"
 
         ExperimentHandler.plot_experiment(
-            (BertTrainedOnDownstreamLoss, "../training/bert_clf/downstream_loss/indiv_2"),
+            (BertTrainedOnDownstreamLoss, "../training/bert_clf/downstream_loss/preprocessing"),
             trial_label_generator=lambda t, hp: _make_name(hp),
             trial_aggregator=lambda hp: _make_name(hp),
             trial_filterer=lambda t, hp: _make_name(hp) in best_models,

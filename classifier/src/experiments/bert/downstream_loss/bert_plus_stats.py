@@ -9,7 +9,7 @@ from experiments.experiment import ExperimentConfig
 from experiments.handler import ExperimentHandler
 from experiments.models import CompileOnFitKerasModel
 from statistical.data_extraction import tweet_level_extractor
-from statistical.data_extraction.sentiment import VaderSentimentAnalysisWrapper
+from statistical.data_extraction.sentiment.vader import VaderSentimentAnalysisWrapper
 
 
 TWEET_FEED_LEN = 10
@@ -52,7 +52,7 @@ class BertPlusStatsExperiment(BertTrainedOnDownstreamLoss):
 
     def __init__(self, config: ExperimentConfig):
         super().__init__(config)
-        self.tuner.num_folds = 5
+        self.tuner.num_folds = 3
 
     def build_model(self, hp):
         bert_input = tf.keras.layers.Input(
@@ -71,7 +71,7 @@ class BertPlusStatsExperiment(BertTrainedOnDownstreamLoss):
 
     def cv_data_transformer(self, x_train, y_train, x_test, y_test):
         _, x_train_bert, y_train, x_test_bert, y_test = super(BertPlusStatsExperiment, self).preprocess_cv_data(
-            self.hyperparameters, x_train, y_train, x_test, y_test)
+            self.hyperparameters, x_train, y_train, x_test, y_test, shuffle_data=False)
         x_train_stats, x_test_stats = extract_tweet_level_stats(x_train, x_test)
 
         def process_stats(x):
@@ -80,6 +80,16 @@ class BertPlusStatsExperiment(BertTrainedOnDownstreamLoss):
 
         x_train_stats = process_stats(x_train_stats)
         x_test_stats = process_stats(x_test_stats)
+
+        # Shuffle training data
+        shuffle_seed = 1
+        tf.random.set_seed(shuffle_seed)
+        x_train_stats = tf.random.shuffle(x_train_stats, seed=shuffle_seed)
+        tf.random.set_seed(shuffle_seed)
+        x_train_bert = tf.random.shuffle(x_train_bert, seed=shuffle_seed)
+        tf.random.set_seed(shuffle_seed)
+        y_train = tf.random.shuffle(y_train, seed=shuffle_seed)
+
         return [x_train_bert, x_train_stats], y_train, [x_test_bert, x_test_stats], y_test
 
     @classmethod
@@ -96,7 +106,7 @@ class BertPlusStatsEmbeddingExperiment(BertTrainedOnDownstreamLoss):
 
     def __init__(self, config: ExperimentConfig):
         super().__init__(config)
-        self.tuner.num_folds = 5
+        self.tuner.num_folds = 3
 
     def cv_data_transformer(self, x_train, y_train, x_test, y_test):
         # Extract tweet-level statistical features
@@ -134,33 +144,39 @@ if __name__ == "__main__":
         (
             BertPlusStatsEmbeddingExperiment,
             {
-                "experiment_dir": "../training/bert_clf/downstream_loss_plus_stats_embedding",
+                "experiment_dir": "/content/training/bert_clf/downstream_loss_plus_stats_embedding",
                 "experiment_name": "indiv_1",
-                "max_trials": 1,
+                "max_trials": 2,
                 "hyperparameters": {
-                    "epochs": 8,
-                    "batch_size": 8,
+                    "epochs": 10,
+                    "batch_size": [8, 8],
                     "learning_rate": 2e-5,
                     "Bert.encoder_url": "https://tfhub.dev/tensorflow/small_bert/bert_en_uncased_L-12_H-128_A-2/1",
                     "Bert.hidden_size": 128,
-                    "Bert.preprocessing": "[remove_emojis, remove_tags, remove_punctuation]",
-                    "selected_encoder_outputs": "default",
+                    "Bert.preprocessing": "[remove_emojis, remove_tags]",
+                    "Bert.pooler": ["max", "concat"],
+                    "selected_encoder_outputs": "sum_last_4_hidden_layers",
+                    "Bert.dropout_rate": 0.1,
+                    "Bert.dense_kernel_reg": 0,
                 },
             }
         ), (
             BertPlusStatsExperiment,
             {
-                "experiment_dir": "../training/bert_clf/downstream_loss_plus_stats",
+                "experiment_dir": "/content/training/bert_clf/downstream_loss_plus_stats",
                 "experiment_name": "indiv_1",
-                "max_trials": 1,
+                "max_trials": 2,
                 "hyperparameters": {
-                    "epochs": 8,
-                    "batch_size": 8,
+                    "epochs": 10,
+                    "batch_size": [8, 8],
                     "learning_rate": 2e-5,
                     "Bert.encoder_url": "https://tfhub.dev/tensorflow/small_bert/bert_en_uncased_L-12_H-128_A-2/1",
                     "Bert.hidden_size": 128,
-                    "Bert.preprocessing": "[remove_emojis, remove_tags, remove_punctuation]",
-                    "selected_encoder_outputs": "default",
+                    "Bert.preprocessing": "[remove_emojis, remove_tags]",
+                    "Bert.pooler": ["max", "concat"],
+                    "selected_encoder_outputs": "sum_last_4_hidden_layers",
+                    "Bert.dropout_rate": 0.1,
+                    "Bert.dense_kernel_reg": 0,
                 },
             }
         )

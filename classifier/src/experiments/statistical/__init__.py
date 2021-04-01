@@ -3,13 +3,14 @@ from typing import Union
 from kerastuner import HyperParameters
 
 import statistical.data_extraction as ex
+import statistical.data_extraction.ner.spacy
 from base import ScopedHyperParameters
 
 
 def get_ner_wrapper(hp: Union[HyperParameters, ScopedHyperParameters]) -> ex.AbstractNerTaggerWrapper:
     ner_library = hp.get("Ner.library")
     if ner_library == "spacy":
-        return ex.named_entity.SpacyNerTaggerWrapper(hp.get("Ner.spacy_pipeline"))
+        return statistical.data_extraction.ner.spacy.SpacyNerTaggerWrapper(hp.get("Ner.spacy_pipeline"))
     else:
         raise ValueError("Invalid `Ner.library` name")
 
