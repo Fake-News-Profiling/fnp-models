@@ -30,7 +30,7 @@ class AbstractService(ABC):
         self.data_handler = DataHandler(self.config.data_handler)
 
     def register_with_server(self, app: Flask):
-        # Register all methods of this class which start with "route_"
+       """ Register all methods of this class which start with 'route_' """
         for attribute in dir(self):
             if attribute.startswith("route_") and callable(getattr(self, attribute)):
 
@@ -38,8 +38,8 @@ class AbstractService(ABC):
                 if attribute in self.route_methods:
                     options["methods"] = self.route_methods[attribute]
 
-                route = attribute.replace('route_', '').lower()
-                url = f"/{self.__class__.__name__.lower()}/{route}"
+                route = attribute.replace('route_', '').lower().replace("_", "-")
+                url = f"/{self.__class__.__name__.lower().replace('_', '-')}/{route}"
                 logging.info("Registering route", url)
                 app.add_url_rule(
                     url,
