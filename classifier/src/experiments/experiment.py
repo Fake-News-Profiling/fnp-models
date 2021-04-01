@@ -221,8 +221,8 @@ class AbstractBertExperiment(AbstractTfExperiment, ABC):
     """ Abstract base class for conducting a Keras Tuner tuning experiment with a BERT-base TensorFlow model """
 
     @staticmethod
-    def single_dense_layer(inputs, dropout_rate, dense_activation, no_l2_reg=False, dense_kernel_reg=None,
-                           dense_bias_reg=None, dense_activity_reg=None, dense_units=1):
+    def single_dense_layer(inputs, dropout_rate, dense_activation,
+                           no_l2_reg=False, dense_kernel_reg=None, dense_units=1):
         dropout = tf.keras.layers.Dropout(dropout_rate)(inputs)
         batch = tf.keras.layers.BatchNormalization()(dropout)
         if no_l2_reg:
@@ -235,8 +235,6 @@ class AbstractBertExperiment(AbstractTfExperiment, ABC):
                 units=dense_units,
                 activation=dense_activation,
                 kernel_regularizer=tf.keras.regularizers.l2(dense_kernel_reg),
-                bias_regularizer=tf.keras.regularizers.l2(dense_bias_reg),
-                activity_regularizer=tf.keras.regularizers.l2(dense_activity_reg),
             )(batch)
         return dense_out
 

@@ -4,9 +4,10 @@ import numpy as np
 import tensorflow as tf
 
 from bert import BertIndividualTweetTokenizer, BertTweetFeedTokenizer
-from experiments.experiment import AbstractBertExperiment
+from experiments.experiment import AbstractBertExperiment, ExperimentConfig
 from experiments.handler import ExperimentHandler
 from experiments.models import CompileOnFitKerasModel
+from experiments.tuners import GridSearchCV
 
 """
 In this module, we experiment fine-tuning BERT on individual tweets or chunks of individual tweets.
@@ -21,6 +22,10 @@ class BertTweetLevelExperiment(AbstractBertExperiment):
     * Bert input for "Bert.type" == "individual": "<user_i_tweet_i>", <user_i_label>
     """
 
+    def __init__(self, config: ExperimentConfig):
+        super().__init__(config, tuner_class=GridSearchCV)
+        self.tuner.num_folds = 3
+
     def build_model(self, hp):
         # Get BERT inputs and outputs
         bert_input, bert_output = self.get_bert_layers(hp)
@@ -28,7 +33,7 @@ class BertTweetLevelExperiment(AbstractBertExperiment):
         # Classifier layer
         dense_out = self.single_dense_layer(
             bert_output["pooled_output"],
-            dropout_rate=hp.Choice("Bert.dropout_rate", [0., 0.1, 0.2]),
+            dropout_rate=hp.Fixed("Bert.dropout_rate", 0.1),
             dense_activation=hp.Fixed("Bert.dense_activation", "linear"),
             no_l2_reg=True,
         )
@@ -64,10 +69,8 @@ class BertTweetLevelFfnnExperiment(AbstractBertExperiment):
                 prev_layer,
                 dense_units=ffnn_input_size // max(1, i * 2),
                 dropout_rate=hp.Float("Bert.dropout_rate", 0, 0.5),
-                dense_activation=hp.Fixed("Bert.dense_mid_layer_activation", "relu"),
+                dense_activation=hp.Fixed("Bert.dense_mid_layer_activation", "linear"),
                 dense_kernel_reg=hp.Choice("Bert.dense_kernel_reg", [0., 0.0001, 0.001, 0.01]),
-                dense_bias_reg=hp.Choice("Bert.dense_bias_reg", [0., 0.0001, 0.001, 0.01]),
-                dense_activity_reg=0,
             )
 
         # Final classifier layer
@@ -76,8 +79,6 @@ class BertTweetLevelFfnnExperiment(AbstractBertExperiment):
             dropout_rate=hp.Fixed("Bert.dropout_rate", 0, 0.5),
             dense_activation=hp.Choice("Bert.dense_activation", ["relu", "linear"]),
             dense_kernel_reg=hp.Choice("Bert.dense_kernel_reg", [0., 0.0001, 0.001, 0.01]),
-            dense_bias_reg=hp.Choice("Bert.dense_bias_reg", [0., 0.0001, 0.001, 0.01]),
-            dense_activity_reg=0,
         )
 
         learning_rate = hp.get("learning_rate")
@@ -103,30 +104,29 @@ if __name__ == "__main__":
     dataset_dir = sys.argv[1]
 
     preprocessing_choices = [
-        # "[remove_emojis]",
-        # "[remove_emojis, remove_punctuation]",
+        "[remove_emojis]",
+        "[remove_emojis, remove_punctuation]",
         "[remove_emojis, remove_tags]",
         "[remove_emojis, remove_tags, remove_punctuation]",
-        # "[tag_emojis]",
-        # "[tag_emojis, remove_punctuation]",
-        # "[replace_emojis]",
-        # "[replace_emojis_no_sep]",
+        "[tag_emojis]",
+        "[tag_emojis, remove_punctuation]",
+        "[replace_emojis_no_sep]",
         "[replace_emojis_no_sep, remove_tags]",
         "[replace_emojis_no_sep, remove_tags, remove_punctuation]",
-        # "none",
+        "none",
     ]
-    experiments = [  # TODO - Run to find best regularisation for linear layer
+    experiments = [
         (
             # Bert (128) Individual tweet-level with varied preprocessing functions
             BertTweetLevelExperiment,
             {
                 "experiment_dir": "../training/bert_clf/tweet_level",
-                "experiment_name": "indiv_2",
+                "experiment_name": "preprocessing",
                 "max_trials": 40,
                 "hyperparameters": {
-                    "epochs": 6,
-                    "batch_size": [16, 32, 64, 80],
-                    "learning_rate": [2e-5, 5e-5],
+                    "epochs": 10,
+                    "batch_size": 32,
+                    "learning_rate": 2e-5,
                     "Bert.encoder_url": "https://tfhub.dev/tensorflow/small_bert/bert_en_uncased_L-12_H-128_A-2/1",
                     "Bert.hidden_size": 128,
                     "Bert.preprocessing": preprocessing_choices,
@@ -157,26 +157,34 @@ if __name__ == "__main__":
     with tf.device("/gpu:0"):
         handler = ExperimentHandler(experiments)
         # handler.run_experiments(dataset_dir)
-        handler.plot_experiment(
-            (BertTweetLevelExperiment, "../training/bert_clf/tweet_level/indiv_1"),
+
+        # Preprocessing choices
+        ExperimentHandler.plot_experiment(
+            (BertTweetLevelExperiment, "../training/bert_clf/tweet_level/preprocessing"),
             trial_label_generator=lambda t, hp: f"{hp.get('Bert.preprocessing')}",
             trial_aggregator=lambda hp: f"{hp.get('Bert.preprocessing')}",
         )
-        handler.plot_experiment(
-            (BertTweetLevelExperiment, "../training/bert_clf/tweet_level/indiv_1"),
-            trial_label_generator=lambda t, hp: f"{hp.get('batch_size')}",
-            trial_aggregator=lambda hp: f"{hp.get('batch_size')}",
-        )
-        handler.plot_experiment(
-            (BertTweetLevelExperiment, "../training/bert_clf/tweet_level/indiv_1"),
-            trial_label_generator=lambda t, hp: f"{hp.get('Bert.preprocessing')} - batch: {hp.get('batch_size')}",
-            trial_aggregator=lambda hp: f"{hp.get('Bert.preprocessing')} - batch: {hp.get('batch_size')}",
-        )
-        handler.plot_experiment(
-            (BertTweetLevelExperiment, "../training/bert_clf/tweet_level/indiv_1"),
-            trial_label_generator=lambda t, hp: f"{np.round(hp.get('Bert.dropout_rate') * 10) / 10}",
-            trial_aggregator=lambda hp: f"{np.round(hp.get('Bert.dropout_rate') * 10) / 10}",
-        )
+
+        # ExperimentHandler.plot_experiment(
+        #     (BertTweetLevelExperiment, "../training/bert_clf/tweet_level/indiv_1"),
+        #     trial_label_generator=lambda t, hp: f"{hp.get('Bert.preprocessing')}",
+        #     trial_aggregator=lambda hp: f"{hp.get('Bert.preprocessing')}",
+        # )
+        # ExperimentHandler.plot_experiment(
+        #     (BertTweetLevelExperiment, "../training/bert_clf/tweet_level/indiv_1"),
+        #     trial_label_generator=lambda t, hp: f"{hp.get('batch_size')}",
+        #     trial_aggregator=lambda hp: f"{hp.get('batch_size')}",
+        # )
+        # ExperimentHandler.plot_experiment(
+        #     (BertTweetLevelExperiment, "../training/bert_clf/tweet_level/indiv_1"),
+        #     trial_label_generator=lambda t, hp: f"{hp.get('Bert.preprocessing')} - batch: {hp.get('batch_size')}",
+        #     trial_aggregator=lambda hp: f"{hp.get('Bert.preprocessing')} - batch: {hp.get('batch_size')}",
+        # )
+        # ExperimentHandler.plot_experiment(
+        #     (BertTweetLevelExperiment, "../training/bert_clf/tweet_level/indiv_1"),
+        #     trial_label_generator=lambda t, hp: f"{np.round(hp.get('Bert.dropout_rate') * 10) / 10}",
+        #     trial_aggregator=lambda hp: f"{np.round(hp.get('Bert.dropout_rate') * 10) / 10}",
+        # )
 
 """
 Current best:

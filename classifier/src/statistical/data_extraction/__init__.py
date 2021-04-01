@@ -1,5 +1,5 @@
 from statistical.data_extraction.readability import readability_tweet_extractor
-from statistical.data_extraction.named_entity import ner_tweet_extractor, AbstractNerTaggerWrapper
+from statistical.data_extraction.ner import ner_tweet_extractor, AbstractNerTaggerWrapper
 from statistical.data_extraction.sentiment import sentiment_tweet_extractor, AbstractSentimentAnalysisWrapper
 from statistical.data_extraction.tweet_level import tweet_level_extractor
 from statistical.data_extraction.preprocessing import TweetStatsExtractor
