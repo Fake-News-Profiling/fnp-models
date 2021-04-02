@@ -8,7 +8,7 @@ class UserProfilerService(AbstractService):
     """ Service which profiles Twitter users """
 
     def __init__(self, config_dict: dict):
-        super().__init__(config_dict)
+        super().__init__(config_dict, endpoint_root="user_profiler")
 
         # Load model handlers
         self.tweet_feed_model_handler = TweetFeedModelHandler(self.config)
