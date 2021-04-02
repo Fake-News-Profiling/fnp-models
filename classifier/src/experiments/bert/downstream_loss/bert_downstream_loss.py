@@ -27,17 +27,18 @@ class BertUserLevelClassifier(tf.keras.layers.Layer):
             self.bert_pooled_output_pooling = None
         self.pooling = self._make_pooler()
         self.dropout = tf.keras.layers.Dropout(self.hyperparameters.get("Bert.dropout_rate"))
+        self.batch_norm = tf.keras.layers.BatchNormalization()
 
     def _make_pooler(self):
         # Returns a pooler of type: (batch_size, TWEET_FEED_LEN, Bert.hidden_size) => (batch_size, Bert.hidden_size)
         pooler = self.hyperparameters.get("Bert.pooler")
 
         if pooler == "max":
-            return tf.keras.layers.GlobalMaxPool1D()
+            return tf.keras.layers.GlobalMaxPool1D()  # shape == (batch_size, Bert.hidden_size)
         elif pooler == "average":
-            return tf.keras.layers.GlobalAveragePooling1D()
+            return tf.keras.layers.GlobalAveragePooling1D()  # shape == (batch_size, Bert.hidden_size)
         elif pooler == "concat":
-            return tf.keras.layers.Flatten()  # Flattens (concatenates) the last layer
+            return tf.keras.layers.Flatten()  # shape == (batch_size, TWEET_FEED_LEN * Bert.hidden_size)
         else:
             raise ValueError("Invalid value for `Bert.pooler`")
 
@@ -65,7 +66,9 @@ class BertUserLevelClassifier(tf.keras.layers.Layer):
         x_train = self._accumulate_bert_outputs(inputs, training=training)
         # x_train.shape == (batch_size, TWEET_FEED_LEN, Bert.hidden_size)
         x_train = self.pooling(x_train)
-        # x_train.shape == (batch_size, Bert.hidden_size)
+        # x_train.shape == (batch_size, Bert.hidden_size) or (batch_size, TWEET_FEED_LEN * Bert.hidden_size)
+        if self.hyperparameters.get("Bert.use_batch_norm"):
+            x_train = self.batch_norm(x_train)
         x_train = self.dropout(x_train, training=training)
         return x_train
 
@@ -78,16 +81,35 @@ class BertTrainedOnDownstreamLoss(AbstractBertExperiment):
     def __init__(self, config: ExperimentConfig):
         super().__init__(config, tuner_class=GridSearchCV)
         self.tuner.num_folds = 3  # Only train/test using 3 of the 5 folds
+        self.tuner.oracle.num_completed_trials = 0
 
     def build_model(self, hp):
+        # BERT tweet chunk pooler
         bert_clf = BertUserLevelClassifier(hp)
         inputs = tf.keras.layers.Input((TWEET_FEED_LEN, 3, hp.get("Bert.hidden_size")), dtype=tf.int32)
         bert_outputs = bert_clf(inputs)
+        # bert_outputs.shape == (batch_size, Bert.hidden_size)
+
+        # Hidden feed-forward layers
+        bert_output_dim = bert_outputs.shape[-1]
+        for i in range(hp.get("Bert.num_hidden_layers")):
+            dense = tf.keras.layers.Dense(
+                bert_output_dim // max(1, i * 2),  # Half the dimension of each feed-forward layer
+                activation=hp.get("Bert.hidden_dense_activation"),
+                kernel_regularizer=tf.keras.regularizers.l2(hp.get("Bert.dense_kernel_reg")),
+            )(bert_outputs)
+            if hp.get("Bert.use_batch_norm"):
+                dense = tf.keras.layers.BatchNormalization()(dense)
+            dropout = tf.keras.layers.Dropout(self.hyperparameters.get("Bert.dropout_rate"))(dense)
+            bert_outputs = dropout
+
+        # Final linear layer
         linear = tf.keras.layers.Dense(
             1,
             activation=hp.Fixed("Bert.dense_activation", "linear"),
             kernel_regularizer=tf.keras.regularizers.l2(hp.get("Bert.dense_kernel_reg")),
         )(bert_outputs)
+
         return CompileOnFitKerasModel(inputs, linear, optimizer_learning_rate=hp.get("learning_rate"))
 
     @classmethod
@@ -156,74 +178,75 @@ if __name__ == "__main__":
 
     experiments = [
         (
-            # Bert (128) Individual with different pooled output methods
             BertTrainedOnDownstreamLoss,
             {
                 "experiment_dir": "../training/bert_clf/downstream_loss",
-                "experiment_name": "indiv_3",
+                "experiment_name": "dropout_rate",
                 "max_trials": 36,
                 "hyperparameters": {
                     "epochs": 10,
                     "batch_size": 8,
-                    "learning_rate": [2e-5, 5e-5],
+                    "learning_rate": 2e-5,
                     "Bert.encoder_url": "https://tfhub.dev/tensorflow/small_bert/bert_en_uncased_L-12_H-128_A-2/1",
                     "Bert.hidden_size": 128,
-                    "Bert.preprocessing": "",
-                    "selected_encoder_outputs": "default",
-                    "Bert.pooler": "",
-                    "Bert.dropout_rate": [0.1, 0.2],
-                    "Bert.dense_kernel_reg": [0., 0.001, 0.01],
+                    "Bert.preprocessing": "[remove_emojis, remove_tags]",
+                    "Bert.pooler": "concat",
+                    "selected_encoder_outputs": "sum_last_4_hidden_layers",
+                    "Bert.dropout_rate": [0., 0.1, 0.2, 0.3, 0.4, 0.5],
+                    "Bert.dense_kernel_reg":  0.00001,
+                    "Bert.num_hidden_layers": 0,
+                    "Bert.use_batch_norm": False,
                 },
             }
         )
     ]
     with tf.device("/gpu:0"):
         handler = ExperimentHandler(experiments)
-        # handler.run_experiments(dataset_dir)
+        handler.run_experiments(dataset_dir)
 
         # Plot preprocessing
-        ExperimentHandler.plot_experiment(
-            (BertTrainedOnDownstreamLoss, "../training/bert_clf/downstream_loss/preprocessing"),
-            trial_label_generator=lambda t, hp: hp.get('Bert.preprocessing'),
-            trial_aggregator=lambda hp: hp.get('Bert.preprocessing'),
-            trial_filterer=lambda t, hp:
-                hp.get("Bert.pooler") == "max" and hp.get("selected_encoder_outputs") == "default",
-        )
-
-        # Plot BERT pooled_output strategy
-        ExperimentHandler.plot_experiment(
-            (BertTrainedOnDownstreamLoss, "../training/bert_clf/downstream_loss/preprocessing"),
-            trial_label_generator=lambda t, hp: hp.get('selected_encoder_outputs'),
-            trial_aggregator=lambda hp: hp.get('selected_encoder_outputs'),
-            trial_filterer=lambda t, hp:
-                hp.get("Bert.pooler") == "max" and hp.get("Bert.preprocessing") == "[remove_emojis, remove_tags]",
-        )
-
-        # Plot BERT tweet embeddings pooler
-        ExperimentHandler.plot_experiment(
-            (BertTrainedOnDownstreamLoss, "../training/bert_clf/downstream_loss/preprocessing"),
-            trial_label_generator=lambda t, hp: hp.get('Bert.pooler'),
-            trial_aggregator=lambda hp: hp.get('Bert.pooler'),
-            trial_filterer=lambda t, hp:
-                hp.get("selected_encoder_outputs") == "sum_all_hidden_layers" and
-                hp.get("Bert.preprocessing") == "[remove_emojis, remove_tags]",
-        )
-
-        # Plot best performing models
-        best_models = {
-            "sum_all_hidden_layers - [remove_emojis, remove_tags, remove_punctuation] - concat",
-            "sum_all_hidden_layers - [remove_emojis, remove_tags, remove_punctuation] - max",
-            "sum_last_4_hidden_layers - [remove_emojis, remove_tags] - concat",
-            "sum_last_4_hidden_layers - [remove_emojis, remove_tags, remove_punctuation] - max",
-            "concat_last_4_hidden_layers - [remove_emojis, remove_tags, remove_punctuation] - max",
-        }
-
-        def _make_name(hp):
-            return f"{hp.get('selected_encoder_outputs')} - {hp.get('Bert.preprocessing')} - {hp.get('Bert.pooler')}"
-
-        ExperimentHandler.plot_experiment(
-            (BertTrainedOnDownstreamLoss, "../training/bert_clf/downstream_loss/preprocessing"),
-            trial_label_generator=lambda t, hp: _make_name(hp),
-            trial_aggregator=lambda hp: _make_name(hp),
-            trial_filterer=lambda t, hp: _make_name(hp) in best_models,
-        )
+        # ExperimentHandler.plot_experiment(
+        #     (BertTrainedOnDownstreamLoss, "../training/bert_clf/downstream_loss/preprocessing"),
+        #     trial_label_generator=lambda t, hp: hp.get('Bert.preprocessing'),
+        #     trial_aggregator=lambda hp: hp.get('Bert.preprocessing'),
+        #     trial_filterer=lambda t, hp:
+        #         hp.get("Bert.pooler") == "max" and hp.get("selected_encoder_outputs") == "default",
+        # )
+        #
+        # # Plot BERT pooled_output strategy
+        # ExperimentHandler.plot_experiment(
+        #     (BertTrainedOnDownstreamLoss, "../training/bert_clf/downstream_loss/preprocessing"),
+        #     trial_label_generator=lambda t, hp: hp.get('selected_encoder_outputs'),
+        #     trial_aggregator=lambda hp: hp.get('selected_encoder_outputs'),
+        #     trial_filterer=lambda t, hp:
+        #         hp.get("Bert.pooler") == "max" and hp.get("Bert.preprocessing") == "[remove_emojis, remove_tags]",
+        # )
+        #
+        # # Plot BERT tweet embeddings pooler
+        # ExperimentHandler.plot_experiment(
+        #     (BertTrainedOnDownstreamLoss, "../training/bert_clf/downstream_loss/preprocessing"),
+        #     trial_label_generator=lambda t, hp: hp.get('Bert.pooler'),
+        #     trial_aggregator=lambda hp: hp.get('Bert.pooler'),
+        #     trial_filterer=lambda t, hp:
+        #         hp.get("selected_encoder_outputs") == "sum_all_hidden_layers" and
+        #         hp.get("Bert.preprocessing") == "[remove_emojis, remove_tags]",
+        # )
+        #
+        # # Plot best performing models
+        # best_models = {
+        #     "sum_all_hidden_layers - [remove_emojis, remove_tags, remove_punctuation] - concat",
+        #     "sum_all_hidden_layers - [remove_emojis, remove_tags, remove_punctuation] - max",
+        #     "sum_last_4_hidden_layers - [remove_emojis, remove_tags] - concat",
+        #     "sum_last_4_hidden_layers - [remove_emojis, remove_tags, remove_punctuation] - max",
+        #     "concat_last_4_hidden_layers - [remove_emojis, remove_tags, remove_punctuation] - max",
+        # }
+        #
+        # def _make_name(hp):
+        #     return f"{hp.get('selected_encoder_outputs')} - {hp.get('Bert.preprocessing')} - {hp.get('Bert.pooler')}"
+        #
+        # ExperimentHandler.plot_experiment(
+        #     (BertTrainedOnDownstreamLoss, "../training/bert_clf/downstream_loss/preprocessing"),
+        #     trial_label_generator=lambda t, hp: _make_name(hp),
+        #     trial_aggregator=lambda hp: _make_name(hp),
+        #     trial_filterer=lambda t, hp: _make_name(hp) in best_models,
+        # )

@@ -144,7 +144,7 @@ if __name__ == "__main__":
         (
             BertPlusStatsEmbeddingExperiment,
             {
-                "experiment_dir": "/content/training/bert_clf/downstream_loss_plus_stats_embedding",
+                "experiment_dir": "../training/bert_clf/downstream_loss_plus_stats_embedding",
                 "experiment_name": "indiv_1",
                 "max_trials": 2,
                 "hyperparameters": {

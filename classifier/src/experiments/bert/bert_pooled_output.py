@@ -17,6 +17,7 @@ class BertPooledOutputExperiment(AbstractBertExperiment):
     def __init__(self, config: ExperimentConfig):
         super().__init__(config, tuner_class=GridSearchCV)
         self.tuner.num_folds = 3
+        self.tuner.oracle.num_completed_trials = 0
 
     def build_model(self, hp):
         # Get BERT inputs and outputs

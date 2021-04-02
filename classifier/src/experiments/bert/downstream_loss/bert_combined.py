@@ -17,7 +17,26 @@ class BertDownstreamLossLogitsCombinedExperiment(AbstractSklearnExperiment):
 
     def cv_data_transformer(self, x_train, y_train, x_test, y_test):
         bert_model = self.fit_bert(x_train, y_train, x_test, y_test)
-        return self.predict_user_data(bert_model, x_train, y_train, x_test, y_test)
+        x_train, y_train, x_test, y_test = self.predict_user_data(bert_model, x_train, y_train, x_test, y_test)
+        x_train, x_test = self.pool_combined(x_train, x_test)
+        return x_train, y_train, x_test, y_test
+
+    def pool_combined(self, x_train, x_test):
+        # x_.shape == (num_users, TWEET_FEED_LEN, -1)
+        pooler = self.hyperparameters.get("Combined.pooler")
+        if pooler == "concat":
+            x_train = tf.keras.layers.Flatten()(x_train)
+            x_test = tf.keras.layers.Flatten()(x_test)
+        elif pooler == "max":
+            x_train = tf.keras.layers.GlobalMaxPool1D()(x_train)
+            x_test = tf.keras.layers.GlobalMaxPool1D()(x_test)
+        elif pooler == "average":
+            x_train = tf.keras.layers.GlobalAveragePooling1D()(x_train)
+            x_test = tf.keras.layers.GlobalAveragePooling1D()(x_test)
+        else:
+            raise ValueError("Invalid value for `Combined.pooler`")
+
+        return x_train, x_test
 
     def fit_bert(self, x_train, y_train, x_test, y_test):
         # Preprocess BERT data
@@ -45,17 +64,14 @@ class BertDownstreamLossLogitsCombinedExperiment(AbstractSklearnExperiment):
 
         def predict_data(x):
             return np.asarray([
-                tf.reshape(
-                    bert_model.predict(
-                        BertTrainedOnDownstreamLoss.tokenize_x(self.hyperparameters, tokenizer, [tweet_feed])
-                    ),
-                    shape=(-1),
+                bert_model.predict(
+                    BertTrainedOnDownstreamLoss.tokenize_x(self.hyperparameters, tokenizer, [tweet_feed])
                 ) for tweet_feed in x
-            ])  # (num_users, 100 / TWEET_FEED_LEN)
+            ])  # (num_users, TWEET_FEED_LEN, -1)
 
         x_train = predict_data(x_train)
         x_test = predict_data(x_test)
-        # x_.shape == (num_users, 1)
+        # x_.shape == (num_users, TWEET_FEED_LEN, -1)
 
         return x_train, y_train, x_test, y_test
 
@@ -69,8 +85,9 @@ class BertDownstreamLossPooledCombinedExperiment(BertDownstreamLossLogitsCombine
     def cv_data_transformer(self, x_train, y_train, x_test, y_test):
         bert_model = self.fit_bert(x_train, y_train, x_test, y_test)
         bert_pooled_model = tf.keras.Model(bert_model.inputs, bert_model.layers[-2].output)
-        # Pooled outputs are concatenated
-        return self.predict_user_data(bert_pooled_model, x_train, y_train, x_test, y_test)
+        x_train, y_train, x_test, y_test = self.predict_user_data(bert_pooled_model, x_train, y_train, x_test, y_test)
+        x_train, x_test = self.pool_combined(x_train, x_test)
+        return x_train, y_train, x_test, y_test
 
     @classmethod
     def preprocess_cv_data(cls, hp, x_train, y_train, x_test, y_test):
@@ -101,13 +118,14 @@ if __name__ == "__main__":
                     "Bert.pooler": "concat",
                     "Bert.dense_kernel_reg": 0.,
                     "Bert.dense_bias_reg": 0.,
+                    "Combined.pooler": "concat",
                 },
             }
         ), (
             BertDownstreamLossPooledCombinedExperiment,
             {
                 "experiment_dir": "../training/bert_clf/downstream_loss_pooled_combined",
-                "experiment_name": "indiv_1",
+                "experiment_name": "concat_pooler",
                 "max_trials": 100,
                 "hyperparameters": {
                     "learning_rate": 5e-5,
@@ -122,6 +140,51 @@ if __name__ == "__main__":
                     "Bert.pooler": "concat",
                     "Bert.dense_kernel_reg": 0.,
                     "Bert.dense_bias_reg": 0.,
+                    "Combined.pooler": "concat",
+                },
+            }
+        ), (
+            BertDownstreamLossPooledCombinedExperiment,
+            {
+                "experiment_dir": "../training/bert_clf/downstream_loss_pooled_combined",
+                "experiment_name": "max_pooler",
+                "max_trials": 100,
+                "hyperparameters": {
+                    "learning_rate": 5e-5,
+                    "Bert.epochs": 6,
+                    "Bert.batch_size": 8,
+                    "Bert.encoder_url": "https://tfhub.dev/tensorflow/small_bert/bert_en_uncased_L-12_H-128_A-2/1",
+                    "Bert.hidden_size": 128,
+                    "Bert.preprocessing": "[remove_emojis, remove_tags]",
+                    "selected_encoder_outputs": "sum_last_4_hidden_layers",
+                    "Bert.dropout_rate": 0.1,
+                    "Bert.dense_activation": "linear",
+                    "Bert.pooler": "concat",
+                    "Bert.dense_kernel_reg": 0.,
+                    "Bert.dense_bias_reg": 0.,
+                    "Combined.pooler": "max",
+                },
+            }
+        ), (
+            BertDownstreamLossPooledCombinedExperiment,
+            {
+                "experiment_dir": "../training/bert_clf/downstream_loss_pooled_combined",
+                "experiment_name": "average_pooler",
+                "max_trials": 100,
+                "hyperparameters": {
+                    "learning_rate": 5e-5,
+                    "Bert.epochs": 6,
+                    "Bert.batch_size": 8,
+                    "Bert.encoder_url": "https://tfhub.dev/tensorflow/small_bert/bert_en_uncased_L-12_H-128_A-2/1",
+                    "Bert.hidden_size": 128,
+                    "Bert.preprocessing": "[remove_emojis, remove_tags]",
+                    "selected_encoder_outputs": "sum_last_4_hidden_layers",
+                    "Bert.dropout_rate": 0.1,
+                    "Bert.dense_activation": "linear",
+                    "Bert.pooler": "concat",
+                    "Bert.dense_kernel_reg": 0.,
+                    "Bert.dense_bias_reg": 0.,
+                    "Combined.pooler": "average",
                 },
             }
         )
