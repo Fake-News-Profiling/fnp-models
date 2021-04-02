@@ -3,6 +3,7 @@ from typing import Union
 from kerastuner import HyperParameters
 
 import statistical.data_extraction as ex
+from statistical.data_extraction.sentiment import vader, stanza, textblob
 import statistical.data_extraction.ner.spacy
 from base import ScopedHyperParameters
 
@@ -18,10 +19,10 @@ def get_ner_wrapper(hp: Union[HyperParameters, ScopedHyperParameters]) -> ex.Abs
 def get_sentiment_wrapper(hp: Union[HyperParameters, ScopedHyperParameters]) -> ex.AbstractSentimentAnalysisWrapper:
     sentiment_library = hp.get("Sentiment.library")
     if sentiment_library == "vader":
-        return ex.sentiment.VaderSentimentAnalysisWrapper()
+        return vader.VaderSentimentAnalysisWrapper()
     elif sentiment_library == "stanza":
-        return ex.sentiment.StanzaSentimentAnalysisWrapper()
+        return stanza.StanzaSentimentAnalysisWrapper()
     elif sentiment_library == "textblob":
-        return ex.sentiment.TextBlobSentimentAnalysisWrapper()
+        return textblob.TextBlobSentimentAnalysisWrapper()
     else:
         raise ValueError("Invalid `Sentiment.library` name")

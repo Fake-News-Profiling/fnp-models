@@ -29,7 +29,7 @@ class ExperimentHandler:
                         y: Optional[Union[List, np.ndarray]] = None):
         if x is None:
             print("Loading dataset")
-            x, y = parse_dataset(dataset_dir, "en", training=False)
+            x, y = parse_dataset(dataset_dir, "en")
 
         print("Running all experiments")
         for experiment_cls, experiment_config in self.experiments:
