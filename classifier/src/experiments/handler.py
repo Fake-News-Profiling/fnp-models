@@ -29,7 +29,7 @@ class ExperimentHandler:
                         y: Optional[Union[List, np.ndarray]] = None):
         if x is None:
             print("Loading dataset")
-            x, y = parse_dataset(dataset_dir, "en", training=False)
+            x, y = parse_dataset(dataset_dir, "en")
 
         print("Running all experiments")
         for experiment_cls, experiment_config in self.experiments:
@@ -50,7 +50,7 @@ class ExperimentHandler:
     def plot_results(self):
         """ Plot performance graphs for each TensorFlow experiment """
         for i in range(len(self.experiments)):
-            self.plot_experiment(i)
+            self.plot_experiment_i(i)
 
     def plot_experiment_i(self, experiment_index: int, **kwargs):
         self.plot_experiment(self.experiments[experiment_index], **kwargs)

@@ -100,7 +100,7 @@ class BertTrainedOnDownstreamLoss(AbstractBertExperiment):
             )(bert_outputs)
             if hp.get("Bert.use_batch_norm"):
                 dense = tf.keras.layers.BatchNormalization()(dense)
-            dropout = tf.keras.layers.Dropout(self.hyperparameters.get("Bert.dropout_rate"))(dense)
+            dropout = tf.keras.layers.Dropout(hp.get("Bert.dropout_rate"))(dense)
             bert_outputs = dropout
 
         # Final linear layer

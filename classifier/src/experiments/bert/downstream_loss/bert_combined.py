@@ -2,6 +2,11 @@ import sys
 
 import numpy as np
 import tensorflow as tf
+from sklearn.base import ClassifierMixin, BaseEstimator
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.linear_model import LogisticRegression
+from sklearn.svm import SVC
+from xgboost import XGBClassifier
 
 from bert import BertIndividualTweetTokenizer
 from bert.models import bert_tokenizer
@@ -10,10 +15,41 @@ from experiments.experiment import AbstractSklearnExperiment
 from experiments.handler import ExperimentHandler
 
 
+class VotingClassifier(ClassifierMixin, BaseEstimator):
+    """ Voting classifier which votes depending on input data """
+
+    def fit(self, x, y):
+        pass
+
+    def predict(self, x):
+        x = self.to_probas(x)
+        return np.argmax(np.sum(x, axis=1), axis=1)
+
+    def predict_proba(self, x):
+        x = self.to_probas(x)
+        return np.mean(x, axis=1)
+
+    @staticmethod
+    def to_probas(x):
+        # x.shape == (-1, TWEET_FEED_LEN)
+        x = x.reshape(len(x), -1, 1)
+        x_other = 1 - x
+        return np.concatenate([x_other, x], axis=-1)
+
+
 class BertDownstreamLossLogitsCombinedExperiment(AbstractSklearnExperiment):
 
     def build_model(self, hp):
-        return AbstractSklearnExperiment.select_sklearn_model(hp)
+        model_type = hp.Choice(
+            "Sklearn.model_type",
+            [LogisticRegression.__name__, SVC.__name__, RandomForestClassifier.__name__, XGBClassifier.__name__,
+             VotingClassifier.__name__]
+        )
+
+        if model_type == VotingClassifier.__name__:
+            return VotingClassifier()
+
+        return self.select_sklearn_model(hp)
 
     def cv_data_transformer(self, x_train, y_train, x_test, y_test):
         bert_model = self.fit_bert(x_train, y_train, x_test, y_test)
@@ -82,6 +118,9 @@ class BertDownstreamLossLogitsCombinedExperiment(AbstractSklearnExperiment):
 
 class BertDownstreamLossPooledCombinedExperiment(BertDownstreamLossLogitsCombinedExperiment):
 
+    def build_model(self, hp):
+        return self.select_sklearn_model(hp)
+
     def cv_data_transformer(self, x_train, y_train, x_test, y_test):
         bert_model = self.fit_bert(x_train, y_train, x_test, y_test)
         bert_pooled_model = tf.keras.Model(bert_model.inputs, bert_model.layers[-2].output)
@@ -103,11 +142,11 @@ if __name__ == "__main__":
             BertDownstreamLossLogitsCombinedExperiment,
             {
                 "experiment_dir": "../training/bert_clf/downstream_loss_logits_combined",
-                "experiment_name": "indiv_1",
+                "experiment_name": "logits",
                 "max_trials": 100,
                 "hyperparameters": {
-                    "learning_rate": 5e-5,
-                    "Bert.epochs": 2,
+                    "learning_rate": 2e-5,
+                    "Bert.epochs": 10,
                     "Bert.batch_size": 8,
                     "Bert.encoder_url": "https://tfhub.dev/tensorflow/small_bert/bert_en_uncased_L-12_H-128_A-2/1",
                     "Bert.hidden_size": 128,
@@ -116,8 +155,9 @@ if __name__ == "__main__":
                     "Bert.dropout_rate": 0.1,
                     "Bert.dense_activation": "linear",
                     "Bert.pooler": "concat",
-                    "Bert.dense_kernel_reg": 0.,
-                    "Bert.dense_bias_reg": 0.,
+                    "Bert.dense_kernel_reg": 0.00001,
+                    "Bert.use_batch_norm": False,
+                    "Bert.num_hidden_layers": 0,
                     "Combined.pooler": "concat",
                 },
             }
@@ -128,8 +168,8 @@ if __name__ == "__main__":
                 "experiment_name": "concat_pooler",
                 "max_trials": 100,
                 "hyperparameters": {
-                    "learning_rate": 5e-5,
-                    "Bert.epochs": 6,
+                    "learning_rate": 2e-5,
+                    "Bert.epochs": 10,
                     "Bert.batch_size": 8,
                     "Bert.encoder_url": "https://tfhub.dev/tensorflow/small_bert/bert_en_uncased_L-12_H-128_A-2/1",
                     "Bert.hidden_size": 128,
@@ -138,8 +178,9 @@ if __name__ == "__main__":
                     "Bert.dropout_rate": 0.1,
                     "Bert.dense_activation": "linear",
                     "Bert.pooler": "concat",
-                    "Bert.dense_kernel_reg": 0.,
-                    "Bert.dense_bias_reg": 0.,
+                    "Bert.dense_kernel_reg": 0.00001,
+                    "Bert.use_batch_norm": False,
+                    "Bert.num_hidden_layers": 0,
                     "Combined.pooler": "concat",
                 },
             }
@@ -150,8 +191,8 @@ if __name__ == "__main__":
                 "experiment_name": "max_pooler",
                 "max_trials": 100,
                 "hyperparameters": {
-                    "learning_rate": 5e-5,
-                    "Bert.epochs": 6,
+                    "learning_rate": 2e-5,
+                    "Bert.epochs": 10,
                     "Bert.batch_size": 8,
                     "Bert.encoder_url": "https://tfhub.dev/tensorflow/small_bert/bert_en_uncased_L-12_H-128_A-2/1",
                     "Bert.hidden_size": 128,
@@ -160,8 +201,9 @@ if __name__ == "__main__":
                     "Bert.dropout_rate": 0.1,
                     "Bert.dense_activation": "linear",
                     "Bert.pooler": "concat",
-                    "Bert.dense_kernel_reg": 0.,
-                    "Bert.dense_bias_reg": 0.,
+                    "Bert.dense_kernel_reg": 0.00001,
+                    "Bert.use_batch_norm": False,
+                    "Bert.num_hidden_layers": 0,
                     "Combined.pooler": "max",
                 },
             }
@@ -172,8 +214,8 @@ if __name__ == "__main__":
                 "experiment_name": "average_pooler",
                 "max_trials": 100,
                 "hyperparameters": {
-                    "learning_rate": 5e-5,
-                    "Bert.epochs": 6,
+                    "learning_rate": 2e-5,
+                    "Bert.epochs": 10,
                     "Bert.batch_size": 8,
                     "Bert.encoder_url": "https://tfhub.dev/tensorflow/small_bert/bert_en_uncased_L-12_H-128_A-2/1",
                     "Bert.hidden_size": 128,
@@ -182,8 +224,9 @@ if __name__ == "__main__":
                     "Bert.dropout_rate": 0.1,
                     "Bert.dense_activation": "linear",
                     "Bert.pooler": "concat",
-                    "Bert.dense_kernel_reg": 0.,
-                    "Bert.dense_bias_reg": 0.,
+                    "Bert.dense_kernel_reg": 0.00001,
+                    "Bert.use_batch_norm": False,
+                    "Bert.num_hidden_layers": 0,
                     "Combined.pooler": "average",
                 },
             }
@@ -191,5 +234,5 @@ if __name__ == "__main__":
     ]
     with tf.device("/gpu:0"):
         handler = ExperimentHandler(experiments)
-        # handler.run_experiments(dataset_dir)
+        handler.run_experiments(dataset_dir)
         handler.print_results(20)
