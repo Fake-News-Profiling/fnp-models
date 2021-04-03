@@ -35,6 +35,9 @@ class VotingClassifier(ClassifierMixin, BaseEstimator):
 class CombinedStatisticalExperiment(AbstractSklearnExperiment):
     """ Extract all statistical data at the user-level, and use this to train a single Sklearn model """
 
+    def __init__(self, config: ExperimentConfig):
+        super().__init__(config, num_cv_splits=10)
+
     def input_data_transformer(self, x):
         ner_wrapper = get_ner_wrapper(self.hyperparameters)
         sentiment_wrapper = get_sentiment_wrapper(self.hyperparameters)
@@ -46,8 +49,7 @@ class EnsembleStatisticalExperiment(AbstractSklearnExperiment):
     """ Load and train statistical models, and then train an Sklearn ensemble model """
 
     def __init__(self, config: ExperimentConfig):
-        super().__init__(config)
-        self.num_readability_features = self.num_ner_features = self.num_sentiment_features = 0
+        super().__init__(config, num_cv_splits=10)
 
     def build_model(self, hp):
         model_type = hp.Choice(
@@ -95,7 +97,7 @@ if __name__ == "__main__":
             CombinedStatisticalExperiment,
             {
                 "experiment_dir": "../training/statistical",
-                "experiment_name": "combined_8",
+                "experiment_name": "combined_9",
                 "max_trials": 100,
                 "hyperparameters": {
                     "Ner.library": "spacy",
@@ -107,12 +109,12 @@ if __name__ == "__main__":
             EnsembleStatisticalExperiment,
             {
                 "experiment_dir": "../training/statistical",
-                "experiment_name": "combined_ensemble_8",
+                "experiment_name": "combined_ensemble_9",
                 "max_trials": 100,
                 "hyperparameters": {
-                    "Readability.trial_hp": "../training/statistical/readability_7/"
-                                            "trial_d36d88c65ce34634607174b0f71785dc/trial.json",
-                    "Ner.trial_hp": "../training/statistical/ner_spacy_sm_7/"
+                    "Readability.trial_hp": "../training/statistical/readability_9/"
+                                            "trial_17e6e17c62b001acb08029fbd018a480/trial.json",
+                    "Ner.trial_hp": "../training/statistical/ner_spacy_sm_9/"
                                     "trial_67bc60cddaffe204c9d613e3e0e5a058/trial.json",
                     "Sentiment.trial_hp": "../training/statistical/sentiment_vader_7/"
                                           "trial_70ab73dc2d9661c28ce343addc2e6420/trial.json",
@@ -121,5 +123,5 @@ if __name__ == "__main__":
         )
     ]
     handler = ExperimentHandler(experiments)
-    # handler.run_experiments(dataset_dir)
+    handler.run_experiments(dataset_dir)
     handler.print_results(num_trials=20)

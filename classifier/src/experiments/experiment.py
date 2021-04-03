@@ -9,7 +9,7 @@ from kerastuner.tuners.bayesian import BayesianOptimizationOracle
 from sklearn.decomposition import PCA
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.linear_model import LogisticRegression
-from sklearn.metrics import make_scorer, log_loss, f1_score, accuracy_score
+from sklearn.metrics import make_scorer, f1_score, accuracy_score
 from sklearn.model_selection import StratifiedKFold
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
@@ -95,7 +95,7 @@ class AbstractExperiment(ABC):
 class AbstractSklearnExperiment(AbstractExperiment, ABC):
     """ Abstract base class for conducting a Keras Tuner tuning experiment with an Sklearn model """
 
-    def __init__(self, config: ExperimentConfig):
+    def __init__(self, config: ExperimentConfig, num_cv_splits=5):
         super().__init__(config)
         self.tuner = SklearnCV(
             oracle=BayesianOptimizationOracle(
@@ -104,17 +104,17 @@ class AbstractSklearnExperiment(AbstractExperiment, ABC):
                 hyperparameters=self.hyperparameters,
             ),
             hypermodel=self.build_model,
-            scoring=make_scorer(log_loss, needs_proba=True),
-            metrics=[accuracy_score, f1_score, tf.keras.losses.binary_crossentropy],
-            cv=StratifiedKFold(n_splits=5, shuffle=True, random_state=1),
+            scoring=make_scorer(tf.keras.losses.binary_crossentropy, needs_proba=True),
+            metrics=[accuracy_score, f1_score],
+            cv=StratifiedKFold(n_splits=num_cv_splits, shuffle=True, random_state=1),
             directory=self.experiment_directory,
             project_name=self.experiment_name,
         )
 
     def run(self, x, y, callbacks=None, *args, **kwargs):
-        if hasattr(self, "cv_data_transformer"):
+        if hasattr(self, "cv_data_transformer") and callable(self.cv_data_transformer):
             self.tuner.fit_data(x, y, self.cv_data_transformer)
-        elif hasattr(self, "input_data_transformer"):
+        elif hasattr(self, "input_data_transformer") and callable(self.input_data_transformer):
             x = self.input_data_transformer(x)
 
         self.tuner.search(x, y)

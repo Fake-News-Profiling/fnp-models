@@ -1,6 +1,6 @@
 import sys
 
-from experiments.experiment import AbstractSklearnExperiment
+from experiments.experiment import AbstractSklearnExperiment, ExperimentConfig
 import statistical.data_extraction as ex
 from experiments.handler import ExperimentHandler
 from experiments.statistical import get_ner_wrapper, get_sentiment_wrapper
@@ -12,6 +12,9 @@ from experiments.statistical import get_ner_wrapper, get_sentiment_wrapper
 class ReadabilityExperiment(AbstractSklearnExperiment):
     """ Extract readability data at the user-level, and use this to train an Sklearn model """
 
+    def __init__(self, config: ExperimentConfig):
+        super().__init__(config, num_cv_splits=10)
+
     def input_data_transformer(self, x):
         extractor = ex.readability_tweet_extractor()
         return extractor.transform(x)
@@ -19,6 +22,9 @@ class ReadabilityExperiment(AbstractSklearnExperiment):
 
 class NerExperiment(AbstractSklearnExperiment):
     """ Extract named-entity recognition data at the user-level, and use this to train an Sklearn model """
+
+    def __init__(self, config: ExperimentConfig):
+        super().__init__(config, num_cv_splits=10)
 
     def input_data_transformer(self, x):
         ner_wrapper = get_ner_wrapper(self.hyperparameters)
@@ -28,6 +34,9 @@ class NerExperiment(AbstractSklearnExperiment):
 
 class SentimentExperiment(AbstractSklearnExperiment):
     """ Extract sentiment data at the user-level, and use this to train an Sklearn model """
+
+    def __init__(self, config: ExperimentConfig):
+        super().__init__(config, num_cv_splits=10)
 
     def input_data_transformer(self, x):
         sentiment_wrapper = get_sentiment_wrapper(self.hyperparameters)
@@ -39,7 +48,7 @@ if __name__ == "__main__":
     """ Execute experiments in this module """
     dataset_dir = sys.argv[1]
 
-    num = 7
+    num = 10
     experiments = [
         (
             ReadabilityExperiment,
@@ -75,5 +84,5 @@ if __name__ == "__main__":
         )
     ]
     handler = ExperimentHandler(experiments)
-    # handler.run_experiments(dataset_dir)
+    handler.run_experiments(dataset_dir)
     handler.print_results(20)
