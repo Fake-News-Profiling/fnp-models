@@ -42,8 +42,6 @@ def readability_tweet_extractor() -> pre.TweetStatsExtractor:
         # syllables_to_words_ratios
         "Total syllables-words ratio",
         "Mean syllables-words ratio",
-        "Min syllables-words ratio",
-        "Max syllables-words ratio",
         # average_tweet_lengths
         "Average tweet lengths in words",
         "Average tweet lengths in characters",
@@ -110,9 +108,7 @@ def syllables_to_words_ratios(tweet_feed: List[str]) -> List:
 
     overall_ratio = sum(tweet_syllables) / max(1, sum(map(len, tweet_words)))
     mean_ratio = np.mean(per_tweet_ratios)
-    min_ratio = min(per_tweet_ratios)
-    max_ratio = max(per_tweet_ratios)
-    return [overall_ratio, mean_ratio, min_ratio, max_ratio]
+    return [overall_ratio, mean_ratio]
 
 
 def average_tweet_lengths(tweet_feed: List[str]) -> List:

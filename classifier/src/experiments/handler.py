@@ -10,6 +10,7 @@ import pandas as pd
 from data import parse_dataset
 from experiments.experiment import AbstractExperiment, ExperimentConfig, AbstractTfExperiment
 from experiments.data_visualisation import plot_averaged_experiment_data
+from statistical.data_extraction import TweetStatsExtractor
 
 Experiment = Tuple[AbstractExperiment.__class__, Union[str, dict, ExperimentConfig]]
 
@@ -47,6 +48,24 @@ class ExperimentHandler:
             print(("\n\nExperiment: %s/%s\n" + df.to_markdown()) %
                   (experiment.config.experiment_dir, experiment.config.experiment_name))
 
+    def print_feature_importance(self, experiment_extractors: List[TweetStatsExtractor], num_trials: int = 10):
+        """ Print feature importance of the top `num_trials` trial results for each experiment """
+        for extractor, (experiment_cls, experiment_config) in zip(experiment_extractors, self.experiments):
+            experiment = self._load_experiment(experiment_cls, experiment_config, save_config=False)
+
+            results = defaultdict(list)
+            for model, trial in zip(experiment.tuner.get_best_models(num_trials),
+                                    experiment.tuner.oracle.get_best_trials(num_trials)):
+                if hasattr(model.steps[-1][1], "feature_importances_"):
+                    results["trial_id"].append(trial.trial_id)
+                    results["Sklearn.model_type"].append(trial.hyperparameters.get("Sklearn.model_type"))
+                    for name, importance in zip(extractor.feature_names, model.steps[-1][1].feature_importances_):
+                        results[name].append(importance)
+
+            df = pd.DataFrame(results)
+            print(("\n\nExperiment: %s/%s\n" + df.to_markdown()) %
+                  (experiment.config.experiment_dir, experiment.config.experiment_name))
+
     def plot_results(self):
         """ Plot performance graphs for each TensorFlow experiment """
         for i in range(len(self.experiments)):
@@ -78,7 +97,7 @@ class ExperimentHandler:
             results["trial_id"].append(trial.trial_id)
             results["Sklearn.model_type"].append(trial.hyperparameters.get("Sklearn.model_type"))
             for score in trial.metrics.metrics.keys():
-                results["loss" if score == "score" else score].append(trial.metrics.get_best_value(score))
+                results[score].append(trial.metrics.get_best_value(score))
 
             results["parameters"].append(trial.hyperparameters.values)
 

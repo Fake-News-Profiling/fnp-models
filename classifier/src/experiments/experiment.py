@@ -21,7 +21,7 @@ from bert import BertTweetFeedTokenizer
 from bert.models import tokenize_bert_input, bert_layers
 from experiments import allow_gpu_memory_growth
 from experiments.tuners import BayesianOptimizationCV, SklearnCV
-
+from statistical.data_extraction import TweetStatsExtractor
 
 allow_gpu_memory_growth()
 
@@ -104,7 +104,7 @@ class AbstractSklearnExperiment(AbstractExperiment, ABC):
                 hyperparameters=self.hyperparameters,
             ),
             hypermodel=self.build_model,
-            scoring=make_scorer(tf.keras.losses.binary_crossentropy, needs_proba=True),
+            scoring=make_scorer(tf.keras.losses.binary_crossentropy),  # , needs_proba=True),
             metrics=[accuracy_score, f1_score],
             cv=StratifiedKFold(n_splits=num_cv_splits, shuffle=True, random_state=1),
             directory=self.experiment_directory,
@@ -180,6 +180,10 @@ class AbstractSklearnExperiment(AbstractExperiment, ABC):
             raise RuntimeError("Invalid SkLearn model type")
 
         return estimator
+
+    @staticmethod
+    def get_extractor(*args, **kwargs) -> TweetStatsExtractor:
+        pass
 
 
 class AbstractTfExperiment(AbstractExperiment, ABC):
