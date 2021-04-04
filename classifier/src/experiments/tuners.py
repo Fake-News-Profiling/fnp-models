@@ -103,6 +103,7 @@ class TensorFlowCVTuner(MultiExecutionTuner, TunerCV):
 
         # Average the results across K-folds and send to the Oracle
         averaged_metrics = {metric: np.mean(values) for metric, values in metrics.items()}
+        print("CV Metrics:", averaged_metrics)
         self.oracle.update_trial(trial.trial_id, metrics=averaged_metrics, step=self._reported_step)
 
 
@@ -214,6 +215,7 @@ class SklearnCV(Sklearn, TunerCV):
                     metrics[metric.__name__].append(result)
 
         trial_metrics = {name: np.mean(values) for name, values in metrics.items()}
+        print("CV Metrics:", trial_metrics)
         self.oracle.update_trial(trial.trial_id, trial_metrics)
         self.save_model(trial.trial_id, model)
 

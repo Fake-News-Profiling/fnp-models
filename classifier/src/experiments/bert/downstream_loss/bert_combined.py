@@ -54,8 +54,16 @@ class BertDownstreamLossLogitsCombinedExperiment(AbstractSklearnExperiment):
     def cv_data_transformer(self, x_train, y_train, x_test, y_test):
         bert_model = self.fit_bert(x_train, y_train, x_test, y_test)
         x_train, y_train, x_test, y_test = self.predict_user_data(bert_model, x_train, y_train, x_test, y_test)
+        x_train = tf.math.sigmoid(x_train)
+        x_test = tf.math.sigmoid(x_test)
         x_train, x_test = self.pool_combined(x_train, x_test)
-        return x_train, y_train, x_test, y_test
+        return self.to_float64(x_train, y_train, x_test, y_test)
+
+    @staticmethod
+    def to_float64(x_train, y_train, x_test, y_test):
+        # RandomForestClassifier doesn't support float32
+        return (tf.cast(x_train, tf.float64), tf.cast(y_train, tf.float64), tf.cast(x_test, tf.float64),
+                tf.cast(y_test, tf.float64))
 
     def pool_combined(self, x_train, x_test):
         # x_.shape == (num_users, TWEET_FEED_LEN, -1)
@@ -126,7 +134,7 @@ class BertDownstreamLossPooledCombinedExperiment(BertDownstreamLossLogitsCombine
         bert_pooled_model = tf.keras.Model(bert_model.inputs, bert_model.layers[-2].output)
         x_train, y_train, x_test, y_test = self.predict_user_data(bert_pooled_model, x_train, y_train, x_test, y_test)
         x_train, x_test = self.pool_combined(x_train, x_test)
-        return x_train, y_train, x_test, y_test
+        return self.to_float64(x_train, y_train, x_test, y_test)
 
     @classmethod
     def preprocess_cv_data(cls, hp, x_train, y_train, x_test, y_test):
