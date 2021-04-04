@@ -2,71 +2,23 @@ import sys
 
 import numpy as np
 import tensorflow as tf
-from sklearn.ensemble import RandomForestClassifier
-from sklearn.linear_model import LogisticRegression
-from sklearn.svm import SVC
-from xgboost import XGBClassifier
 
 from bert import BertIndividualTweetTokenizer
 from bert.models import bert_tokenizer
-from experiments.bert import VotingClassifier
-from experiments.bert.downstream_loss.bert_downstream_loss import BertTrainedOnDownstreamLoss
-from experiments.experiment import AbstractSklearnExperiment
+from experiments.bert import BertLogitsCombinedExperiment
+from experiments.bert.individual_tweets.bert_individual import BertIndividualExperiment
 from experiments.handler import ExperimentHandler
 
 
-class BertDownstreamLossLogitsCombinedExperiment(AbstractSklearnExperiment):
-
-    def build_model(self, hp):
-        model_type = hp.Choice(
-            "Sklearn.model_type",
-            [LogisticRegression.__name__, SVC.__name__, RandomForestClassifier.__name__, XGBClassifier.__name__,
-             VotingClassifier.__name__]
-        )
-
-        if model_type == VotingClassifier.__name__:
-            return VotingClassifier()
-
-        return self.select_sklearn_model(hp)
-
-    def cv_data_transformer(self, x_train, y_train, x_test, y_test):
-        bert_model = self.fit_bert(x_train, y_train, x_test, y_test)
-        x_train, y_train, x_test, y_test = self.predict_user_data(bert_model, x_train, y_train, x_test, y_test)
-        x_train = tf.math.sigmoid(x_train)
-        x_test = tf.math.sigmoid(x_test)
-        x_train, x_test = self.pool_combined(x_train, x_test)
-        return self.to_float64(x_train, y_train, x_test, y_test)
-
-    @staticmethod
-    def to_float64(x_train, y_train, x_test, y_test):
-        # RandomForestClassifier doesn't support float32
-        return (tf.cast(x_train, tf.float64), tf.cast(y_train, tf.float64), tf.cast(x_test, tf.float64),
-                tf.cast(y_test, tf.float64))
-
-    def pool_combined(self, x_train, x_test):
-        # x_.shape == (num_users, TWEET_FEED_LEN, -1)
-        pooler = self.hyperparameters.get("Combined.pooler")
-        if pooler == "concat":
-            x_train = tf.keras.layers.Flatten()(x_train)
-            x_test = tf.keras.layers.Flatten()(x_test)
-        elif pooler == "max":
-            x_train = tf.keras.layers.GlobalMaxPool1D()(x_train)
-            x_test = tf.keras.layers.GlobalMaxPool1D()(x_test)
-        elif pooler == "average":
-            x_train = tf.keras.layers.GlobalAveragePooling1D()(x_train)
-            x_test = tf.keras.layers.GlobalAveragePooling1D()(x_test)
-        else:
-            raise ValueError("Invalid value for `Combined.pooler`")
-
-        return x_train, x_test
+class BertIndividualLogitsCombinedExperiment(BertLogitsCombinedExperiment):
 
     def fit_bert(self, x_train, y_train, x_test, y_test):
         # Preprocess BERT data
-        _, x_train_bert, y_train_bert, x_test_bert, y_test_bert = BertTrainedOnDownstreamLoss.preprocess_cv_data(
+        _, x_train_bert, y_train_bert, x_test_bert, y_test_bert = BertIndividualExperiment.preprocess_cv_data(
             self.hyperparameters, x_train, y_train, x_test, y_test)
 
         # Train BERT model
-        bert_model = BertTrainedOnDownstreamLoss.build_model(None, self.hyperparameters)
+        bert_model = BertIndividualExperiment.build_model(None, self.hyperparameters)
         bert_model.fit(
             x=x_train_bert,
             y=y_train_bert,
@@ -87,7 +39,7 @@ class BertDownstreamLossLogitsCombinedExperiment(AbstractSklearnExperiment):
         def predict_data(x):
             return np.asarray([
                 bert_model.predict(
-                    BertTrainedOnDownstreamLoss.tokenize_x(self.hyperparameters, tokenizer, [tweet_feed])
+                    tokenizer.tokenize_input([tweet_feed])
                 ) for tweet_feed in x
             ])  # (num_users, TWEET_FEED_LEN, -1)
 
@@ -97,12 +49,8 @@ class BertDownstreamLossLogitsCombinedExperiment(AbstractSklearnExperiment):
 
         return x_train, y_train, x_test, y_test
 
-    @classmethod
-    def preprocess_cv_data(cls, hp, x_train, y_train, x_test, y_test):
-        return hp, x_train, y_train, x_test, y_test
 
-
-class BertDownstreamLossPooledCombinedExperiment(BertDownstreamLossLogitsCombinedExperiment):
+class BertIndividualPooledCombinedExperiment(BertIndividualLogitsCombinedExperiment):
 
     def build_model(self, hp):
         return self.select_sklearn_model(hp)
@@ -125,7 +73,7 @@ if __name__ == "__main__":
 
     experiments = [
         (
-            BertDownstreamLossLogitsCombinedExperiment,
+            BertIndividualLogitsCombinedExperiment,
             {
                 "experiment_dir": "../training/bert_clf/downstream_loss_logits_combined",
                 "experiment_name": "logits",
@@ -148,7 +96,7 @@ if __name__ == "__main__":
                 },
             }
         ), (
-            BertDownstreamLossPooledCombinedExperiment,
+            BertIndividualPooledCombinedExperiment,
             {
                 "experiment_dir": "../training/bert_clf/downstream_loss_pooled_combined",
                 "experiment_name": "concat_pooler",
@@ -171,7 +119,7 @@ if __name__ == "__main__":
                 },
             }
         ), (
-            BertDownstreamLossPooledCombinedExperiment,
+            BertIndividualPooledCombinedExperiment,
             {
                 "experiment_dir": "../training/bert_clf/downstream_loss_pooled_combined",
                 "experiment_name": "max_pooler",
@@ -194,7 +142,7 @@ if __name__ == "__main__":
                 },
             }
         ), (
-            BertDownstreamLossPooledCombinedExperiment,
+            BertIndividualPooledCombinedExperiment,
             {
                 "experiment_dir": "../training/bert_clf/downstream_loss_pooled_combined",
                 "experiment_name": "average_pooler",

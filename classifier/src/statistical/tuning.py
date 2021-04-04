@@ -30,7 +30,7 @@ def get_tuner(project_num, project):
 
 def print_results(project_num, projects=None, num_trials=10):
     if projects is None:
-        projects = ["readability", "ner", "sentiment", "combined", "combined_ensemble", "tweet_level",
+        projects = ["readability", "ner", "sentiment", "combined", "combined_ensemble", "individual_tweets",
                     "tweet_level_ensemble"]
 
     for project in projects:
