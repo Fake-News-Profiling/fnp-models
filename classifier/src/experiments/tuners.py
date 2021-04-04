@@ -213,7 +213,17 @@ class SklearnCV(Sklearn, TunerCV):
                     result = metric(y_test, y_test_pred)
                     metrics[metric.__name__].append(result)
 
-        trial_metrics = {name: np.mean(values) for name, values in metrics.items()}
+        # Averaged metrics
+        trial_metrics = {}
+        for name, values in metrics.items():
+            if name == "score":
+                trial_metrics["loss"] = np.mean(values)
+                trial_metrics["loss_std"] = np.std(values)
+                trial_metrics["score"] = trial_metrics["loss"] + trial_metrics["loss_std"]
+            else:
+                trial_metrics[name] = np.mean(values)  # Averaged metrics
+                trial_metrics[f"{name}_std"] = np.std(values)  # Standard deviation of metrics
+
         self.oracle.update_trial(trial.trial_id, trial_metrics)
         self.save_model(trial.trial_id, model)
 
