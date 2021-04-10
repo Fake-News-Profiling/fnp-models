@@ -17,7 +17,7 @@ class VotingClassifier(ClassifierMixin, BaseEstimator):
 
     def predict(self, x):
         x = self.to_probas(x)
-        return np.argmax(np.sum(x, axis=1), axis=1)
+        return np.argmax(np.sum(x, axis=1), axis=1).astype(np.float64)
 
     def predict_proba(self, x):
         x = self.to_probas(x)
@@ -28,7 +28,9 @@ class VotingClassifier(ClassifierMixin, BaseEstimator):
         # x.shape == (-1, TWEET_FEED_LEN)
         x = x.reshape(len(x), -1, 1)
         x_other = 1 - x
-        return np.concatenate([x_other, x], axis=-1)
+        x_probas = np.concatenate([x_other, x], axis=-1)
+        # x_probas.shape == (-1, TWEET_FEED_LEN, 2)
+        return x_probas
 
 
 class BertLogitsCombinedExperiment(AbstractSklearnExperiment):

@@ -67,7 +67,7 @@ def tweet_sentiment_scores(tweet_feed: List[str],
         counts = [0, 0, 0]
         indices = {"negative": 0, "neutral": 1, "positive": 2}
         counts[indices[sentiment.classification]] += 1
-        return sentiment.negative, sentiment.positive, sentiment.compound, *counts
+        return (sentiment.negative, sentiment.positive, sentiment.compound, *counts)
 
     tweet_sentiments = np.asarray(list(map(sentiment_scores_as_list, tweet_feed)))
     sentiment_mean = np.mean(tweet_sentiments[:, :3], axis=0)
