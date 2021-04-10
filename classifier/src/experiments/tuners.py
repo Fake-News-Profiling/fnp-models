@@ -71,8 +71,7 @@ class TensorFlowCVTuner(MultiExecutionTuner, TunerCV):
         original_callbacks = fit_kwargs.pop('callbacks', [])
         metrics = defaultdict(list)
 
-        split_data = self.cv_data if self.cv_data is not None else kfold_split_wrapper(
-            self.cv, fit_kwargs["x"], fit_kwargs["y"])
+        split_data = self.cv_data or kfold_split_wrapper(self.cv, fit_kwargs["x"], fit_kwargs["y"])
         for split_num, (x_train, y_train, x_test, y_test) in enumerate(split_data):
             if split_num == self.num_folds:
                 break
@@ -191,7 +190,7 @@ class SklearnCV(Sklearn, TunerCV):
         """
         metrics = defaultdict(list)
 
-        split_data = self.cv_data if self.cv_data is not None else kfold_split_wrapper(self.cv, X, y)
+        split_data = self.cv_data or kfold_split_wrapper(self.cv, X, y)
         for split_num, (x_train, y_train, x_test, y_test) in enumerate(split_data):
             _, x_train, y_train, x_test, y_test = self.preprocess(
                 trial.hyperparameters, x_train, y_train, x_test, y_test)

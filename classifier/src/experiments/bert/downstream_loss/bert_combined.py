@@ -2,10 +2,6 @@ import sys
 
 import numpy as np
 import tensorflow as tf
-from sklearn.ensemble import RandomForestClassifier
-from sklearn.linear_model import LogisticRegression
-from sklearn.svm import SVC
-from xgboost import XGBClassifier
 
 from bert import BertIndividualTweetTokenizer
 from bert.models import bert_tokenizer
@@ -18,13 +14,7 @@ from experiments.handler import ExperimentHandler
 class BertDownstreamLossLogitsCombinedExperiment(AbstractSklearnExperiment):
 
     def build_model(self, hp):
-        model_type = hp.Choice(
-            "Sklearn.model_type",
-            [LogisticRegression.__name__, SVC.__name__, RandomForestClassifier.__name__, XGBClassifier.__name__,
-             VotingClassifier.__name__]
-        )
-
-        if model_type == VotingClassifier.__name__:
+        if hp.get("Sklearn.model_type") == VotingClassifier.__name__:
             return VotingClassifier()
 
         return self.select_sklearn_model(hp)
@@ -40,8 +30,10 @@ class BertDownstreamLossLogitsCombinedExperiment(AbstractSklearnExperiment):
     @staticmethod
     def to_float64(x_train, y_train, x_test, y_test):
         # RandomForestClassifier doesn't support float32
-        return (tf.cast(x_train, tf.float64), tf.cast(y_train, tf.float64), tf.cast(x_test, tf.float64),
-                tf.cast(y_test, tf.float64))
+        def cast(data):
+            return np.asarray(tf.cast(data, tf.float64))
+
+        return cast(x_train), cast(y_train), cast(x_test), cast(y_test)
 
     def pool_combined(self, x_train, x_test):
         # x_.shape == (num_users, TWEET_FEED_LEN, -1)
@@ -128,7 +120,7 @@ if __name__ == "__main__":
             # Classifying BERT output logits
             BertDownstreamLossLogitsCombinedExperiment,
             {
-                "experiment_dir": "../training/bert_clf/downstream_loss_logits_combined",
+                "experiment_dir": "../training/bert_clf/downstream_loss/combined",
                 "experiment_name": "logits",
                 "max_trials": 100,
                 "hyperparameters": {
@@ -146,13 +138,15 @@ if __name__ == "__main__":
                     "Bert.use_batch_norm": False,
                     "Bert.num_hidden_layers": 0,
                     "Combined.pooler": "concat",
+                    "Sklearn.model_type": ["VotingClassifier", "LogisticRegression", "SVC",
+                                           "RandomForestClassifier", "XGBClassifier"]
                 },
             }
         ), (
             # Classifying BERT last hidden layer with a concat combined pooler
             BertDownstreamLossPooledCombinedExperiment,
             {
-                "experiment_dir": "../training/bert_clf/downstream_loss_pooled_combined",
+                "experiment_dir": "../training/bert_clf/downstream_loss/combined",
                 "experiment_name": "concat_pooler",
                 "max_trials": 100,
                 "hyperparameters": {
@@ -176,7 +170,7 @@ if __name__ == "__main__":
             # Classifying BERT last hidden layer with a max combined pooler
             BertDownstreamLossPooledCombinedExperiment,
             {
-                "experiment_dir": "../training/bert_clf/downstream_loss_pooled_combined",
+                "experiment_dir": "../training/bert_clf/downstream_loss/combined",
                 "experiment_name": "max_pooler",
                 "max_trials": 100,
                 "hyperparameters": {
@@ -200,7 +194,7 @@ if __name__ == "__main__":
             # Classifying BERT last hidden layer with an average combined pooler
             BertDownstreamLossPooledCombinedExperiment,
             {
-                "experiment_dir": "../training/bert_clf/downstream_loss_pooled_combined",
+                "experiment_dir": "../training/bert_clf/downstream_loss/combined",
                 "experiment_name": "average_pooler",
                 "max_trials": 100,
                 "hyperparameters": {

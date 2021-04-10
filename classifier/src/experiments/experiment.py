@@ -1,4 +1,5 @@
 import math
+import os
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from functools import partial
@@ -22,7 +23,7 @@ import data.preprocess as pre
 from bert import BertTweetFeedTokenizer
 from bert.models import tokenize_bert_input, bert_layers
 from experiments import allow_gpu_memory_growth
-from experiments.tuners import BayesianOptimizationCV, SklearnCV
+from experiments.tuners import BayesianOptimizationCV, SklearnCV, kfold_split_wrapper
 from statistical.data_extraction import TweetStatsExtractor
 
 allow_gpu_memory_growth()
@@ -106,32 +107,58 @@ class AbstractExperiment(ABC):
 
 
 class AbstractSklearnExperiment(AbstractExperiment, ABC):
-    """ Abstract base class for conducting a Keras Tuner tuning experiment with an Sklearn model """
+    """
+    Abstract base class for conducting a Keras Tuner tuning experiment with an Sklearn model.
+    Each Sklearn model is tuned individually, so a list of sklearn model types must be passed in the config
+    hyperparameters.
+    """
 
     def __init__(self, config: ExperimentConfig, num_cv_splits: int = 5, tuner_initial_points: int = None):
         super().__init__(config)
-        self.tuner = SklearnCV(
+        self.num_cv_splits = num_cv_splits
+        self.tuner_initial_points = tuner_initial_points
+
+    def make_tuner(self, hp: HyperParameters, model_type: str) -> SklearnCV:
+        return SklearnCV(
             oracle=BayesianOptimizationOracle(
-                objective=Objective("score", "min"),  # minimise log loss
+                objective=Objective("score", "min"),  # minimise cross-entropy loss
                 max_trials=self.config.max_trials,
-                hyperparameters=self.hyperparameters,
-                num_initial_points=tuner_initial_points,
+                hyperparameters=hp,
+                num_initial_points=self.tuner_initial_points,
             ),
             hypermodel=self.build_model,
             scoring=make_scorer(tf.keras.losses.binary_crossentropy),
             metrics=[accuracy_score, f1_score],
-            cv=StratifiedKFold(n_splits=num_cv_splits, shuffle=True, random_state=1),
-            directory=self.experiment_directory,
-            project_name=self.experiment_name,
+            cv=StratifiedKFold(n_splits=self.num_cv_splits, shuffle=True, random_state=1),
+            directory=os.path.join(self.experiment_directory, self.experiment_name),
+            project_name=model_type,
         )
 
     def run(self, x, y, callbacks=None, *args, **kwargs):
+        # Processing the initial data is computationally costly, so do it once before we hyperparameter tune
+        cv_data = None
         if hasattr(self, "cv_data_transformer") and callable(self.cv_data_transformer):
-            self.tuner.fit_data(x, y, self.cv_data_transformer)
+            cv = StratifiedKFold(n_splits=self.num_cv_splits, shuffle=True, random_state=1)
+            cv_data = [self.cv_data_transformer(*cv_fold) for cv_fold in kfold_split_wrapper(cv, x, y)]
         elif hasattr(self, "input_data_transformer") and callable(self.input_data_transformer):
             x = self.input_data_transformer(x)
 
-        self.tuner.search(x, y)
+        # Run a search for each model type
+        model_types = self.config.hyperparameters.setdefault(
+            "Sklearn.model_type", ["LogisticRegression", "SVC", "RandomForestClassifier", "XGBClassifier"])
+        if isinstance(model_types, str):
+            model_types = [model_types]
+
+        for model_type in model_types:
+            # Build a HyperParameters object with just this model_type
+            hp_dict = self.config.hyperparameters.copy()
+            hp_dict["Sklearn.model_type"] = model_type
+            hp = self.parse_to_hyperparameters(hp_dict)
+
+            tuner = self.make_tuner(hp, model_type)
+            tuner.cv_data = cv_data
+            print("Performing search for model_type:", model_type)
+            tuner.search(x, y)
 
     def build_model(self, hp):
         """ Build an Sklearn pipeline with a final estimator """
@@ -147,11 +174,7 @@ class AbstractSklearnExperiment(AbstractExperiment, ABC):
     @staticmethod
     def select_sklearn_model(hp):
         """ Select and instantiate an Sklearn estimator """
-        model_type = hp.Choice(
-            "Sklearn.model_type",
-            [LogisticRegression.__name__, SVC.__name__, RandomForestClassifier.__name__, XGBClassifier.__name__]
-        )
-
+        model_type = hp.get("Sklearn.model_type")
         if model_type == LogisticRegression.__name__:
             with hp.conditional_scope("Sklearn.model_type", LogisticRegression.__name__):
                 # Use a log distribution as it's more likely we'll want less regularisation
