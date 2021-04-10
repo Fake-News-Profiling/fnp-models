@@ -8,8 +8,9 @@ import numpy as np
 import pandas as pd
 
 from data import parse_dataset
-from experiments.experiment import AbstractExperiment, ExperimentConfig, AbstractTfExperiment
+from experiments.experiment import AbstractExperiment, ExperimentConfig, AbstractTfExperiment, AbstractSklearnExperiment
 from experiments.data_visualisation import plot_averaged_experiment_data
+from experiments.statistical import sklearn_models
 from statistical.data_extraction import TweetStatsExtractor
 
 
@@ -43,11 +44,24 @@ class ExperimentHandler:
 
     def print_results(self, num_trials: int = 10):
         """ Print out the top `num_trials` trial results for each experiment """
+        def print_df(experiment_):
+            df = self._build_best_trials_df(experiment_, num_trials)
+            print(("\n\nExperiment: %s/%s\n" + df.to_markdown()) %
+                  (experiment_.config.experiment_dir, experiment_.config.experiment_name))
+
         for experiment_cls, experiment_config in self.experiments:
             experiment = self._load_experiment(experiment_cls, experiment_config, save_config=False)
-            df = self._build_best_trials_df(experiment, num_trials)
-            print(("\n\nExperiment: %s/%s\n" + df.to_markdown()) %
-                  (experiment.config.experiment_dir, experiment.config.experiment_name))
+
+            if isinstance(experiment, AbstractSklearnExperiment):
+                model_types = experiment.config.hyperparameters.setdefault("Sklearn.model_type", sklearn_models)
+                if isinstance(model_types, str):
+                    model_types = [model_types]
+
+                for model_type in model_types:
+                    experiment.tuner = experiment.make_tuner(experiment.hyperparameters, model_type)
+                    print_df(experiment)
+            else:
+                print_df(experiment)
 
     def print_feature_importance(self, experiment_extractors: List[TweetStatsExtractor], num_trials: int = 10):
         """ Print feature importance of the top `num_trials` trial results for each experiment """
@@ -94,6 +108,7 @@ class ExperimentHandler:
     def _build_best_trials_df(experiment: AbstractExperiment.__class__, num_trials: int) -> pd.DataFrame:
         """ Get the top `num_trials` trial results, and return them in a pandas DataFrame """
         results = defaultdict(list)
+
         for trial in experiment.tuner.oracle.get_best_trials(num_trials):
             results["trial_id"].append(trial.trial_id)
             results["Sklearn.model_type"].append(trial.hyperparameters.get("Sklearn.model_type"))

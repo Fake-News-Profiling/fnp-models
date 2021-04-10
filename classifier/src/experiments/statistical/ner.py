@@ -111,5 +111,5 @@ if __name__ == "__main__":
 
     # Hyperparameter tuning
     hp_handler = model_hypertuning_handler()
-    # hp_handler.run_experiments(dataset_dir)
+    hp_handler.run_experiments(dataset_dir)
     hp_handler.print_results(10)

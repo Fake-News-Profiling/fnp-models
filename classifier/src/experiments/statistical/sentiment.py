@@ -4,8 +4,7 @@ from functools import partial
 import statistical.data_extraction.sentiment.sentiment as sent
 from experiments.experiment import ExperimentConfig
 from experiments.handler import ExperimentHandler
-from experiments.statistical import get_sentiment_wrapper, AbstractStatisticalExperiment, default_svc_model, \
-    sklearn_models
+from experiments.statistical import get_sentiment_wrapper, AbstractStatisticalExperiment, default_svc_model
 from statistical.data_extraction import TweetStatsExtractor
 
 """ Experiments for Sentiment Analysis models """
@@ -211,5 +210,5 @@ if __name__ == "__main__":
 
     # Hyperparameter tuning
     hp_handler = model_hypertuning_handler()
-    hp_handler.run_experiments(dataset_dir)
+    # hp_handler.run_experiments(dataset_dir)
     hp_handler.print_results(10)
