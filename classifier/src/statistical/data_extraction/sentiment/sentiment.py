@@ -58,7 +58,7 @@ def tweet_sentiment_scores(tweet_feed: List[str],
     neutral and positive tweets.
 
     Returns:
-        [negative_mean, neutral_mean, positive_mean, compound_mean, negative_std, ..., negative_range, ...,
+        [negative_mean, neutral_mean, positive_mean, compound_mean, negative_std, ..., compound_min, negative_max, ...,
         num_negative, num_neutral, num_positive]
     """
 
@@ -77,7 +77,7 @@ def tweet_sentiment_scores(tweet_feed: List[str],
     num_neg = np.sum(tweet_sentiments[:, 3])
     num_neu = np.sum(tweet_sentiments[:, 4])
     num_pos = np.sum(tweet_sentiments[:, 5])
-    return np.concatenate([sentiment_mean, sentiment_std, sentiment_min, sentiment_max, [num_neg, num_neu, num_pos]])
+    return np.concatenate([sentiment_mean, sentiment_std, sentiment_min[-1:], sentiment_max, [num_neg, num_neu, num_pos]])
 
 
 def aggregated_compound_tweet_sentiment_scores(tweet_feed: List[str],
@@ -87,8 +87,8 @@ def aggregated_compound_tweet_sentiment_scores(tweet_feed: List[str],
     scores = tweet_sentiment_scores(tweet_feed, sentiment_wrapper)
     compound_mean = scores[2]
     compound_std = scores[5]
-    compound_min = scores[8]
-    compound_max = scores[11]
+    compound_min = scores[6]
+    compound_max = scores[9]
     return [compound_mean, compound_std, compound_min, compound_max]
 
 
@@ -99,8 +99,8 @@ def aggregated_compound_tweet_sentiment_scores_plus_counts(tweet_feed: List[str]
     scores = tweet_sentiment_scores(tweet_feed, sentiment_wrapper)
     compound_mean = scores[2]
     compound_std = scores[5]
-    compound_min = scores[8]
-    compound_max = scores[11]
+    compound_min = scores[6]
+    compound_max = scores[9]
     return [compound_mean, compound_std, compound_min, compound_max, *scores[-3:]]
 
 

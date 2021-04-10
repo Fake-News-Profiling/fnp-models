@@ -69,7 +69,7 @@ def feature_comparison_handler():
         (
             experiment,
             {
-                "experiment_dir": "../training/statistical/sentiment/features",
+                "experiment_dir": "../training/statistical/ner/features",
                 "experiment_name": experiment.__name__,
                 "max_trials": 2,
                 "hyperparameters": {"Ner.library": "stanza", **default_svc_model}
@@ -85,7 +85,7 @@ def model_hypertuning_handler():
         (
             NerCountsExperiment,
             {
-                "experiment_dir": "../training/statistical/sentiment/hypertuning",
+                "experiment_dir": "../training/statistical/ner/hypertuning",
                 "experiment_name": model,
                 "max_trials": 200,
                 "hyperparameters": {"Ner.library": "stanza", "Sklearn.model_type": model},
@@ -95,37 +95,21 @@ def model_hypertuning_handler():
     return ExperimentHandler(experiments)
 
 
-def run(dataset_dir):
-    # Compare libraries
-    library_handler = library_comparison_handler()
-    library_handler.run_experiments(dataset_dir)
-    library_handler.print_results(2)
-
-    # Compare features
-    feature_handler = feature_comparison_handler()
-    feature_handler.run_experiments(dataset_dir)
-    feature_handler.print_results(2)
-
-    # Hyperparameter tuning
-    hp_handler = model_hypertuning_handler()
-    hp_handler.run_experiments(dataset_dir)
-    hp_handler.print_results(10)
-
 if __name__ == "__main__":
     """ Execute experiments in this module """
     dataset_dir = sys.argv[1]
 
     # Compare libraries
     library_handler = library_comparison_handler()
-    library_handler.run_experiments(dataset_dir)
+    # library_handler.run_experiments(dataset_dir)
     library_handler.print_results(2)
 
     # Compare features
     feature_handler = feature_comparison_handler()
-    feature_handler.run_experiments(dataset_dir)
+    # feature_handler.run_experiments(dataset_dir)
     feature_handler.print_results(2)
 
     # Hyperparameter tuning
     hp_handler = model_hypertuning_handler()
-    hp_handler.run_experiments(dataset_dir)
+    # hp_handler.run_experiments(dataset_dir)
     hp_handler.print_results(10)

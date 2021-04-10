@@ -24,6 +24,33 @@ class AbstractSentimentExperiment(AbstractStatisticalExperiment):
         pass
 
 
+class CompoundSentimentExperiment(AbstractSentimentExperiment):
+    """
+    Extract averaged sentiment and polarity scores:
+    """
+
+    @staticmethod
+    def get_extractor(sentiment_wrapper: sent.AbstractSentimentAnalysisWrapper) -> TweetStatsExtractor:
+        extractor = TweetStatsExtractor([
+            lambda tweet_feed: sent.aggregated_compound_tweet_sentiment_scores_plus_counts(
+                tweet_feed, sentiment_wrapper=sentiment_wrapper)[:1]
+        ])
+        return extractor
+
+
+class SentimentExperiment(AbstractSentimentExperiment):
+    """
+    Extract averaged sentiment and polarity scores:
+    """
+
+    @staticmethod
+    def get_extractor(sentiment_wrapper: sent.AbstractSentimentAnalysisWrapper) -> TweetStatsExtractor:
+        extractor = TweetStatsExtractor([
+            lambda tweet_feed: sent.tweet_sentiment_scores(tweet_feed, sentiment_wrapper=sentiment_wrapper)[:3]
+        ])
+        return extractor
+
+
 class AggregatedCompoundSentimentExperiment(AbstractSentimentExperiment):
     """
     Extract averaged sentiment and polarity scores:
@@ -111,7 +138,7 @@ def library_comparison_handler():
     sentiment_libraries = ["vader", "textblob"]
     experiments = [
         (
-            AggregatedCompoundSentimentExperiment,
+            CompoundSentimentExperiment,
             {
                 "experiment_dir": "../training/statistical/sentiment/library_comparison",
                 "experiment_name": library,
@@ -125,7 +152,8 @@ def library_comparison_handler():
 
 def feature_comparison_handler():
     """ Compare using different combinations of sentiment features """
-    features = [AggregatedCompoundSentimentExperiment, AggregatedSentimentExperiment,
+    features = [CompoundSentimentExperiment, SentimentExperiment,
+                AggregatedCompoundSentimentExperiment, AggregatedSentimentExperiment,
                 AggregatedCompoundPlusCountsSentimentExperiment, AggregatedPlusCountsSentimentExperiment,
                 AggregatedCompoundPlusCountsPlusOverallSentimentExperiment,
                 AggregatedPlusCountsPlusOverallSentimentExperiment]
@@ -150,25 +178,21 @@ def model_hypertuning_handler():
             AggregatedCompoundPlusCountsPlusOverallSentimentExperiment,
             {
                 "experiment_dir": "../training/statistical/sentiment/hypertuning",
-                "experiment_name": model,
+                "experiment_name": "AggregatedCompoundPlusCountsPlusOverallSentimentExperiment",
                 "max_trials": 200,
-                "hyperparameters": {"Sentiment.library": "vader", "Sklearn.model_type": model},
+                "hyperparameters": {"Sentiment.library": "vader"},
             }
-        ) for model in sklearn_models
-    ]
-    experiments2 = [
-        (
+        ), (
             AggregatedCompoundSentimentExperiment,
             {
                 "experiment_dir": "../training/statistical/sentiment/hypertuning",
-                "experiment_name": f"{model}_AggregatedCompoundSentimentExperiment",
+                "experiment_name": "AggregatedCompoundSentimentExperiment",
                 "max_trials": 200,
-                "hyperparameters": {"Sentiment.library": "vader", "Sklearn.model_type": model},
+                "hyperparameters": {"Sentiment.library": "vader"},
             }
-        ) for model in sklearn_models
+        )
     ]
-    experiments2 += experiments
-    return ExperimentHandler(experiments2)
+    return ExperimentHandler(experiments)
 
 
 if __name__ == "__main__":
