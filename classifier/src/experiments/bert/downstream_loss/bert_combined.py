@@ -2,7 +2,6 @@ import sys
 
 import numpy as np
 import tensorflow as tf
-from sklearn.base import ClassifierMixin, BaseEstimator
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.linear_model import LogisticRegression
 from sklearn.svm import SVC
@@ -10,31 +9,10 @@ from xgboost import XGBClassifier
 
 from bert import BertIndividualTweetTokenizer
 from bert.models import bert_tokenizer
+from experiments.bert import VotingClassifier
 from experiments.bert.downstream_loss.bert_downstream_loss import BertTrainedOnDownstreamLoss
 from experiments.experiment import AbstractSklearnExperiment
 from experiments.handler import ExperimentHandler
-
-
-class VotingClassifier(ClassifierMixin, BaseEstimator):
-    """ Voting classifier which votes depending on input data """
-
-    def fit(self, x, y):
-        pass
-
-    def predict(self, x):
-        x = self.to_probas(x)
-        return np.argmax(np.sum(x, axis=1), axis=1)
-
-    def predict_proba(self, x):
-        x = self.to_probas(x)
-        return np.mean(x, axis=1)
-
-    @staticmethod
-    def to_probas(x):
-        # x.shape == (-1, TWEET_FEED_LEN)
-        x = x.reshape(len(x), -1, 1)
-        x_other = 1 - x
-        return np.concatenate([x_other, x], axis=-1)
 
 
 class BertDownstreamLossLogitsCombinedExperiment(AbstractSklearnExperiment):
@@ -54,8 +32,16 @@ class BertDownstreamLossLogitsCombinedExperiment(AbstractSklearnExperiment):
     def cv_data_transformer(self, x_train, y_train, x_test, y_test):
         bert_model = self.fit_bert(x_train, y_train, x_test, y_test)
         x_train, y_train, x_test, y_test = self.predict_user_data(bert_model, x_train, y_train, x_test, y_test)
+        x_train = tf.math.sigmoid(x_train)
+        x_test = tf.math.sigmoid(x_test)
         x_train, x_test = self.pool_combined(x_train, x_test)
-        return x_train, y_train, x_test, y_test
+        return self.to_float64(x_train, y_train, x_test, y_test)
+
+    @staticmethod
+    def to_float64(x_train, y_train, x_test, y_test):
+        # RandomForestClassifier doesn't support float32
+        return (tf.cast(x_train, tf.float64), tf.cast(y_train, tf.float64), tf.cast(x_test, tf.float64),
+                tf.cast(y_test, tf.float64))
 
     def pool_combined(self, x_train, x_test):
         # x_.shape == (num_users, TWEET_FEED_LEN, -1)
@@ -126,7 +112,7 @@ class BertDownstreamLossPooledCombinedExperiment(BertDownstreamLossLogitsCombine
         bert_pooled_model = tf.keras.Model(bert_model.inputs, bert_model.layers[-2].output)
         x_train, y_train, x_test, y_test = self.predict_user_data(bert_pooled_model, x_train, y_train, x_test, y_test)
         x_train, x_test = self.pool_combined(x_train, x_test)
-        return x_train, y_train, x_test, y_test
+        return self.to_float64(x_train, y_train, x_test, y_test)
 
     @classmethod
     def preprocess_cv_data(cls, hp, x_train, y_train, x_test, y_test):
@@ -139,6 +125,7 @@ if __name__ == "__main__":
 
     experiments = [
         (
+            # Classifying BERT output logits
             BertDownstreamLossLogitsCombinedExperiment,
             {
                 "experiment_dir": "../training/bert_clf/downstream_loss_logits_combined",
@@ -146,22 +133,23 @@ if __name__ == "__main__":
                 "max_trials": 100,
                 "hyperparameters": {
                     "learning_rate": 2e-5,
-                    "Bert.epochs": 10,
+                    "Bert.epochs": 4,
                     "Bert.batch_size": 8,
                     "Bert.encoder_url": "https://tfhub.dev/tensorflow/small_bert/bert_en_uncased_L-12_H-128_A-2/1",
                     "Bert.hidden_size": 128,
-                    "Bert.preprocessing": "[remove_emojis, remove_tags]",
-                    "selected_encoder_outputs": "sum_last_4_hidden_layers",
-                    "Bert.dropout_rate": 0.1,
+                    "selected_encoder_outputs": "default",
                     "Bert.dense_activation": "linear",
-                    "Bert.pooler": "concat",
-                    "Bert.dense_kernel_reg": 0.00001,
+                    "Bert.pooler": "max",
+                    "Bert.preprocessing": "[replace_emojis_no_sep, remove_tags]",
+                    "Bert.dropout_rate": 0.1,
+                    "Bert.dense_kernel_reg": 0.0001,
                     "Bert.use_batch_norm": False,
                     "Bert.num_hidden_layers": 0,
                     "Combined.pooler": "concat",
                 },
             }
         ), (
+            # Classifying BERT last hidden layer with a concat combined pooler
             BertDownstreamLossPooledCombinedExperiment,
             {
                 "experiment_dir": "../training/bert_clf/downstream_loss_pooled_combined",
@@ -169,22 +157,23 @@ if __name__ == "__main__":
                 "max_trials": 100,
                 "hyperparameters": {
                     "learning_rate": 2e-5,
-                    "Bert.epochs": 10,
+                    "Bert.epochs": 4,
                     "Bert.batch_size": 8,
                     "Bert.encoder_url": "https://tfhub.dev/tensorflow/small_bert/bert_en_uncased_L-12_H-128_A-2/1",
                     "Bert.hidden_size": 128,
-                    "Bert.preprocessing": "[remove_emojis, remove_tags]",
-                    "selected_encoder_outputs": "sum_last_4_hidden_layers",
-                    "Bert.dropout_rate": 0.1,
+                    "selected_encoder_outputs": "default",
                     "Bert.dense_activation": "linear",
-                    "Bert.pooler": "concat",
-                    "Bert.dense_kernel_reg": 0.00001,
+                    "Bert.pooler": "max",
+                    "Bert.preprocessing": "[replace_emojis_no_sep, remove_tags]",
+                    "Bert.dropout_rate": 0.1,
+                    "Bert.dense_kernel_reg": 0.0001,
                     "Bert.use_batch_norm": False,
                     "Bert.num_hidden_layers": 0,
                     "Combined.pooler": "concat",
                 },
             }
         ), (
+            # Classifying BERT last hidden layer with a max combined pooler
             BertDownstreamLossPooledCombinedExperiment,
             {
                 "experiment_dir": "../training/bert_clf/downstream_loss_pooled_combined",
@@ -192,22 +181,23 @@ if __name__ == "__main__":
                 "max_trials": 100,
                 "hyperparameters": {
                     "learning_rate": 2e-5,
-                    "Bert.epochs": 10,
+                    "Bert.epochs": 4,
                     "Bert.batch_size": 8,
                     "Bert.encoder_url": "https://tfhub.dev/tensorflow/small_bert/bert_en_uncased_L-12_H-128_A-2/1",
                     "Bert.hidden_size": 128,
-                    "Bert.preprocessing": "[remove_emojis, remove_tags]",
-                    "selected_encoder_outputs": "sum_last_4_hidden_layers",
-                    "Bert.dropout_rate": 0.1,
+                    "selected_encoder_outputs": "default",
                     "Bert.dense_activation": "linear",
-                    "Bert.pooler": "concat",
-                    "Bert.dense_kernel_reg": 0.00001,
+                    "Bert.pooler": "max",
+                    "Bert.preprocessing": "[replace_emojis_no_sep, remove_tags]",
+                    "Bert.dropout_rate": 0.1,
+                    "Bert.dense_kernel_reg": 0.0001,
                     "Bert.use_batch_norm": False,
                     "Bert.num_hidden_layers": 0,
                     "Combined.pooler": "max",
                 },
             }
         ), (
+            # Classifying BERT last hidden layer with an average combined pooler
             BertDownstreamLossPooledCombinedExperiment,
             {
                 "experiment_dir": "../training/bert_clf/downstream_loss_pooled_combined",
@@ -215,16 +205,16 @@ if __name__ == "__main__":
                 "max_trials": 100,
                 "hyperparameters": {
                     "learning_rate": 2e-5,
-                    "Bert.epochs": 10,
+                    "Bert.epochs": 4,
                     "Bert.batch_size": 8,
                     "Bert.encoder_url": "https://tfhub.dev/tensorflow/small_bert/bert_en_uncased_L-12_H-128_A-2/1",
                     "Bert.hidden_size": 128,
-                    "Bert.preprocessing": "[remove_emojis, remove_tags]",
-                    "selected_encoder_outputs": "sum_last_4_hidden_layers",
-                    "Bert.dropout_rate": 0.1,
+                    "selected_encoder_outputs": "default",
                     "Bert.dense_activation": "linear",
-                    "Bert.pooler": "concat",
-                    "Bert.dense_kernel_reg": 0.00001,
+                    "Bert.pooler": "max",
+                    "Bert.preprocessing": "[replace_emojis_no_sep, remove_tags]",
+                    "Bert.dropout_rate": 0.1,
+                    "Bert.dense_kernel_reg": 0.0001,
                     "Bert.use_batch_norm": False,
                     "Bert.num_hidden_layers": 0,
                     "Combined.pooler": "average",

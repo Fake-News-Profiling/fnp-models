@@ -158,12 +158,13 @@ if __name__ == "__main__":
     """ Execute experiments in this module """
     dataset_dir = sys.argv[1]
 
+    # Hyperparameter tuning experiments
     experiments = [
         (
             # Preprocessing choice
             BertTrainedOnDownstreamLoss,
             {
-                "experiment_dir": "../training/bert_clf/downstream_loss",
+                "experiment_dir": "../training/bert_clf/downstream_loss_old",
                 "experiment_name": "preprocessing",
                 "max_trials": 36,
                 "hyperparameters": {
@@ -185,11 +186,12 @@ if __name__ == "__main__":
                     "Bert.use_batch_norm": False,
                 },
             }
-        ), (
+        ),
+        (
             # BERT pooled_output strategy
             BertTrainedOnDownstreamLoss,
             {
-                "experiment_dir": "../training/bert_clf/downstream_loss",
+                "experiment_dir": "../training/bert_clf/downstream_loss_old",
                 "experiment_name": "pooled_output",
                 "max_trials": 36,
                 "hyperparameters": {
@@ -213,11 +215,12 @@ if __name__ == "__main__":
                     "Bert.use_batch_norm": False,
                 },
             }
-        ), (
+        ),
+        (
             # BERT pooler
             BertTrainedOnDownstreamLoss,
             {
-                "experiment_dir": "../training/bert_clf/downstream_loss",
+                "experiment_dir": "../training/bert_clf/downstream_loss_old",
                 "experiment_name": "pooler",
                 "max_trials": 36,
                 "hyperparameters": {
@@ -235,11 +238,12 @@ if __name__ == "__main__":
                     "Bert.use_batch_norm": False,
                 },
             }
-        ), (
+        ),
+        (
             # Dropout rate
             BertTrainedOnDownstreamLoss,
             {
-                "experiment_dir": "../training/bert_clf/downstream_loss",
+                "experiment_dir": "../training/bert_clf/downstream_loss_old",
                 "experiment_name": "dropout_rate",
                 "max_trials": 36,
                 "hyperparameters": {
@@ -257,12 +261,13 @@ if __name__ == "__main__":
                     "Bert.use_batch_norm": False,
                 },
             }
-        ), (
+        ),
+        (
             # Dense classifier kernel regularisation
             BertTrainedOnDownstreamLoss,
             {
-                "experiment_dir": "../training/bert_clf/downstream_loss",
-                "experiment_name": "kernel_reg",
+                "experiment_dir": "../training/bert_clf/downstream_loss_old",
+                "experiment_name": "dropout_rate",
                 "max_trials": 36,
                 "hyperparameters": {
                     "epochs": 10,
@@ -279,34 +284,13 @@ if __name__ == "__main__":
                     "Bert.use_batch_norm": False,
                 },
             }
-        ), (
-            # Using a batch normalisation layer
-            BertTrainedOnDownstreamLoss,
-            {
-                "experiment_dir": "../training/bert_clf/downstream_loss",
-                "experiment_name": "batch_norm",
-                "max_trials": 36,
-                "hyperparameters": {
-                    "epochs": 10,
-                    "batch_size": 8,
-                    "learning_rate": 2e-5,
-                    "Bert.encoder_url": "https://tfhub.dev/tensorflow/small_bert/bert_en_uncased_L-12_H-128_A-2/1",
-                    "Bert.hidden_size": 128,
-                    "Bert.preprocessing": "[remove_emojis, remove_tags]",
-                    "Bert.pooler": "max",
-                    "selected_encoder_outputs": "default",
-                    "Bert.dropout_rate": 0.1,
-                    "Bert.dense_kernel_reg":  0.,
-                    "Bert.num_hidden_layers": 0,
-                    "Bert.use_batch_norm": [False, True],
-                },
-            }
-        ), (
+        ),
+        (
             # Final dense activation
             BertTrainedOnDownstreamLoss,
             {
                 "experiment_dir": "../training/bert_clf/downstream_loss",
-                "experiment_name": "dense_activation",
+                "experiment_name": "dense_activation2",
                 "max_trials": 36,
                 "hyperparameters": {
                     "epochs": 10,
@@ -318,14 +302,82 @@ if __name__ == "__main__":
                     "Bert.pooler": "max",
                     "selected_encoder_outputs": "default",
                     "Bert.dropout_rate": 0.1,
-                    "Bert.dense_kernel_reg":  0.,
+                    "Bert.dense_kernel_reg": 0.,
                     "Bert.num_hidden_layers": 0,
                     "Bert.use_batch_norm": False,
                     "Bert.dense_activation": ["linear", "sigmoid", "tanh", "relu"]
                 },
             }
+        ),
+        (
+            # FFNN
+            BertTrainedOnDownstreamLoss,
+            {
+                "experiment_dir": "../training/bert_clf/downstream_loss",
+                "experiment_name": "ffnn_tanh",
+                "max_trials": 36,
+                "hyperparameters": {
+                    "epochs": 10,
+                    "batch_size": 8,
+                    "learning_rate": 2e-5,
+                    "Bert.encoder_url": "https://tfhub.dev/tensorflow/small_bert/bert_en_uncased_L-12_H-128_A-2/1",
+                    "Bert.hidden_size": 128,
+                    "Bert.preprocessing": "[remove_emojis, remove_tags]",
+                    "Bert.pooler": "max",
+                    "selected_encoder_outputs": "default",
+                    "Bert.dropout_rate": 0.1,
+                    "Bert.dense_kernel_reg": 0.,
+                    "Bert.num_hidden_layers": [0, 1, 2, 3, 4],
+                    "Bert.hidden_dense_activation": "tanh",
+                    "Bert.use_batch_norm": False,
+                    "Bert.dense_activation": "sigmoid"
+                },
+            }
         )
     ]
+    with tf.device("/gpu:0"):
+        hp_handler = ExperimentHandler(experiments)
+        # hp_handler.run_experiments(dataset_dir)
+
+    # Best models experiments
+    experiments = [
+        (
+            BertTrainedOnDownstreamLoss,
+            {
+                "experiment_dir": "../training/bert_clf/downstream_loss",
+                "experiment_name": "best_models",
+                "max_trials": 36,
+                "hyperparameters": {
+                    "epochs": 5,
+                    "batch_size": 8,
+                    "learning_rate": 2e-5,
+                    "Bert.encoder_url": "https://tfhub.dev/tensorflow/small_bert/bert_en_uncased_L-12_H-128_A-2/1",
+                    "Bert.hidden_size": 128,
+                    "Bert.preprocessing": [
+                        "[replace_emojis_no_sep, remove_tags]",
+                        "[remove_emojis, remove_tags, remove_punctuation]",
+                    ],
+                    "selected_encoder_outputs": [
+                        "default",
+                        "concat_last_4_hidden_layers",
+                    ],
+                    "Bert.pooler": [
+                        "max",
+                        "concat"
+                    ],
+                    "Bert.dense_kernel_reg": 0.0001,
+                    "Bert.use_batch_norm": False,
+                    "Bert.num_hidden_layers": 0,
+                    "Bert.dense_activation": [
+                        "tanh",
+                        "linear",
+                    ],
+                    "Bert.dropout_rate": 0.1,
+                },
+            }
+        ),
+    ]
+
     with tf.device("/gpu:0"):
         handler = ExperimentHandler(experiments)
         handler.run_experiments(dataset_dir)
