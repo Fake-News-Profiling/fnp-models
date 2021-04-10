@@ -58,7 +58,10 @@ class ExperimentHandler:
                     model_types = [model_types]
 
                 for model_type in model_types:
-                    experiment.tuner = experiment.make_tuner(experiment.hyperparameters, model_type)
+                    hp_dict = experiment.config.hyperparameters.copy()
+                    hp_dict["Sklearn.model_type"] = model_type
+                    hp = AbstractExperiment.parse_to_hyperparameters(hp_dict)
+                    experiment.tuner = experiment.make_tuner(hp, model_type)
                     print_df(experiment)
             else:
                 print_df(experiment)
