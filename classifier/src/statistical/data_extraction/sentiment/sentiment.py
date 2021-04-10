@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from functools import partial
-from typing import Any, List
+from typing import Any, List, Optional
 
 import numpy as np
 
@@ -15,6 +15,9 @@ import statistical.data_extraction.preprocessing as pre
 class Sentiment:
     compound: float
     classification: str
+    negative: Optional[float] = 0
+    neutral: Optional[float] = 0
+    positive: Optional[float] = 0
 
 
 class AbstractSentimentAnalysisWrapper(ABC):
@@ -32,8 +35,8 @@ class AbstractSentimentAnalysisWrapper(ABC):
 def sentiment_tweet_extractor(sentiment_wrapper: AbstractSentimentAnalysisWrapper) -> pre.TweetStatsExtractor:
     """ Create a TweetStatsExtractor for named entity recognition features """
     extractor = pre.TweetStatsExtractor([
-        partial(tweet_sentiment_scores, sentiment_wrapper=sentiment_wrapper),
-        partial(overall_sentiment, sentiment_wrapper=sentiment_wrapper),
+        partial(aggregated_compound_tweet_sentiment_scores_plus_counts, sentiment_wrapper=sentiment_wrapper),
+        partial(overall_compound_sentiment_score, sentiment_wrapper=sentiment_wrapper),
     ])
     extractor.feature_names = [
         "Average tweet sentiment",
@@ -49,28 +52,73 @@ def sentiment_tweet_extractor(sentiment_wrapper: AbstractSentimentAnalysisWrappe
 
 
 def tweet_sentiment_scores(tweet_feed: List[str],
-                           sentiment_wrapper: AbstractSentimentAnalysisWrapper = None) -> List[float]:
-    """ Returns the average, standard deviation, and max/min sentiment scores of the user """
-    tweet_comp_sentiments = []
-    num_pos = num_neu = num_neg = 0
-    for tweet in tweet_feed:
+                           sentiment_wrapper: AbstractSentimentAnalysisWrapper = None) -> np.ndarray:
+    """
+    Returns the average, standard deviation, and range of each polarity score, as well as counts of negative,
+    neutral and positive tweets.
+
+    Returns:
+        [negative_mean, neutral_mean, positive_mean, compound_mean, negative_std, ..., negative_range, ...,
+        num_negative, num_neutral, num_positive]
+    """
+
+    def sentiment_scores_as_list(tweet):
         sentiment = sentiment_wrapper.sentiment(tweet)
-        tweet_comp_sentiments.append(sentiment.compound)
-        if sentiment.classification == "positive":
-            num_pos += 1
-        elif sentiment.classification == "neutral":
-            num_neu += 1
-        elif sentiment.classification == "negative":
-            num_neg += 1
+        counts = [0, 0, 0]
+        indices = {"negative": 0, "neutral": 1, "positive": 2}
+        counts[indices[sentiment.classification]] += 1
+        return sentiment.negative, sentiment.positive, sentiment.compound, *counts
 
-    sent_mean = np.mean(tweet_comp_sentiments, axis=0)
-    sent_std_dev = np.std(tweet_comp_sentiments)
-    sent_max = np.max(tweet_comp_sentiments, axis=0)
-    sent_min = np.min(tweet_comp_sentiments, axis=0)
-    return [sent_mean, sent_std_dev, sent_max, sent_min, num_pos, num_neu, num_neg]
+    tweet_sentiments = np.asarray(list(map(sentiment_scores_as_list, tweet_feed)))
+    sentiment_mean = np.mean(tweet_sentiments[:, :3], axis=0)
+    sentiment_std = np.std(tweet_sentiments[:, :3], axis=0)
+    sentiment_min = np.min(tweet_sentiments[:, :3], axis=0)
+    sentiment_max = np.max(tweet_sentiments[:, :3], axis=0)
+    num_neg = np.sum(tweet_sentiments[:, 3])
+    num_neu = np.sum(tweet_sentiments[:, 4])
+    num_pos = np.sum(tweet_sentiments[:, 5])
+    return np.concatenate([sentiment_mean, sentiment_std, sentiment_min, sentiment_max, [num_neg, num_neu, num_pos]])
 
 
-def overall_sentiment(tweet_feed: List[str],
-                      sentiment_wrapper: AbstractSentimentAnalysisWrapper = None) -> float:
+def aggregated_compound_tweet_sentiment_scores(tweet_feed: List[str],
+                                               sentiment_wrapper: AbstractSentimentAnalysisWrapper = None
+                                               ) -> List[float]:
+    """ Returns the average, standard deviation and range of compound scores """
+    scores = tweet_sentiment_scores(tweet_feed, sentiment_wrapper)
+    compound_mean = scores[2]
+    compound_std = scores[5]
+    compound_min = scores[8]
+    compound_max = scores[11]
+    return [compound_mean, compound_std, compound_min, compound_max]
+
+
+def aggregated_compound_tweet_sentiment_scores_plus_counts(tweet_feed: List[str],
+                                                           sentiment_wrapper: AbstractSentimentAnalysisWrapper = None
+                                                           ) -> List[float]:
+    """ Returns the average, standard deviation and range of compound scores """
+    scores = tweet_sentiment_scores(tweet_feed, sentiment_wrapper)
+    compound_mean = scores[2]
+    compound_std = scores[5]
+    compound_min = scores[8]
+    compound_max = scores[11]
+    return [compound_mean, compound_std, compound_min, compound_max, *scores[-3:]]
+
+
+def aggregated_tweet_sentiment_scores(tweet_feed: List[str],
+                                      sentiment_wrapper: AbstractSentimentAnalysisWrapper = None) -> List[float]:
+    """ Returns the average, standard deviation and range of sentiment and polarity scores """
+    scores = tweet_sentiment_scores(tweet_feed, sentiment_wrapper)
+    return scores[:-3]
+
+
+def overall_sentiment_score(tweet_feed: List[str],
+                            sentiment_wrapper: AbstractSentimentAnalysisWrapper = None) -> List[float]:
     """ Returns the overall sentiment when all of the users tweets have been concatenated """
-    return sentiment_wrapper.sentiment(". ".join(tweet_feed)).compound
+    sentiment = sentiment_wrapper.sentiment(". ".join(tweet_feed))
+    return [sentiment.negative, sentiment.neutral, sentiment.positive, sentiment.compound]
+
+
+def overall_compound_sentiment_score(tweet_feed: List[str],
+                                     sentiment_wrapper: AbstractSentimentAnalysisWrapper = None) -> float:
+    """ Returns the overall compound sentiment when all of the users tweets have been concatenated """
+    return overall_sentiment_score(tweet_feed, sentiment_wrapper)[-1]

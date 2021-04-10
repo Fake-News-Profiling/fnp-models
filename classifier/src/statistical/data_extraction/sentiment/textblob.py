@@ -19,5 +19,5 @@ class TextBlobSentimentAnalysisWrapper(AbstractSentimentAnalysisWrapper):
 
         return Sentiment(
             compound=compound,
-            classification=classification
+            classification=classification,
         )

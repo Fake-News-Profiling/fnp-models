@@ -1,8 +1,10 @@
+import math
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from functools import partial
-from typing import Optional
+from typing import Optional, Any
 
+import numpy as np
 import tensorflow as tf
 from kerastuner import HyperParameters, Objective
 from kerastuner.tuners.bayesian import BayesianOptimizationOracle
@@ -55,8 +57,8 @@ class AbstractExperiment(ABC):
         """ Run this experiment """
         pass
 
-    @staticmethod
-    def parse_to_hyperparameters(hyperparameters_dict: dict):
+    @classmethod
+    def parse_to_hyperparameters(cls, hyperparameters_dict: dict):
         """
         Parse a dict of hyperparameters to a KerasTuner HyperParameters object. The dict should be of the form:
         {"hp_name": {"type": "hp_type", "args": [...], "kwargs": {...}}, ...}
@@ -71,40 +73,52 @@ class AbstractExperiment(ABC):
         hp = HyperParameters()
         # Add each hyperparameter to `hp`
         for name, value in hyperparameters_dict.items():
-            if isinstance(value, dict):
-                hp_type = value["type"]
-                hp_type_args = value.get(["args"], [])
-                hp_type_kwargs = value.get(["kwargs"], {})
+            if isinstance(value, dict) and "condition" in value:
+                with hp.conditional_scope(value["condition"]["name"], value["condition"]["value"]):
+                    if "value" in value:
+                        value = value["value"]
 
-                hyperparameter = {
-                    "int": hp.Int,
-                    "float": hp.Float,
-                    "bool": hp.Boolean,
-                    "choice": hp.Choice,
-                    "fixed": hp.Fixed,
-                }[hp_type]
-                hyperparameter(name, *hp_type_args, **hp_type_kwargs)
-            elif isinstance(value, list):
-                hp.Choice(name, value)
+                    cls._make_hp(hp, name, value)
             else:
-                hp.Fixed(name, value)
+                cls._make_hp(hp, name, value)
 
         return hp
+
+    @staticmethod
+    def _make_hp(hp: HyperParameters, name: str, value: Any):
+        if isinstance(value, dict):
+            hp_type = value["type"]
+            hp_type_args = value.get(["args"], [])
+            hp_type_kwargs = value.get(["kwargs"], {})
+
+            hyperparameter = {
+                "int": hp.Int,
+                "float": hp.Float,
+                "bool": hp.Boolean,
+                "choice": hp.Choice,
+                "fixed": hp.Fixed,
+            }[hp_type]
+            hyperparameter(name, *hp_type_args, **hp_type_kwargs)
+        elif isinstance(value, list):
+            hp.Choice(name, value)
+        else:
+            hp.Fixed(name, value)
 
 
 class AbstractSklearnExperiment(AbstractExperiment, ABC):
     """ Abstract base class for conducting a Keras Tuner tuning experiment with an Sklearn model """
 
-    def __init__(self, config: ExperimentConfig, num_cv_splits=5):
+    def __init__(self, config: ExperimentConfig, num_cv_splits: int = 5, tuner_initial_points: int = None):
         super().__init__(config)
         self.tuner = SklearnCV(
             oracle=BayesianOptimizationOracle(
                 objective=Objective("score", "min"),  # minimise log loss
                 max_trials=self.config.max_trials,
                 hyperparameters=self.hyperparameters,
+                num_initial_points=tuner_initial_points,
             ),
             hypermodel=self.build_model,
-            scoring=make_scorer(tf.keras.losses.binary_crossentropy),  # , needs_proba=True),
+            scoring=make_scorer(tf.keras.losses.binary_crossentropy),
             metrics=[accuracy_score, f1_score],
             cv=StratifiedKFold(n_splits=num_cv_splits, shuffle=True, random_state=1),
             directory=self.experiment_directory,
@@ -125,7 +139,7 @@ class AbstractSklearnExperiment(AbstractExperiment, ABC):
         steps = [("scaler", StandardScaler()), ("estimator", estimator)]
 
         # Add PCA to deal with multi-collinearity issues in data (Gradient Boosting doesn't have this issue)
-        if hp.get("Sklearn.model_type") != XGBClassifier.__name__:
+        if hp.Fixed("Sklearn.use_pca", True) and hp.get("Sklearn.model_type") != XGBClassifier.__name__:
             steps.insert(0, ("PCA", PCA()))
 
         return Pipeline(steps)
@@ -140,44 +154,41 @@ class AbstractSklearnExperiment(AbstractExperiment, ABC):
 
         if model_type == LogisticRegression.__name__:
             with hp.conditional_scope("Sklearn.model_type", LogisticRegression.__name__):
+                # Use a log distribution as it's more likely we'll want less regularisation
                 estimator = LogisticRegression(
-                    C=hp.Float("Sklearn.LogisticRegression.C", 0.0001, 1000),
-                    solver=hp.Choice(
-                        "Sklearn.LogisticRegression.solver", ["lbfgs", "liblinear", "sag", "saga", "newton-cg"])
+                    C=hp.Float("Sklearn.LogisticRegression.C", 0.01, 500, sampling="log"),
                 )
         elif model_type == SVC.__name__:
             with hp.conditional_scope("Sklearn.model_type", SVC.__name__):
                 estimator = SVC(
-                    C=hp.Float("Sklearn.SVC.C", 0.0001, 1000),
-                    kernel=hp.Choice("Sklearn.SVC.kernel", ["poly", "rbf", "sigmoid"]),
+                    C=hp.Float("Sklearn.SVC.C", 0.01, 500, sampling="log"),
                     probability=True,
                 )
         elif model_type == RandomForestClassifier.__name__:
             with hp.conditional_scope("Sklearn.model_type", RandomForestClassifier.__name__):
                 estimator = RandomForestClassifier(
-                    n_estimators=hp.Choice("Sklearn.RandomForestClassifier.n_estimators",
-                                           [10, 20, 30, 40, 50, 100, 200, 300, 400]),
+                    n_estimators=hp.Int("Sklearn.RandomForestClassifier.n_estimators", 1, 500),
                     criterion=hp.Choice("Sklearn.RandomForestClassifier.criterion", ["gini", "entropy"]),
                     min_samples_split=hp.Int("Sklearn.RandomForestClassifier.min_samples_split", 2, 8),
-                    min_samples_leaf=hp.Int("Sklearn.RandomForestClassifier.min_samples_leaf", 2, 6),
+                    min_samples_leaf=hp.Int("Sklearn.RandomForestClassifier.min_samples_leaf", 2, 8),
                     min_impurity_decrease=hp.Float("Sklearn.RandomForestClassifier.min_impurity_decrease", 0, 1),
                 )
         elif model_type == XGBClassifier.__name__:
             with hp.conditional_scope("Sklearn.model_type", XGBClassifier.__name__):
                 estimator = XGBClassifier(
-                    learning_rate=hp.Float("Sklearn.XGBClassifier.learning_rate", 0.01, 0.1),
-                    gamma=hp.Float("Sklearn.XGBClassifier.gamma", 3, 7),
-                    max_depth=hp.Int("Sklearn.XGBClassifier.max_depth", 3, 6),
-                    min_child_weight=hp.Int("Sklearn.XGBClassifier.min_child_weight", 3, 6),
-                    subsample=hp.Float("Sklearn.XGBClassifier.subsample", 0.6, 1),
-                    colsample_bytree=hp.Float("Sklearn.XGBClassifier.colsample_bytree", 0.4, 0.7),
-                    colsample_bylevel=hp.Float("Sklearn.XGBClassifier.colsample_bylevel", 0.8, 1),
-                    colsample_bynode=hp.Float("Sklearn.XGBClassifier.colsample_bynode", 0.2, 0.5),
-                    reg_lambda=hp.Float("Sklearn.XGBClassifier.reg_lambda", 0.2, 1),
-                    reg_alpha=hp.Float("Sklearn.XGBClassifier.reg_alpha", 0.1, 0.5),
+                    verbosity=0,
+                    learning_rate=hp.Float("Sklearn.XGBClassifier.learning_rate", 0.01, 0.2),
+                    gamma=hp.Float("Sklearn.XGBClassifier.gamma", 0, 8),
+                    max_depth=hp.Int("Sklearn.XGBClassifier.max_depth", 2, 8),
+                    min_child_weight=hp.Int("Sklearn.XGBClassifier.min_child_weight", 1, 8),
+                    subsample=hp.Float("Sklearn.XGBClassifier.subsample", 0.5, 1),
+                    colsample_bytree=hp.Float("Sklearn.XGBClassifier.colsample_bytree", 0.2, 1),
+                    colsample_bylevel=hp.Float("Sklearn.XGBClassifier.colsample_bylevel", 0.5, 1),
+                    colsample_bynode=hp.Float("Sklearn.XGBClassifier.colsample_bynode", 0.2, 0.8),
+                    reg_lambda=hp.Float("Sklearn.XGBClassifier.reg_lambda", 0., 1),
                 )
         else:
-            raise RuntimeError("Invalid SkLearn model type")
+            raise RuntimeError("Invalid SkLearn model type:", model_type)
 
         return estimator
 

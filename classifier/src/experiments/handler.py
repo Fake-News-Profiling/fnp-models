@@ -12,6 +12,7 @@ from experiments.experiment import AbstractExperiment, ExperimentConfig, Abstrac
 from experiments.data_visualisation import plot_averaged_experiment_data
 from statistical.data_extraction import TweetStatsExtractor
 
+
 Experiment = Tuple[AbstractExperiment.__class__, Union[str, dict, ExperimentConfig]]
 
 

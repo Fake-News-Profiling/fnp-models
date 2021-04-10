@@ -19,6 +19,9 @@ class VaderSentimentAnalysisWrapper(AbstractSentimentAnalysisWrapper):
             classification = "neutral"
 
         return Sentiment(
+            negative=scores["neg"],
+            neutral=scores["neu"],
+            positive=scores["pos"],
             compound=compound,
-            classification=classification
+            classification=classification,
         )

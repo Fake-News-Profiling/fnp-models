@@ -1,17 +1,16 @@
 import sys
 from functools import partial
 
-from experiments.experiment import AbstractSklearnExperiment, ExperimentConfig
-import statistical.data_extraction as ex
+from experiments.experiment import ExperimentConfig
 import statistical.data_extraction.ner.named_entity as ner
 from experiments.handler import ExperimentHandler
-from experiments.statistical import get_ner_wrapper
+from experiments.statistical import get_ner_wrapper, AbstractStatisticalExperiment, default_svc_model, sklearn_models
 from statistical.data_extraction import TweetStatsExtractor
 
 """ Experiments for NER models """
 
 
-class NerCountsExperiment(AbstractSklearnExperiment):
+class NerCountsExperiment(AbstractStatisticalExperiment):
     """ Extract named-entity recognition data at the user-level, and use this to train an Sklearn model """
 
     def __init__(self, config: ExperimentConfig):
@@ -28,7 +27,7 @@ class NerCountsExperiment(AbstractSklearnExperiment):
         return extractor
 
 
-class AggregatedNerCountsExperiment(AbstractSklearnExperiment):
+class AggregatedNerCountsExperiment(AbstractStatisticalExperiment):
     """ Extract named-entity recognition data at the user-level, and use this to train an Sklearn model """
 
     def __init__(self, config: ExperimentConfig):
@@ -46,36 +45,87 @@ class AggregatedNerCountsExperiment(AbstractSklearnExperiment):
         return extractor
 
 
-if __name__ == "__main__":
-    """ Execute experiments in this module """
-    dataset_dir = sys.argv[1]
-
+def library_comparison_handler():
+    """ Comparing VADER, Stanza and TextBlob libraries """
+    sentiment_libraries = ["nltk", "stanza"]
     experiments = [
         (
             NerCountsExperiment,
             {
-                "experiment_dir": "../training/statistical/ner",
-                "experiment_name": "counts_ner_spacy_sm",
-                "max_trials": 100,
-                "hyperparameters": {"Ner.library": "spacy", "Ner.spacy_pipeline": "en_core_web_sm"},
+                "experiment_dir": "../training/statistical/ner/library_comparison",
+                "experiment_name": library,
+                "max_trials": 2,
+                "hyperparameters": {"Ner.library": library, **default_svc_model},
             }
-        ), (
-            AggregatedNerCountsExperiment,
-            {
-                "experiment_dir": "../training/statistical/ner",
-                "experiment_name": "aggregated_ner_spacy_sm",
-                "max_trials": 100,
-                "hyperparameters": {"Ner.library": "spacy", "Ner.spacy_pipeline": "en_core_web_sm"},
-            }
-        )
+        ) for library in sentiment_libraries
     ]
-    handler = ExperimentHandler(experiments)
-    handler.run_experiments(dataset_dir)
-    handler.print_results(10)
-    handler.print_feature_importance(
-        [
-            NerCountsExperiment.get_extractor({"Ner.library": "spacy", "Ner.spacy_pipeline": "en_core_web_sm"}),
-            AggregatedNerCountsExperiment.get_extractor({"Ner.library": "spacy", "Ner.spacy_pipeline": "en_core_web_sm"}),
-        ],
-        num_trials=10
-    )
+    return ExperimentHandler(experiments)
+
+
+def feature_comparison_handler():
+    """ Compare using different combinations of sentiment features """
+    features = [NerCountsExperiment, AggregatedNerCountsExperiment]
+    experiments = [
+        (
+            experiment,
+            {
+                "experiment_dir": "../training/statistical/sentiment/features",
+                "experiment_name": experiment.__name__,
+                "max_trials": 2,
+                "hyperparameters": {"Ner.library": "stanza", **default_svc_model}
+            }
+        ) for experiment in features
+    ]
+    return ExperimentHandler(experiments)
+
+
+def model_hypertuning_handler():
+    """ Using the best library and features, hyperparameter tune various models """
+    experiments = [
+        (
+            NerCountsExperiment,
+            {
+                "experiment_dir": "../training/statistical/sentiment/hypertuning",
+                "experiment_name": model,
+                "max_trials": 200,
+                "hyperparameters": {"Ner.library": "stanza", "Sklearn.model_type": model},
+            }
+        ) for model in sklearn_models
+    ]
+    return ExperimentHandler(experiments)
+
+
+def run(dataset_dir):
+    # Compare libraries
+    library_handler = library_comparison_handler()
+    library_handler.run_experiments(dataset_dir)
+    library_handler.print_results(2)
+
+    # Compare features
+    feature_handler = feature_comparison_handler()
+    feature_handler.run_experiments(dataset_dir)
+    feature_handler.print_results(2)
+
+    # Hyperparameter tuning
+    hp_handler = model_hypertuning_handler()
+    hp_handler.run_experiments(dataset_dir)
+    hp_handler.print_results(10)
+
+if __name__ == "__main__":
+    """ Execute experiments in this module """
+    dataset_dir = sys.argv[1]
+
+    # Compare libraries
+    library_handler = library_comparison_handler()
+    library_handler.run_experiments(dataset_dir)
+    library_handler.print_results(2)
+
+    # Compare features
+    feature_handler = feature_comparison_handler()
+    feature_handler.run_experiments(dataset_dir)
+    feature_handler.print_results(2)
+
+    # Hyperparameter tuning
+    hp_handler = model_hypertuning_handler()
+    hp_handler.run_experiments(dataset_dir)
+    hp_handler.print_results(10)

@@ -8,10 +8,10 @@ from sklearn.base import BaseEstimator, ClassifierMixin
 from xgboost import XGBClassifier
 
 from base import load_hyperparameters
-from experiments.experiment import AbstractSklearnExperiment, ExperimentConfig
+from experiments.experiment import ExperimentConfig
 import statistical.data_extraction as ex
 from experiments.handler import ExperimentHandler
-from experiments.statistical import get_sentiment_wrapper, get_ner_wrapper
+from experiments.statistical import get_sentiment_wrapper, get_ner_wrapper, AbstractStatisticalExperiment
 
 """ Experiment for training combined and ensemble statistical models """
 
@@ -32,7 +32,7 @@ class VotingClassifier(ClassifierMixin, BaseEstimator):
         return np.mean(x, axis=1)
 
 
-class CombinedStatisticalExperiment(AbstractSklearnExperiment):
+class CombinedStatisticalExperiment(AbstractStatisticalExperiment):
     """ Extract all statistical data at the user-level, and use this to train a single Sklearn model """
 
     def __init__(self, config: ExperimentConfig):
@@ -45,7 +45,7 @@ class CombinedStatisticalExperiment(AbstractSklearnExperiment):
         return extractor.transform(x)
 
 
-class EnsembleStatisticalExperiment(AbstractSklearnExperiment):
+class EnsembleStatisticalExperiment(AbstractStatisticalExperiment):
     """ Load and train statistical models, and then train an Sklearn ensemble model """
 
     def __init__(self, config: ExperimentConfig):

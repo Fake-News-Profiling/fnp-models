@@ -71,5 +71,3 @@ def aggregated_named_entities_counts(tweet_feed: List[str], ner_tagger: Abstract
         results += [count, mean, tweet_range, std]
 
     return results
-
-

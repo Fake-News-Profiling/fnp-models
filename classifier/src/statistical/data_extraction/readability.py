@@ -73,10 +73,10 @@ def readability_tweet_extractor() -> pre.TweetStatsExtractor:
 
 
 def tag_counts(tweet_feed: List[str], tags: bool = None) -> np.ndarray:
-    """ Returns the average number of tag used, for each tag in tags """
+    """ Returns the total number of tag used, for each tag in tags """
     if tags is None:
         tags = ['#USER#', '#HASHTAG#', '#URL#']
-    return np.mean([[tweet.count(tag) for tag in tags] for tweet in tweet_feed], axis=0)
+    return np.sum([[tweet.count(tag) for tag in tags] for tweet in tweet_feed], axis=0)
 
 
 def retweet_ratio(tweet_feed: List[str]) -> float:

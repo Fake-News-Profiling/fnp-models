@@ -1,6 +1,7 @@
 import sys
 
-from experiments.experiment import AbstractSklearnExperiment, ExperimentConfig
+from experiments.experiment import ExperimentConfig
+from experiments.statistical import AbstractStatisticalExperiment, default_svc_model, sklearn_models
 from statistical.data_extraction.preprocessing import TweetStatsExtractor
 import statistical.data_extraction.readability as read
 from experiments.handler import ExperimentHandler
@@ -9,10 +10,11 @@ from experiments.handler import ExperimentHandler
 """ Experiments for Readability models """
 
 
-class ReadabilityExperiment(AbstractSklearnExperiment):
+class ReadabilityExperiment(AbstractStatisticalExperiment):
     """ Sklearn Experiment with 10 Cross-validation splits"""
     def __init__(self, config: ExperimentConfig):
-        super().__init__(config, num_cv_splits=10)
+        tuner_initial_points = config.max_trials // 5 if config.max_trials > 10 else None
+        super().__init__(config, num_cv_splits=10, tuner_initial_points=tuner_initial_points)
 
     def input_data_transformer(self, x):
         return self.get_extractor().transform(x)
@@ -28,9 +30,6 @@ class StatisticalCountFeaturesExperiment(ReadabilityExperiment):
         * Numerical values count
     """
 
-    def input_data_transformer(self, x):
-        return self.get_extractor().transform(x)
-
     @staticmethod
     def get_extractor():
         extractor = TweetStatsExtractor([
@@ -41,9 +40,9 @@ class StatisticalCountFeaturesExperiment(ReadabilityExperiment):
             read.number_counts,
         ])
         extractor.feature_names = [
-            "Average number of '#USER#' tags per tweet",
-            "Average number of '#HASHTAG#' tags per tweet",
-            "Average number of '#URL#' tags per tweet",
+            "Total number of '#USER#' tags",
+            "Total number of '#HASHTAG#' tags",
+            "Total number of '#URL#' tags",
             "Total number of emojis",
             "Average tweet lengths in words",
             "Average tweet lengths in characters",
@@ -64,9 +63,6 @@ class TextReadabilityFeaturesExperiment(ReadabilityExperiment):
         * Word casing counts
     """
 
-    def input_data_transformer(self, x):
-        return self.get_extractor().transform(x)
-
     @staticmethod
     def get_extractor():
         extractor = TweetStatsExtractor([
@@ -85,7 +81,7 @@ class TextReadabilityFeaturesExperiment(ReadabilityExperiment):
             "Average number of :",
             "Average number of .",
             "Average number of personal pronouns",
-            "Ratio of characters to words",
+            "Total characters to words ratio",
             "Average words with first letter capitalised",
             "Average fully capitalised words",
         ]
@@ -100,9 +96,6 @@ class UniquenessFeaturesExperiment(ReadabilityExperiment):
         * Emoji ttr
         * Retweets-to-tweets ratio
     """
-
-    def input_data_transformer(self, x):
-        return self.get_extractor().transform(x)
 
     @staticmethod
     def get_extractor():
@@ -131,49 +124,50 @@ class AllReadabilityFeaturesExperiment(ReadabilityExperiment):
         return read.readability_tweet_extractor()
 
 
+def feature_comparison_handler():
+    """ Compare using different combinations of readability features """
+    features = [StatisticalCountFeaturesExperiment, TextReadabilityFeaturesExperiment,
+                UniquenessFeaturesExperiment, AllReadabilityFeaturesExperiment]
+    experiments = [
+        (
+            experiment,
+            {
+                "experiment_dir": "../training/statistical/readability/features",
+                "experiment_name": experiment.__name__,
+                "max_trials": 2,
+                "hyperparameters": default_svc_model,
+            }
+        ) for experiment in features
+    ]
+    return ExperimentHandler(experiments)
+
+
+def model_hypertuning_handler():
+    """ Using the best features, hyperparameter tune various models """
+    experiments = [
+        (
+            AllReadabilityFeaturesExperiment,
+            {
+                "experiment_dir": "../training/statistical/readability/hypertuning",
+                "experiment_name": model,
+                "max_trials": 200,
+                "hyperparameters": {"Sklearn.model_type": model},
+            }
+        ) for model in sklearn_models
+    ]
+    return ExperimentHandler(experiments)
+
+
 if __name__ == "__main__":
     """ Execute experiments in this module """
     dataset_dir = sys.argv[1]
 
-    experiments = [
-        (
-            StatisticalCountFeaturesExperiment,
-            {
-                "experiment_dir": "../training/statistical/readability",
-                "experiment_name": "statistical_counts",
-                "max_trials": 100,
-            }
-        ), (
-            TextReadabilityFeaturesExperiment,
-            {
-                "experiment_dir": "../training/statistical/readability",
-                "experiment_name": "text_readability",
-                "max_trials": 100,
-            }
-        ), (
-            UniquenessFeaturesExperiment,
-            {
-                "experiment_dir": "../training/statistical/readability",
-                "experiment_name": "uniqueness",
-                "max_trials": 100,
-            }
-        ), (
-            AllReadabilityFeaturesExperiment,
-            {
-                "experiment_dir": "../training/statistical/readability",
-                "experiment_name": "all_features",
-                "max_trials": 100,
-            }
-        )
-    ]
-    handler = ExperimentHandler(experiments)
-    # handler.run_experiments(dataset_dir)
-    handler.print_results(num_trials=10)
-    handler.print_feature_importance(
-        [
-            StatisticalCountFeaturesExperiment.get_extractor(),
-            TextReadabilityFeaturesExperiment.get_extractor(),
-            UniquenessFeaturesExperiment.get_extractor(),
-            AllReadabilityFeaturesExperiment.get_extractor(),
-        ],
-        num_trials=10)
+    # Compare features
+    library_handler = feature_comparison_handler()
+    # library_handler.run_experiments(dataset_dir)
+    library_handler.print_results(2)
+
+    # Hyperparameter tuning
+    hp_handler = model_hypertuning_handler()
+    # hp_handler.run_experiments(dataset_dir)
+    hp_handler.print_results(10)

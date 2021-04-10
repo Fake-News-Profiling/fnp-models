@@ -262,7 +262,7 @@ if __name__ == "__main__":
             BertTrainedOnDownstreamLoss,
             {
                 "experiment_dir": "../training/bert_clf/downstream_loss",
-                "experiment_name": "dropout_rate",
+                "experiment_name": "kernel_reg",
                 "max_trials": 36,
                 "hyperparameters": {
                     "epochs": 10,
@@ -277,6 +277,51 @@ if __name__ == "__main__":
                     "Bert.dense_kernel_reg":  [0., 0.00001, 0.0001, 0.001, 0.01],
                     "Bert.num_hidden_layers": 0,
                     "Bert.use_batch_norm": False,
+                },
+            }
+        ), (
+            # Using a batch normalisation layer
+            BertTrainedOnDownstreamLoss,
+            {
+                "experiment_dir": "../training/bert_clf/downstream_loss",
+                "experiment_name": "batch_norm",
+                "max_trials": 36,
+                "hyperparameters": {
+                    "epochs": 10,
+                    "batch_size": 8,
+                    "learning_rate": 2e-5,
+                    "Bert.encoder_url": "https://tfhub.dev/tensorflow/small_bert/bert_en_uncased_L-12_H-128_A-2/1",
+                    "Bert.hidden_size": 128,
+                    "Bert.preprocessing": "[remove_emojis, remove_tags]",
+                    "Bert.pooler": "max",
+                    "selected_encoder_outputs": "default",
+                    "Bert.dropout_rate": 0.1,
+                    "Bert.dense_kernel_reg":  0.,
+                    "Bert.num_hidden_layers": 0,
+                    "Bert.use_batch_norm": [False, True],
+                },
+            }
+        ), (
+            # Final dense activation
+            BertTrainedOnDownstreamLoss,
+            {
+                "experiment_dir": "../training/bert_clf/downstream_loss",
+                "experiment_name": "dense_activation",
+                "max_trials": 36,
+                "hyperparameters": {
+                    "epochs": 10,
+                    "batch_size": 8,
+                    "learning_rate": 2e-5,
+                    "Bert.encoder_url": "https://tfhub.dev/tensorflow/small_bert/bert_en_uncased_L-12_H-128_A-2/1",
+                    "Bert.hidden_size": 128,
+                    "Bert.preprocessing": "[remove_emojis, remove_tags]",
+                    "Bert.pooler": "max",
+                    "selected_encoder_outputs": "default",
+                    "Bert.dropout_rate": 0.1,
+                    "Bert.dense_kernel_reg":  0.,
+                    "Bert.num_hidden_layers": 0,
+                    "Bert.use_batch_norm": False,
+                    "Bert.dense_activation": ["linear", "sigmoid", "tanh", "relu"]
                 },
             }
         )
