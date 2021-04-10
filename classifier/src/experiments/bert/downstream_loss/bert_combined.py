@@ -125,6 +125,7 @@ if __name__ == "__main__":
 
     experiments = [
         (
+            # Classifying BERT output logits
             BertDownstreamLossLogitsCombinedExperiment,
             {
                 "experiment_dir": "../training/bert_clf/downstream_loss_logits_combined",
@@ -132,22 +133,23 @@ if __name__ == "__main__":
                 "max_trials": 100,
                 "hyperparameters": {
                     "learning_rate": 2e-5,
-                    "Bert.epochs": 10,
+                    "Bert.epochs": 4,
                     "Bert.batch_size": 8,
                     "Bert.encoder_url": "https://tfhub.dev/tensorflow/small_bert/bert_en_uncased_L-12_H-128_A-2/1",
                     "Bert.hidden_size": 128,
-                    "Bert.preprocessing": "[remove_emojis, remove_tags]",
-                    "selected_encoder_outputs": "sum_last_4_hidden_layers",
-                    "Bert.dropout_rate": 0.1,
+                    "selected_encoder_outputs": "default",
                     "Bert.dense_activation": "linear",
-                    "Bert.pooler": "concat",
-                    "Bert.dense_kernel_reg": 0.00001,
+                    "Bert.pooler": "max",
+                    "Bert.preprocessing": "[replace_emojis_no_sep, remove_tags]",
+                    "Bert.dropout_rate": 0.1,
+                    "Bert.dense_kernel_reg": 0.0001,
                     "Bert.use_batch_norm": False,
                     "Bert.num_hidden_layers": 0,
                     "Combined.pooler": "concat",
                 },
             }
         ), (
+            # Classifying BERT last hidden layer with a concat combined pooler
             BertDownstreamLossPooledCombinedExperiment,
             {
                 "experiment_dir": "../training/bert_clf/downstream_loss_pooled_combined",
@@ -155,22 +157,23 @@ if __name__ == "__main__":
                 "max_trials": 100,
                 "hyperparameters": {
                     "learning_rate": 2e-5,
-                    "Bert.epochs": 10,
+                    "Bert.epochs": 4,
                     "Bert.batch_size": 8,
                     "Bert.encoder_url": "https://tfhub.dev/tensorflow/small_bert/bert_en_uncased_L-12_H-128_A-2/1",
                     "Bert.hidden_size": 128,
-                    "Bert.preprocessing": "[remove_emojis, remove_tags]",
-                    "selected_encoder_outputs": "sum_last_4_hidden_layers",
-                    "Bert.dropout_rate": 0.1,
+                    "selected_encoder_outputs": "default",
                     "Bert.dense_activation": "linear",
-                    "Bert.pooler": "concat",
-                    "Bert.dense_kernel_reg": 0.00001,
+                    "Bert.pooler": "max",
+                    "Bert.preprocessing": "[replace_emojis_no_sep, remove_tags]",
+                    "Bert.dropout_rate": 0.1,
+                    "Bert.dense_kernel_reg": 0.0001,
                     "Bert.use_batch_norm": False,
                     "Bert.num_hidden_layers": 0,
                     "Combined.pooler": "concat",
                 },
             }
         ), (
+            # Classifying BERT last hidden layer with a max combined pooler
             BertDownstreamLossPooledCombinedExperiment,
             {
                 "experiment_dir": "../training/bert_clf/downstream_loss_pooled_combined",
@@ -178,22 +181,23 @@ if __name__ == "__main__":
                 "max_trials": 100,
                 "hyperparameters": {
                     "learning_rate": 2e-5,
-                    "Bert.epochs": 10,
+                    "Bert.epochs": 4,
                     "Bert.batch_size": 8,
                     "Bert.encoder_url": "https://tfhub.dev/tensorflow/small_bert/bert_en_uncased_L-12_H-128_A-2/1",
                     "Bert.hidden_size": 128,
-                    "Bert.preprocessing": "[remove_emojis, remove_tags]",
-                    "selected_encoder_outputs": "sum_last_4_hidden_layers",
-                    "Bert.dropout_rate": 0.1,
+                    "selected_encoder_outputs": "default",
                     "Bert.dense_activation": "linear",
-                    "Bert.pooler": "concat",
-                    "Bert.dense_kernel_reg": 0.00001,
+                    "Bert.pooler": "max",
+                    "Bert.preprocessing": "[replace_emojis_no_sep, remove_tags]",
+                    "Bert.dropout_rate": 0.1,
+                    "Bert.dense_kernel_reg": 0.0001,
                     "Bert.use_batch_norm": False,
                     "Bert.num_hidden_layers": 0,
                     "Combined.pooler": "max",
                 },
             }
         ), (
+            # Classifying BERT last hidden layer with an average combined pooler
             BertDownstreamLossPooledCombinedExperiment,
             {
                 "experiment_dir": "../training/bert_clf/downstream_loss_pooled_combined",
@@ -201,16 +205,16 @@ if __name__ == "__main__":
                 "max_trials": 100,
                 "hyperparameters": {
                     "learning_rate": 2e-5,
-                    "Bert.epochs": 10,
+                    "Bert.epochs": 4,
                     "Bert.batch_size": 8,
                     "Bert.encoder_url": "https://tfhub.dev/tensorflow/small_bert/bert_en_uncased_L-12_H-128_A-2/1",
                     "Bert.hidden_size": 128,
-                    "Bert.preprocessing": "[remove_emojis, remove_tags]",
-                    "selected_encoder_outputs": "sum_last_4_hidden_layers",
-                    "Bert.dropout_rate": 0.1,
+                    "selected_encoder_outputs": "default",
                     "Bert.dense_activation": "linear",
-                    "Bert.pooler": "concat",
-                    "Bert.dense_kernel_reg": 0.00001,
+                    "Bert.pooler": "max",
+                    "Bert.preprocessing": "[replace_emojis_no_sep, remove_tags]",
+                    "Bert.dropout_rate": 0.1,
+                    "Bert.dense_kernel_reg": 0.0001,
                     "Bert.use_batch_norm": False,
                     "Bert.num_hidden_layers": 0,
                     "Combined.pooler": "average",
