@@ -10,17 +10,16 @@ from experiments.handler import ExperimentHandler
 """ Experiments for Readability models """
 
 
-class ReadabilityExperiment(AbstractStatisticalExperiment):
+class AbstractReadabilityExperiment(AbstractStatisticalExperiment):
     """ Sklearn Experiment with 10 Cross-validation splits"""
     def __init__(self, config: ExperimentConfig):
-        tuner_initial_points = config.max_trials // 5 if config.max_trials > 10 else None
-        super().__init__(config, tuner_initial_points=tuner_initial_points)
+        super().__init__(config)
 
     def input_data_transformer(self, x):
         return self.get_extractor().transform(x)
 
 
-class StatisticalCountFeaturesExperiment(ReadabilityExperiment):
+class StatisticalCountFeaturesExperiment(AbstractReadabilityExperiment):
     """
     Extract word/character statistical count features:
         * Tag counts
@@ -53,7 +52,7 @@ class StatisticalCountFeaturesExperiment(ReadabilityExperiment):
         return extractor
 
 
-class TextReadabilityFeaturesExperiment(ReadabilityExperiment):
+class TextReadabilityFeaturesExperiment(AbstractReadabilityExperiment):
     """
     Extract readability features:
         * Syllables-to-words ratio
@@ -88,7 +87,7 @@ class TextReadabilityFeaturesExperiment(ReadabilityExperiment):
         return extractor
 
 
-class UniquenessFeaturesExperiment(ReadabilityExperiment):
+class UniquenessFeaturesExperiment(AbstractReadabilityExperiment):
     """
     Extract uniqueness features:
         * Word ttr
@@ -116,7 +115,7 @@ class UniquenessFeaturesExperiment(ReadabilityExperiment):
         return extractor
 
 
-class AllReadabilityFeaturesExperiment(ReadabilityExperiment):
+class AllReadabilityFeaturesExperiment(AbstractReadabilityExperiment):
     """ Extract all readability features """
 
     @staticmethod

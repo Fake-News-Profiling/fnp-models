@@ -2,7 +2,6 @@ from typing import Union
 
 from kerastuner import HyperParameters
 
-
 from data import BertTweetPreprocessor
 from data.preprocess import tag_indicators, replace_xml_and_html
 import statistical.data_extraction as ex

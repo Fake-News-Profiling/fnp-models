@@ -2,7 +2,7 @@ import os
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from functools import partial
-from typing import Optional, Any
+from typing import Any, Union
 
 import tensorflow as tf
 from kerastuner import HyperParameters, Objective
@@ -18,6 +18,7 @@ from sklearn.svm import SVC
 from xgboost import XGBClassifier
 
 import data.preprocess as pre
+from base import load_hyperparameters
 from bert import BertTweetFeedTokenizer
 from bert.models import tokenize_bert_input, bert_layers
 from experiments import allow_gpu_memory_growth
@@ -57,21 +58,24 @@ class AbstractExperiment(ABC):
         pass
 
     @classmethod
-    def parse_to_hyperparameters(cls, hyperparameters_dict: dict):
+    def parse_to_hyperparameters(cls, hyperparameters: Union[str, dict]):
         """
-        Parse a dict of hyperparameters to a KerasTuner HyperParameters object. The dict should be of the form:
+        Parse a filepath to a saved KerasTuner HyperParameters config file, or if a dict is passed then parse it to a
+        HyperParameters object. The dict should be of the form:
         {"hp_name": {"type": "hp_type", "args": [...], "kwargs": {...}}, ...}
 
         For simplicity:
         * `hp.Fixed` values can also be set as: {"hp_name": fixed_hp_value, ...}
         * `hp.Choice` values can also be set as: {"hp_name": [hp_choice_1, ...], ...}
         """
-        if hyperparameters_dict is None:
+        if hyperparameters is None:
             return None
+        if isinstance(hyperparameters, str):
+            return load_hyperparameters(hyperparameters)
 
         hp = HyperParameters()
         # Add each hyperparameter to `hp`
-        for name, value in hyperparameters_dict.items():
+        for name, value in hyperparameters.items():
             if isinstance(value, dict) and "condition" in value:
                 with hp.conditional_scope(value["condition"]["name"], value["condition"]["value"]):
                     if "value" in value:
@@ -113,7 +117,7 @@ class AbstractSklearnExperiment(AbstractExperiment, ABC):
 
     def __init__(self, config: ExperimentConfig, tuner_initial_points: int = None):
         super().__init__(config)
-        self.tuner_initial_points = tuner_initial_points
+        self.tuner_initial_points = tuner_initial_points or (config.max_trials // 5 if config.max_trials > 10 else None)
 
     def make_tuner(self, hp: HyperParameters, model_type: str) -> SklearnCV:
         return SklearnCV(
@@ -133,12 +137,14 @@ class AbstractSklearnExperiment(AbstractExperiment, ABC):
 
     def run(self, x, y, callbacks=None, *args, **kwargs):
         # Processing the initial data is computationally costly, so do it once before we hyperparameter tune
+        if hasattr(self, "input_data_transformer") and callable(self.input_data_transformer):
+            x = self.input_data_transformer(x)
+
         cv_data = None
         if hasattr(self, "cv_data_transformer") and callable(self.cv_data_transformer):
             cv = StratifiedKFold(n_splits=self.config.num_cv_splits, shuffle=True, random_state=1)
-            cv_data = [self.cv_data_transformer(*cv_fold) for cv_fold in kfold_split_wrapper(cv, x, y)]
-        elif hasattr(self, "input_data_transformer") and callable(self.input_data_transformer):
-            x = self.input_data_transformer(x)
+            cv_data = [self.cv_data_transformer(self.hyperparameters, *cv_fold)
+                       for cv_fold in kfold_split_wrapper(cv, x, y)]
 
         # Run a search for each model type
         model_types = self.config.hyperparameters.setdefault(
@@ -157,9 +163,10 @@ class AbstractSklearnExperiment(AbstractExperiment, ABC):
             print("Performing search for model_type:", model_type)
             tuner.search(x, y)
 
-    def build_model(self, hp):
+    @classmethod
+    def build_model(cls, hp):
         """ Build an Sklearn pipeline with a final estimator """
-        estimator = self.select_sklearn_model(hp)
+        estimator = cls.select_sklearn_model(hp)
         steps = [("scaler", StandardScaler()), ("estimator", estimator)]
 
         # Add PCA to deal with multi-collinearity issues in data (Gradient Boosting doesn't have this issue)
