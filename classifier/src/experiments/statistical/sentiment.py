@@ -2,7 +2,6 @@ import sys
 from functools import partial
 
 import statistical.data_extraction.sentiment.sentiment as sent
-from experiments.experiment import ExperimentConfig
 from experiments.handler import ExperimentHandler
 from experiments.statistical import get_sentiment_wrapper, AbstractStatisticalExperiment, default_svc_model
 from statistical.data_extraction import TweetStatsExtractor
@@ -11,8 +10,6 @@ from statistical.data_extraction import TweetStatsExtractor
 
 
 class AbstractSentimentExperiment(AbstractStatisticalExperiment):
-    def __init__(self, config: ExperimentConfig):
-        super().__init__(config, num_cv_splits=10)
 
     def input_data_transformer(self, x):
         sentiment_wrapper = get_sentiment_wrapper(self.hyperparameters)
@@ -142,6 +139,7 @@ def library_comparison_handler():
                 "experiment_dir": "../training/statistical/sentiment/library_comparison",
                 "experiment_name": library,
                 "max_trials": 2,
+                "num_cv_splits": 10,
                 "hyperparameters": {"Sentiment.library": library, **default_svc_model}
             }
         ) for library in sentiment_libraries
@@ -163,6 +161,7 @@ def feature_comparison_handler():
                 "experiment_dir": "../training/statistical/sentiment/features",
                 "experiment_name": experiment.__name__,
                 "max_trials": 2,
+                "num_cv_splits": 10,
                 "hyperparameters": {"Sentiment.library": "vader", **default_svc_model}
             }
         ) for experiment in features
@@ -179,6 +178,7 @@ def model_hypertuning_handler():
                 "experiment_dir": "../training/statistical/sentiment/hypertuning",
                 "experiment_name": "AggregatedCompoundPlusCountsPlusOverallSentimentExperiment",
                 "max_trials": 200,
+                "num_cv_splits": 10,
                 "hyperparameters": {"Sentiment.library": "vader"},
             }
         ), (
@@ -187,6 +187,7 @@ def model_hypertuning_handler():
                 "experiment_dir": "../training/statistical/sentiment/hypertuning",
                 "experiment_name": "AggregatedCompoundSentimentExperiment",
                 "max_trials": 200,
+                "num_cv_splits": 10,
                 "hyperparameters": {"Sentiment.library": "vader"},
             }
         )

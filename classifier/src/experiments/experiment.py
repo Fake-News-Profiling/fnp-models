@@ -1,11 +1,9 @@
-import math
 import os
 from abc import ABC, abstractmethod
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from functools import partial
 from typing import Optional, Any
 
-import numpy as np
 import tensorflow as tf
 from kerastuner import HyperParameters, Objective
 from kerastuner.tuners.bayesian import BayesianOptimizationOracle
@@ -33,7 +31,7 @@ allow_gpu_memory_growth()
 class ExperimentConfig:
     experiment_dir: str
     experiment_name: str
-    hyperparameters: Optional[dict] = None
+    hyperparameters: dict = field(default_factory=dict)
     max_trials: int = 30
     num_cv_splits: int = 5
 
@@ -113,9 +111,8 @@ class AbstractSklearnExperiment(AbstractExperiment, ABC):
     hyperparameters.
     """
 
-    def __init__(self, config: ExperimentConfig, num_cv_splits: int = 5, tuner_initial_points: int = None):
+    def __init__(self, config: ExperimentConfig, tuner_initial_points: int = None):
         super().__init__(config)
-        self.num_cv_splits = num_cv_splits
         self.tuner_initial_points = tuner_initial_points
 
     def make_tuner(self, hp: HyperParameters, model_type: str) -> SklearnCV:
@@ -129,7 +126,7 @@ class AbstractSklearnExperiment(AbstractExperiment, ABC):
             hypermodel=self.build_model,
             scoring=make_scorer(tf.keras.losses.binary_crossentropy),
             metrics=[accuracy_score, f1_score],
-            cv=StratifiedKFold(n_splits=self.num_cv_splits, shuffle=True, random_state=1),
+            cv=StratifiedKFold(n_splits=self.config.num_cv_splits, shuffle=True, random_state=1),
             directory=os.path.join(self.experiment_directory, self.experiment_name),
             project_name=model_type,
         )
@@ -138,7 +135,7 @@ class AbstractSklearnExperiment(AbstractExperiment, ABC):
         # Processing the initial data is computationally costly, so do it once before we hyperparameter tune
         cv_data = None
         if hasattr(self, "cv_data_transformer") and callable(self.cv_data_transformer):
-            cv = StratifiedKFold(n_splits=self.num_cv_splits, shuffle=True, random_state=1)
+            cv = StratifiedKFold(n_splits=self.config.num_cv_splits, shuffle=True, random_state=1)
             cv_data = [self.cv_data_transformer(*cv_fold) for cv_fold in kfold_split_wrapper(cv, x, y)]
         elif hasattr(self, "input_data_transformer") and callable(self.input_data_transformer):
             x = self.input_data_transformer(x)
@@ -227,7 +224,7 @@ class AbstractTfExperiment(AbstractExperiment, ABC):
         super().__init__(config)
 
         self.tuner = tuner_class(
-            n_splits=config.num_cv_splits,
+            n_splits=self.config.num_cv_splits,
             preprocess=self.preprocess_cv_data,
             hypermodel=self.build_model,
             hyperparameters=self.hyperparameters,

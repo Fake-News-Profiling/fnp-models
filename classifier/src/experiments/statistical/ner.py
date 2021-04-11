@@ -1,10 +1,9 @@
 import sys
 from functools import partial
 
-from experiments.experiment import ExperimentConfig
 import statistical.data_extraction.ner.named_entity as ner
 from experiments.handler import ExperimentHandler
-from experiments.statistical import get_ner_wrapper, AbstractStatisticalExperiment, default_svc_model, sklearn_models
+from experiments.statistical import get_ner_wrapper, AbstractStatisticalExperiment, default_svc_model
 from statistical.data_extraction import TweetStatsExtractor
 
 """ Experiments for NER models """
@@ -12,9 +11,6 @@ from statistical.data_extraction import TweetStatsExtractor
 
 class NerCountsExperiment(AbstractStatisticalExperiment):
     """ Extract named-entity recognition data at the user-level, and use this to train an Sklearn model """
-
-    def __init__(self, config: ExperimentConfig):
-        super().__init__(config, num_cv_splits=10)
 
     def input_data_transformer(self, x):
         return self.get_extractor(self.hyperparameters).transform(x)
@@ -29,9 +25,6 @@ class NerCountsExperiment(AbstractStatisticalExperiment):
 
 class AggregatedNerCountsExperiment(AbstractStatisticalExperiment):
     """ Extract named-entity recognition data at the user-level, and use this to train an Sklearn model """
-
-    def __init__(self, config: ExperimentConfig):
-        super().__init__(config, num_cv_splits=10)
 
     def input_data_transformer(self, x):
         return self.get_extractor(self.hyperparameters).transform(x)
@@ -55,6 +48,7 @@ def library_comparison_handler():
                 "experiment_dir": "../training/statistical/ner/library_comparison",
                 "experiment_name": library,
                 "max_trials": 2,
+                "num_cv_splits": 10,
                 "hyperparameters": {"Ner.library": library, **default_svc_model},
             }
         ) for library in sentiment_libraries
@@ -72,6 +66,7 @@ def feature_comparison_handler():
                 "experiment_dir": "../training/statistical/ner/features",
                 "experiment_name": experiment.__name__,
                 "max_trials": 2,
+                "num_cv_splits": 10,
                 "hyperparameters": {"Ner.library": "stanza", **default_svc_model}
             }
         ) for experiment in features
@@ -86,11 +81,12 @@ def model_hypertuning_handler():
             NerCountsExperiment,
             {
                 "experiment_dir": "../training/statistical/ner/hypertuning",
-                "experiment_name": model,
+                "experiment_name": "NerCountsExperiment",
                 "max_trials": 200,
-                "hyperparameters": {"Ner.library": "stanza", "Sklearn.model_type": model},
+                "num_cv_splits": 10,
+                "hyperparameters": {"Ner.library": "stanza"},
             }
-        ) for model in sklearn_models
+        )
     ]
     return ExperimentHandler(experiments)
 
@@ -111,5 +107,5 @@ if __name__ == "__main__":
 
     # Hyperparameter tuning
     hp_handler = model_hypertuning_handler()
-    hp_handler.run_experiments(dataset_dir)
+    # hp_handler.run_experiments(dataset_dir)
     hp_handler.print_results(10)

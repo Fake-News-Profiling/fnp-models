@@ -1,7 +1,7 @@
 import sys
 
 from experiments.experiment import ExperimentConfig
-from experiments.statistical import AbstractStatisticalExperiment, default_svc_model, sklearn_models
+from experiments.statistical import AbstractStatisticalExperiment, default_svc_model
 from statistical.data_extraction.preprocessing import TweetStatsExtractor
 import statistical.data_extraction.readability as read
 from experiments.handler import ExperimentHandler
@@ -14,7 +14,7 @@ class ReadabilityExperiment(AbstractStatisticalExperiment):
     """ Sklearn Experiment with 10 Cross-validation splits"""
     def __init__(self, config: ExperimentConfig):
         tuner_initial_points = config.max_trials // 5 if config.max_trials > 10 else None
-        super().__init__(config, num_cv_splits=10, tuner_initial_points=tuner_initial_points)
+        super().__init__(config, tuner_initial_points=tuner_initial_points)
 
     def input_data_transformer(self, x):
         return self.get_extractor().transform(x)
@@ -135,6 +135,7 @@ def feature_comparison_handler():
                 "experiment_dir": "../training/statistical/readability/features",
                 "experiment_name": experiment.__name__,
                 "max_trials": 2,
+                "num_cv_splits": 10,
                 "hyperparameters": default_svc_model,
             }
         ) for experiment in features
@@ -148,12 +149,12 @@ def model_hypertuning_handler():
         (
             AllReadabilityFeaturesExperiment,
             {
-                "experiment_dir": "../training/statistical/readability/hypertuning",
-                "experiment_name": model,
+                "experiment_dir": "../training/statistical/readability",
+                "experiment_name": "hypertuning",
+                "num_cv_splits": 10,
                 "max_trials": 200,
-                "hyperparameters": {"Sklearn.model_type": model},
             }
-        ) for model in sklearn_models
+        )
     ]
     return ExperimentHandler(experiments)
 

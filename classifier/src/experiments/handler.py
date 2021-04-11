@@ -117,7 +117,11 @@ class ExperimentHandler:
 
             results["parameters"].append(trial.hyperparameters.values)
 
-        return pd.DataFrame(results)
+        return pd.DataFrame(
+            results,
+            columns=["Sklearn.model_type", "score", "loss", "loss_std", "accuracy_score", "f1_score",
+                     "accuracy_score_std", "f1_score_std", "trial_id", "parameters"]
+        )
 
     @staticmethod
     def _load_experiment_config(config: Union[str, dict, ExperimentConfig],
