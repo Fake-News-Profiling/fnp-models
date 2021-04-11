@@ -2,6 +2,9 @@ import sys
 
 import numpy as np
 import tensorflow as tf
+from sklearn.decomposition import PCA
+from sklearn.pipeline import Pipeline
+from sklearn.preprocessing import StandardScaler
 
 from bert import BertIndividualTweetTokenizer
 from bert.models import bert_tokenizer
@@ -97,6 +100,17 @@ class BertDownstreamLossLogitsCombinedExperiment(AbstractSklearnExperiment):
 class BertDownstreamLossPooledCombinedExperiment(BertDownstreamLossLogitsCombinedExperiment):
 
     def build_model(self, hp):
+        """ Build an Sklearn pipeline with a final estimator """
+        if hp.Fixed("Sklearn.scale", False):
+            estimator = self.select_sklearn_model(hp)
+            steps = [("scaler", StandardScaler()), ("estimator", estimator)]
+
+            # Add PCA to deal with multi-collinearity issues in data (Gradient Boosting doesn't have this issue)
+            if hp.get("Sklearn.model_type") != "XGBClassifier":
+                steps.insert(0, ("PCA", PCA()))
+
+            return Pipeline(steps)
+
         return self.select_sklearn_model(hp)
 
     def cv_data_transformer(self, x_train, y_train, x_test, y_test):
@@ -111,10 +125,8 @@ class BertDownstreamLossPooledCombinedExperiment(BertDownstreamLossLogitsCombine
         return hp, x_train, y_train, x_test, y_test
 
 
-if __name__ == "__main__":
-    """ Execute experiments in this module """
-    dataset_dir = sys.argv[1]
-
+def logits_experiment_handler(bert_hp_dict: dict):
+    """ Trains a BERT model and then fits a secondary model to predict based on BERT's output logits"""
     experiments = [
         (
             # Classifying BERT output logits
@@ -124,99 +136,64 @@ if __name__ == "__main__":
                 "experiment_name": "logits",
                 "max_trials": 100,
                 "hyperparameters": {
-                    "learning_rate": 2e-5,
-                    "Bert.epochs": 4,
-                    "Bert.batch_size": 8,
-                    "Bert.encoder_url": "https://tfhub.dev/tensorflow/small_bert/bert_en_uncased_L-12_H-128_A-2/1",
-                    "Bert.hidden_size": 128,
-                    "selected_encoder_outputs": "default",
-                    "Bert.dense_activation": "linear",
-                    "Bert.pooler": "max",
-                    "Bert.preprocessing": "[replace_emojis_no_sep, remove_tags]",
-                    "Bert.dropout_rate": 0.1,
-                    "Bert.dense_kernel_reg": 0.0001,
-                    "Bert.use_batch_norm": False,
-                    "Bert.num_hidden_layers": 0,
                     "Combined.pooler": "concat",
                     "Sklearn.model_type": ["VotingClassifier", "LogisticRegression", "SVC",
-                                           "RandomForestClassifier", "XGBClassifier"]
-                },
-            }
-        ), (
-            # Classifying BERT last hidden layer with a concat combined pooler
-            BertDownstreamLossPooledCombinedExperiment,
-            {
-                "experiment_dir": "../training/bert_clf/downstream_loss/combined",
-                "experiment_name": "concat_pooler",
-                "max_trials": 100,
-                "hyperparameters": {
-                    "learning_rate": 2e-5,
-                    "Bert.epochs": 4,
-                    "Bert.batch_size": 8,
-                    "Bert.encoder_url": "https://tfhub.dev/tensorflow/small_bert/bert_en_uncased_L-12_H-128_A-2/1",
-                    "Bert.hidden_size": 128,
-                    "selected_encoder_outputs": "default",
-                    "Bert.dense_activation": "linear",
-                    "Bert.pooler": "max",
-                    "Bert.preprocessing": "[replace_emojis_no_sep, remove_tags]",
-                    "Bert.dropout_rate": 0.1,
-                    "Bert.dense_kernel_reg": 0.0001,
-                    "Bert.use_batch_norm": False,
-                    "Bert.num_hidden_layers": 0,
-                    "Combined.pooler": "concat",
-                },
-            }
-        ), (
-            # Classifying BERT last hidden layer with a max combined pooler
-            BertDownstreamLossPooledCombinedExperiment,
-            {
-                "experiment_dir": "../training/bert_clf/downstream_loss/combined",
-                "experiment_name": "max_pooler",
-                "max_trials": 100,
-                "hyperparameters": {
-                    "learning_rate": 2e-5,
-                    "Bert.epochs": 4,
-                    "Bert.batch_size": 8,
-                    "Bert.encoder_url": "https://tfhub.dev/tensorflow/small_bert/bert_en_uncased_L-12_H-128_A-2/1",
-                    "Bert.hidden_size": 128,
-                    "selected_encoder_outputs": "default",
-                    "Bert.dense_activation": "linear",
-                    "Bert.pooler": "max",
-                    "Bert.preprocessing": "[replace_emojis_no_sep, remove_tags]",
-                    "Bert.dropout_rate": 0.1,
-                    "Bert.dense_kernel_reg": 0.0001,
-                    "Bert.use_batch_norm": False,
-                    "Bert.num_hidden_layers": 0,
-                    "Combined.pooler": "max",
-                },
-            }
-        ), (
-            # Classifying BERT last hidden layer with an average combined pooler
-            BertDownstreamLossPooledCombinedExperiment,
-            {
-                "experiment_dir": "../training/bert_clf/downstream_loss/combined",
-                "experiment_name": "average_pooler",
-                "max_trials": 100,
-                "hyperparameters": {
-                    "learning_rate": 2e-5,
-                    "Bert.epochs": 4,
-                    "Bert.batch_size": 8,
-                    "Bert.encoder_url": "https://tfhub.dev/tensorflow/small_bert/bert_en_uncased_L-12_H-128_A-2/1",
-                    "Bert.hidden_size": 128,
-                    "selected_encoder_outputs": "default",
-                    "Bert.dense_activation": "linear",
-                    "Bert.pooler": "max",
-                    "Bert.preprocessing": "[replace_emojis_no_sep, remove_tags]",
-                    "Bert.dropout_rate": 0.1,
-                    "Bert.dense_kernel_reg": 0.0001,
-                    "Bert.use_batch_norm": False,
-                    "Bert.num_hidden_layers": 0,
-                    "Combined.pooler": "average",
+                                           "RandomForestClassifier", "XGBClassifier"],
+                    **bert_hp_dict,
                 },
             }
         )
     ]
+    return ExperimentHandler(experiments)
+
+
+def pooling_experiment_handler(bert_hp_dict: dict):
+    """ Trains a BERT model and then fits a secondary model to predict based on BERT's final hidden layer """
+    pooler_args = ["concat", "max", "average"]
+    experiments = [
+        (
+            BertDownstreamLossPooledCombinedExperiment,
+            {
+                "experiment_dir": "../training/bert_clf/downstream_loss/combined/pooler",
+                "experiment_name": pooler,
+                "max_trials": 100,
+                "hyperparameters": {
+                    "Combined.pooler": pooler,
+                    **bert_hp_dict,
+                },
+            }
+        ) for pooler in pooler_args
+    ]
+    return ExperimentHandler(experiments)
+
+
+if __name__ == "__main__":
+    """ Execute experiments in this module """
+    dataset_dir = sys.argv[1]
+
+    bert_hp = {
+        "learning_rate": 2e-5,
+        "Bert.epochs": 4,
+        "Bert.batch_size": 8,
+        "Bert.encoder_url": "https://tfhub.dev/tensorflow/small_bert/bert_en_uncased_L-12_H-128_A-2/1",
+        "Bert.hidden_size": 128,
+        "selected_encoder_outputs": "default",
+        "Bert.dense_activation": "linear",
+        "Bert.pooler": "max",
+        "Bert.preprocessing": "[replace_emojis_no_sep, remove_tags]",
+        "Bert.dropout_rate": 0.1,
+        "Bert.dense_kernel_reg": 0.0001,
+        "Bert.use_batch_norm": False,
+        "Bert.num_hidden_layers": 0,
+    }
+
     with tf.device("/gpu:0"):
-        handler = ExperimentHandler(experiments)
-        handler.run_experiments(dataset_dir)
-        handler.print_results(20)
+        # Logits experiment
+        handler = logits_experiment_handler(bert_hp)
+        # handler.run_experiments(dataset_dir)
+        handler.print_results(10)
+
+        # Pooler experiments
+        handler = pooling_experiment_handler(bert_hp)
+        # handler.run_experiments(dataset_dir)
+        handler.print_results(10)
