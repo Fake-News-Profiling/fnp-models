@@ -150,7 +150,7 @@ def plus_stats_handler():
             # Incorporating stats at classification time
             BertPlusStatsExperiment,
             {
-                "experiment_dir": "../training/bert_clf/downstream_loss/plus_stats",
+                "experiment_dir": "../training/bert_clf/individual/plus_stats",
                 "experiment_name": "stats",
                 "max_trials": 1,
                 "num_cv_splits": 3,
@@ -160,8 +160,18 @@ def plus_stats_handler():
             # Statistical BERT embeddings
             BertPlusStatsEmbeddingExperiment,
             {
-                "experiment_dir": "../training/bert_clf/downstream_loss/plus_stats",
+                "experiment_dir": "../training/bert_clf/individual/plus_stats",
                 "experiment_name": "stats_embeddings",
+                "max_trials": 1,
+                "num_cv_splits": 3,
+                "hyperparameters": bert_model_hps,
+            }
+        ), (
+            # BERT with no stats (for comparison)
+            BertTrainedOnDownstreamLossExperiment,
+            {
+                "experiment_dir": "../training/bert_clf/individual/plus_stats",
+                "experiment_name": "no_stats",
                 "max_trials": 1,
                 "num_cv_splits": 3,
                 "hyperparameters": bert_model_hps,

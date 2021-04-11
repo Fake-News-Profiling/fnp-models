@@ -174,6 +174,16 @@ def plus_stats_handler():
                 "num_cv_splits": 3,
                 "hyperparameters": bert_model_hps,
             }
+        ), (
+            # BERT with no stats (for comparison)
+            BertTrainedOnDownstreamLossExperiment,
+            {
+                "experiment_dir": "../training/bert_clf/downstream_loss/plus_stats",
+                "experiment_name": "no_stats",
+                "max_trials": 1,
+                "num_cv_splits": 3,
+                "hyperparameters": bert_model_hps,
+            }
         )
     ]
     return ExperimentHandler(experiments)
