@@ -4,7 +4,7 @@ import numpy as np
 import tensorflow as tf
 
 import data.preprocess as pre
-from experiments.bert.downstream_loss.bert_downstream_loss import BertTrainedOnDownstreamLoss, BertUserLevelClassifier
+from experiments.bert.downstream_loss.bert_experiment_models import BertTrainedOnDownstreamLoss, BertUserLevelClassifier
 from experiments.experiment import ExperimentConfig
 from experiments.handler import ExperimentHandler
 from experiments.models import CompileOnFitKerasModel

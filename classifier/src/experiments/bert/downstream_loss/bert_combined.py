@@ -9,7 +9,7 @@ from sklearn.preprocessing import StandardScaler
 from bert import BertIndividualTweetTokenizer
 from bert.models import bert_tokenizer
 from experiments.bert import VotingClassifier
-from experiments.bert.downstream_loss.bert_downstream_loss import BertTrainedOnDownstreamLoss
+from experiments.bert.downstream_loss.bert_experiment_models import BertTrainedOnDownstreamLoss
 from experiments.experiment import AbstractSklearnExperiment
 from experiments.handler import ExperimentHandler
 
@@ -185,6 +185,7 @@ if __name__ == "__main__":
         "Bert.dense_kernel_reg": 0.0001,
         "Bert.use_batch_norm": False,
         "Bert.num_hidden_layers": 0,
+        "Bert.tweet_feed_len": 10,
     }
 
     with tf.device("/gpu:0"):
