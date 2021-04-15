@@ -1,15 +1,16 @@
 from collections import defaultdict
+from functools import partial
 
 import numpy as np
 import pandas as pd
 import tensorflow as tf
-from sklearn.metrics import precision_score, recall_score, f1_score
+from sklearn.metrics import precision_score, recall_score, f1_score, roc_auc_score
 from sklearn.model_selection import StratifiedKFold
 
+import evaluation as eval
 import evaluation.models as models
-from base import ScopedHyperParameters
 from base.training import allow_gpu_memory_growth
-from data import load_data, parse_labels_to_floats, parse_dataset
+from data import parse_dataset
 
 allow_gpu_memory_growth()
 
@@ -20,44 +21,52 @@ def evaluate(model, x, y, eval_metrics):
     return {name: fn(y, predictions) for name, fn in eval_metrics}
 
 
-def evaluate_models(x, y, eval_models, eval_metrics, cv_splits=5, save_filepath=None):
+def evaluate_models(x, y, eval_models, eval_metrics, cv_splits=10, num_repetitions=5, save_filepath=None):
     """ Evaluate fake news profiling models, using K-fold Cross-Validation """
-    kfold = StratifiedKFold(n_splits=cv_splits, shuffle=True)
 
-    # Fit and evaluate models using Cross-Validation on the training set
+    # Perform `num_repetitions` cross-validations
     cv_metrics = defaultdict(list)
-    for i, (train_indices, val_indices) in enumerate(kfold.split(x, y)):
-        for name, model_class, hyperparameters in eval_models:
-            cv_metrics["CV split"].append(i + 1)
-            model = model_class(hyperparameters)
-            cv_metrics["Model"].append(name)
-            model.fit(x[train_indices], y[train_indices])
-            metrics = evaluate(model, x[val_indices], y[val_indices], eval_metrics)
+    for r in range(num_repetitions):
+        kfold = StratifiedKFold(n_splits=cv_splits, shuffle=True)
 
-            for metric_name, value in metrics.items():
-                cv_metrics[metric_name].append(float(value))
+        # Fit and evaluate models using Cross-Validation on the dataset
+        for i, (train_indices, val_indices) in enumerate(kfold.split(x, y)):
+            for name, model_class, hyperparameters in eval_models:
+                cv_metrics["Repetition"].append(r + 1)
+                cv_metrics["CV split"].append(i + 1)
+                model = model_class(hyperparameters)
+                cv_metrics["Model"].append(name)
+                model.fit(x[train_indices], y[train_indices])
+                metrics = evaluate(model, x[val_indices], y[val_indices], eval_metrics)
 
-            print(pd.DataFrame(cv_metrics).to_markdown())
+                for metric_name, value in metrics.items():
+                    cv_metrics[metric_name].append(float(value))
+
+        print(pd.DataFrame(cv_metrics).to_markdown())
+
+    cv_df = pd.DataFrame(cv_metrics)
 
     # Compute metric averages
-    cv_df = pd.DataFrame(cv_metrics)
+    final_df = pd.DataFrame()
     for model_name in cv_df["Model"].unique():
-        def reduce_col(col_data):
+        def reduce_col(col_data, aggr):
             if col_data.dtype == object:
                 return col_data.iloc[0]
-            return np.mean(col_data)
+            return aggr(col_data)
 
-        row = cv_df[cv_df["Model"] == model_name].apply(reduce_col)
-        row.loc["CV split"] = "Average"
-        cv_df = cv_df.append(row, ignore_index=True)
+        # Compute average and std scores
+        for name, agg in [("Average", np.mean), ("Standard Deviation", np.std), ("Max", np.max), ("Min", np.min)]:
+            row = cv_df[cv_df["Model"] == model_name].apply(partial(reduce_col, aggr=agg))
+            row.loc["Agg"] = name
+            final_df = final_df.append(row, ignore_index=True)
 
-    cv_df = cv_df.sort_values(["Model", "CV split"])
-    print(f"\n{cv_splits}-fold Cross-Validation results:\n", cv_df.to_markdown(), sep="", end="\n")
+    final_df = final_df[["Model", "Agg", *[name for name, _ in eval_metrics]]].sort_values(["Model", "Agg"])
+    print(f"\n{cv_splits}-fold Cross-Validation results:\n", final_df.to_markdown(), sep="", end="\n")
 
     if save_filepath is not None:
         with open(save_filepath, "a") as file:
             file.write("\n")
-            cv_df.to_markdown(file)
+            final_df.to_markdown(file)
 
 
 def main():
@@ -73,34 +82,6 @@ def main():
         ("TfIdfModel", models.baselines.TfIdfModel, None),
         ("SvmCharNGramsModel", models.baselines.SvmCharNGramsModel, None),
         ("Buda20NgramEnsembleModel", models.baselines.Buda20NgramEnsembleModel, None),
-
-        # Statistical models
-        ("ReadabilityStatisticalModel", models.StatisticalModel,
-         ScopedHyperParameters.from_json("evaluation/models/hyperparameters/readability_model.json")),
-        ("NerStatisticalModel", models.StatisticalModel,
-         ScopedHyperParameters.from_json("evaluation/models/hyperparameters/ner_model.json")),
-        ("SentimentStatisticalModel", models.StatisticalModel,
-         ScopedHyperParameters.from_json("evaluation/models/hyperparameters/sentiment_model.json")),
-
-        # BERT-based models
-        # ("BertPooledModel", models.BertPooledModel,
-        #  load_hyperparameters("models/hyperparameters/bert_model.json", to_scoped_hyperparameters=True)),
-        # ("EnsembleBertPooledModel", models.ensemble_bert_pooled_model,
-        #  load_hyperparameters("models/hyperparameters/ensemble_bert_model.json", to_scoped_hyperparameters=True)),
-        # ("Bert256PooledModel", models.BertPooledModel,
-        #  load_hyperparameters("models/hyperparameters/bert_model_256.json", to_scoped_hyperparameters=True)),
-        # ("EnsembleBert256PooledModel", models.ensemble_bert_pooled_model,
-        #  load_hyperparameters("models/hyperparameters/ensemble_bert_model_256.json", to_scoped_hyperparameters=True)),
-        # ("EnsembleBertPooledModelFfnnOut", models.ensemble_bert_pooled_model,
-        #  load_hyperparameters("models/hyperparameters/ensemble_bert_model_ffnn_out.json",
-        #                       to_scoped_hyperparameters=True)),
-        # ("BertPooledModelFfnnOut", models.BertPooledModel,
-        #  load_hyperparameters("models/hyperparameters/bert_model_ffnn_out.json", to_scoped_hyperparameters=True)),
-        # ("Bert256PooledModelFfnnOut", models.BertPooledModel,
-        #  load_hyperparameters("models/hyperparameters/bert_model_256_ffnn_out.json", to_scoped_hyperparameters=True)),
-        # ("EnsembleBert256PooledModelFfnnOut", models.ensemble_bert_pooled_model,
-        #  load_hyperparameters("models/hyperparameters/ensemble_bert_model_256_ffnn_out.json",
-        #                       to_scoped_hyperparameters=True)),
     ]
     metrics = [
         ("Loss", tf.keras.losses.binary_crossentropy),
@@ -108,11 +89,14 @@ def main():
         ("Precision", precision_score),
         ("Recall", recall_score),
         ("F1", f1_score),
+        ("ROC AUC", roc_auc_score),
+        ("True positives", eval.true_positives),
+        ("False negatives", eval.false_negatives),
+        ("True negatives", eval.true_negatives),
+        ("False positives", eval.false_positives),
     ]
     with tf.device("/gpu:0"):
-        evaluate_models(x, y, eval_models, metrics, save_filepath="evaluation/eval_results.txt")
-        evaluate_models(x, y, eval_models, metrics, save_filepath="evaluation/eval_results.txt")
-        evaluate_models(x, y, eval_models, metrics, save_filepath="evaluation/eval_results.txt")
+        evaluate_models(x, y, eval_models, metrics, save_filepath="evaluation/evaluation_results.txt")
 
 
 if __name__ == "__main__":
