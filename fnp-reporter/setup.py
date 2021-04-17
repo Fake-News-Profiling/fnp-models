@@ -5,7 +5,9 @@ setup(
     version="1.0.0",
     packages=["fnp-reporter"],
     description="Reporter client for Fake News Profiling",
-    long_description=open("README.txt").read(),
-    install_requires=[],
+    long_description=open("README.md").read(),
+    install_requires=[
+        "jinja2",
+    ],
 )
 

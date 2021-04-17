@@ -12,6 +12,7 @@ def parse_program_args() -> argparse.Namespace:
     """ Parse the inputted program arguments """
     arg_parser = argparse.ArgumentParser()
     arg_parser.add_argument("config", help="Filepath to the services configuration file", type=str)
+    arg_parser.add_argument("server_port", help="The server's port", type=int, default=8080)
     return arg_parser.parse_args()
 
 
@@ -46,7 +47,7 @@ def main():
         service.register_with_server(app)
 
     # Run the Flask server
-    app.run(host="0.0.0.0", port=8000, debug=False)
+    app.run(host="0.0.0.0", port=args.server_port, debug=False)
 
 
 if __name__ == "__main__":

@@ -5,7 +5,7 @@ setup(
     version="1.0.0",
     packages=find_packages(),
     description="Models for Fake News Profiling",
-    long_description=open("README.txt").read(),
+    long_description=open("README.md").read(),
     install_requires=[
         "numpy",
         "pandas",

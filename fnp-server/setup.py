@@ -1,10 +1,14 @@
-from setuptools import setup
+from setuptools import setup, find_packages
 
 setup(
-    name="FNP-Server",
+    name="fnp-server",
     version="1.0.0",
-    packages=["fnp-server"],
+    packages=find_packages(),
     description="Fake News Profiling Server",
-    long_description=open("README.txt").read(),
-    install_requires=[],
+    long_description=open("README.md").read(),
+    install_requires=[
+        "flask",
+        "requests",
+        "fnp-models",
+    ],
 )

@@ -9,4 +9,4 @@ data/service_config.json
 venv/
 build/
 dist/
-fnp_models.egg-info/
+fnp_server.egg-info/
