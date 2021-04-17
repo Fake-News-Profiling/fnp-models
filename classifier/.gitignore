@@ -1,8 +1,0 @@
-# IDE
-/.idea/
-.ipynb_checkpoints/
-__pycache__/
-
-/preprocessing/training/
-/training/
-dependencies/

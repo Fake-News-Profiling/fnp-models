@@ -1,0 +1,12 @@
+# IDE
+.vscode/
+.idea/
+
+# Config files
+data/service_config.json
+
+# Builds
+venv/
+build/
+dist/
+fnp_models.egg-info/

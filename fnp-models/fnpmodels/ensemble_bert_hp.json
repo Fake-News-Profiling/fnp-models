@@ -1,0 +1,75 @@
+{
+  "bert": {
+    "learning_rate": 0.00002,
+    "epochs": 4,
+    "batch_size": 128,
+    "selected_encoder_outputs": "default",
+    "Bert": {
+      "encoder_url": "https://tfhub.dev/tensorflow/small_bert/bert_en_uncased_L-12_H-128_A-2/1",
+      "hidden_size": 128,
+      "preprocessing": "[replace_emojis_no_sep, remove_tags]",
+      "dense_kernel_reg": 0.00001,
+      "use_batch_norm": false,
+      "num_hidden_layers": 0,
+      "dense_activation": "tanh",
+      "dropout_rate": 0.1,
+      "tweet_feed_len": 1
+    },
+    "Classifier": {
+      "pooler": "max",
+      "pooling_type": "last_hidden_layer",
+      "model_type": "RandomForestClassifier",
+      "scale": false,
+      "n_estimators": 202,
+      "criterion": "entropy",
+      "min_samples_split": 6,
+      "min_samples_leaf": 8,
+      "min_impurity_decrease": 0,
+      "ignore_preprocessing": true
+    }
+  },
+
+  "readability": {
+    "data_type": "readability",
+    "model_type": "SVC",
+    "C": 2.126186365416362,
+    "use_pca": true,
+    "ignore_preprocessing": false
+  },
+
+  "sentiment": {
+    "data_type": "sentiment",
+    "Sentiment": {
+      "library": "vader"
+    },
+    "model_type": "SVC",
+    "C": 49.763148643424906,
+    "use_pca": true,
+    "ignore_preprocessing": false
+  },
+
+  "ner": {
+    "data_type": "ner",
+    "Ner": {
+      "library": "stanza"
+    },
+    "model_type": "XGBClassifier",
+    "learning_rate": 0.02768628608048948,
+    "gamma": 3.69570911960424,
+    "max_depth": 7,
+    "min_child_weight": 2,
+    "subsample": 0.7746438810941617,
+    "colsample_bytree": 0.49295036240854295,
+    "colsample_bylevel": 0.7381592709842704,
+    "colsample_bynode": 0.5807673935803902,
+    "reg_lambda": 0.2877716065197798,
+    "use_pca": true,
+    "ignore_preprocessing": false
+  },
+
+  "ensemble": {
+    "model_type": "SVC",
+    "C": 122.86651185892256,
+    "ignore_preprocessing": true
+  }
+}

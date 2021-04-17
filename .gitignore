@@ -1,12 +1,8 @@
 # IDE
-/.vscode/
-/.idea/
+.vscode/
+.idea/
+__pycache__/
 
-# Virtual Env
-/venv/
-
-# Scripts
-/scripts/run_app.sh
-/.vscode/
-/.idea/
-/reports/
+# Directories
+saved_models/
+training/
