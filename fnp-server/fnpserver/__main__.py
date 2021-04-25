@@ -6,6 +6,7 @@ import importlib
 from flask import Flask
 
 from fnpserver import AbstractService
+from fnpserver.services import DataEncoder
 
 
 def parse_program_args() -> argparse.Namespace:
@@ -32,6 +33,7 @@ def main():
 
     # Startup the Flask server
     app = Flask("Fake News Profiling API")
+    app.json_encoder = DataEncoder
 
     # Load services and register them with the Flask server
     with open(args.config, "r") as file:

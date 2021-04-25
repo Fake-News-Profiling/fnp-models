@@ -23,6 +23,7 @@ class UserProfilerService(AbstractService):
         username = request.args.get("username")
 
         tweet_feed = self.data_handler.get_twitter_handler().get_user_tweet_feed(username)
+        tweet_feed = [tweet.text for tweet in tweet_feed]
         data = self.tweet_feed_model([tweet_feed])
         data["num_tweets_used"] = len(tweet_feed)
         data["username"] = username

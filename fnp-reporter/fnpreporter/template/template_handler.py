@@ -7,7 +7,7 @@ class UserProfilerTemplateHandler:
     """ Compiles data into a Twitter user fake news spreader report """
 
     def __init__(self, report_dir: str):
-        template_env = Environment(loader=FileSystemLoader("template/templates"))
+        template_env = Environment(loader=FileSystemLoader("data/templates"))
         self.template = template_env.get_template("report_template.html")
         self.report_dir = report_dir
 

@@ -3,7 +3,7 @@ from json import JSONDecodeError
 
 import requests
 
-from .template import UserProfilerTemplateHandler
+from fnpreporter.template import UserProfilerTemplateHandler
 
 
 def parse_program_args() -> argparse.Namespace:
@@ -27,7 +27,17 @@ def main():
         response = requests.get(args.api_url, params={"username": username})
         try:
             data = response.json()
-            template_handler.generate_report(f"{username}_report", data)
+
+            template_handler.generate_report(f"{username}_report", {
+                "is_fake_news_spreader": data["Ensemble.predict"][0] == 1,
+                "Ensemble_predict_proba": data["Ensemble.predict_proba"][0],
+                "Bert_predict_proba": data["Bert.predict_proba"][0],
+                "Readability_predict_proba": data["Readability.predict_proba"][0],
+                "Ner_predict_proba": data["Ner.predict_proba"][0],
+                "Sentiment_predict_proba": data["Sentiment.predict_proba"][0],
+                "num_tweets_used": data["num_tweets_used"],
+                "username": data["username"],
+            })
         except JSONDecodeError:
             print("Error: unable to decode response from the server -", response)
 

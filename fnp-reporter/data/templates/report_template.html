@@ -35,7 +35,7 @@
 
         <div style="width: 60%; margin: auto;">
             <!-- Overall classification -->
-            {% if bert_tweet_feed.is_fake_news_spreader %}
+            {% if is_fake_news_spreader %}
             <div class="alert alert-danger" role="alert">
                 <h2>Prediction: FAKE NEWS SPREADER</h2>
             </div>
@@ -48,8 +48,29 @@
             <!-- Classification details -->
             <p>
                 We looked at <span class="username">@{{ username }}</span>'s last 
-                {{ num_tweets_used }} tweets and predicted a <bf>{{ '%.2f' % bert_tweet_feed.fake_news_spreader_proba }}%</bf>
+                {{ num_tweets_used }} tweets and predicted a <bf>{{ '%.2f' % Ensemble_predict_proba[1] }}%</bf>
                 probability that they are a fake news spreader.
+
+                <hr>
+                4 models were used to make the final classification. Their individual probabilities are outlined below.
+                <img src="https://lh3.googleusercontent.com/d/1hwwfjkZXQExyB91hGOhaEuMJMlPYollT=s1000"
+                     style="width: 80%; display: block; margin-left: auto; margin-right: auto; padding: 20px">
+
+
+                <div class="card" style="padding: 20px">
+                    <div class={% if Bert_predict_proba[1] > 0.5 %} "alert alert-danger" {% else %} "alert alert-success" {% endif %} role="alert">
+                        <h3>BERT Model: {{ '%.2f' % Bert_predict_proba[1] }}%</h3>
+                    </div>
+                    <div class={% if Readability_predict_proba[1] > 0.5 %} "alert alert-danger" {% else %} "alert alert-success" {% endif %} role="alert">
+                        <h3>Readability Model: {{ '%.2f' % Readability_predict_proba[1] }}%</h3>
+                    </div>
+                    <div class={% if Sentiment_predict_proba[1] > 0.5 %} "alert alert-danger" {% else %} "alert alert-success" {% endif %} role="alert">
+                        <h3>Sentiment Model: {{ '%.2f' % Sentiment_predict_proba[1] }}%</h3>
+                    </div>
+                    <div class={% if Ner_predict_proba[1] > 0.5 %} "alert alert-danger" {% else %} "alert alert-success" {% endif %} role="alert" style="margin-bottom: 0;">
+                        <h3>NER Model: {{ '%.2f' % Ner_predict_proba[1] }}%</h3>
+                    </div>
+                </div>
             </p>
         </div>
 	</div>

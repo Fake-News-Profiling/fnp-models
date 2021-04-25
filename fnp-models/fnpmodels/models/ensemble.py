@@ -33,11 +33,11 @@ class EnsembleBertModel(AbstractModel):
 
     def __call__(self, x, *args, **kwargs):
         bert_out, read_out, sent_out, ner_out = self._call_child_models(x)
-        x_outputs = np.concatenate([bert_out, read_out, sent_out, ner_out])
+        x_outputs = np.concatenate([bert_out, read_out, sent_out, ner_out], axis=1)
         return {
             "Ensemble.predict": self.ensemble_model.predict(x_outputs),
             "Ensemble.predict_proba": self.ensemble_model.predict_proba(x_outputs),
-            "Ensemble.weights": self.ensemble_model.model.weights,  # TODO
+            "Ensemble.weights": self.ensemble_model.model.feature_importances_,
             "Bert.predict_proba": bert_out,
             "Readability.predict_proba": read_out,
             "Sentiment.predict_proba": sent_out,

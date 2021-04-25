@@ -10,3 +10,5 @@ venv/
 build/
 dist/
 fnp_server.egg-info/
+
+data/weights/

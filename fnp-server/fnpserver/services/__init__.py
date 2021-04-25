@@ -1,3 +1,4 @@
+import json
 import logging
 from abc import ABC
 from typing import Dict
@@ -5,6 +6,7 @@ from dataclasses import dataclass
 
 from dacite import from_dict
 from flask import Flask
+import numpy as np
 
 from fnpserver.data.data_handler import DataHandler, DataHandlerConfig
 
@@ -41,9 +43,22 @@ class AbstractService(ABC):
                 route = attribute.replace('route_', '').lower().replace("_", "-")
                 url = f"/{self.endpoint}/{route}"
                 logging.info("Registering route", url)
+
                 app.add_url_rule(
                     url,
                     endpoint=route,
                     view_func=getattr(self, attribute),
                     **options
                 )
+
+
+class DataEncoder(json.JSONEncoder):
+    """ JSON data encoder which can handle Numpy data types"""
+
+    def default(self, data):
+        if isinstance(data, np.bool_):
+            return bool(data)
+        elif isinstance(data, np.ndarray):
+            return data.tolist()
+
+        return json.JSONEncoder.default(self, data)

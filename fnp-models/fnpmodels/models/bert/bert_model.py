@@ -1,3 +1,5 @@
+import os
+
 import tensorflow as tf
 
 from fnpmodels.models import AbstractModel, ScopedHyperParameters
@@ -19,7 +21,8 @@ class BertModel(AbstractModel):
         self.bert_pooled = None
         self.classifier = SklearnModel(self.hp["Classifier"])
 
-        if "Bert.weights_path" in self.hp:
+        if "Bert.weights_path" in self.hp and os.path.exists(self.hp["Bert.weights_path"] + ".index"):
+            print("Loading model weights:", self.hp["Bert.weights_path"])
             self.bert.load_weights(self.hp["Bert.weights_path"])
             self.bert_pooled = self._build_bert_pooled()
 
@@ -36,7 +39,8 @@ class BertModel(AbstractModel):
             self.bert_pooled.predict(
                 tokenize_x(self.hp, self.tokenizer, [tweet_feed])
             ) for tweet_feed in x_train
-        ])  # (num_users, TWEET_FEED_LEN, -1)
+        ])  # (num_users, TWEET_FEED_LEN, 1, -1)
+        x_train = tf.reshape(x_train, (x_train.shape[0], x_train.shape[1], x_train.shape[3]))
 
         pooler = self.hp.get("Classifier.pooler")
         if pooler == "concat":
@@ -54,12 +58,12 @@ class BertModel(AbstractModel):
         # Train BERT
         xt = tokenize_x(self.hp, self.tokenizer, xp, shuffle=True)
         yt = tokenize_y(self.hp, y)
-        self.bert.fit(xt, yt, batch_size=self.hp.get("batch_size"), epochs=self.hp.get("epochs"))
+        self.bert.fit(x=xt, y=yt, batch_size=self.hp.get("batch_size"), epochs=self.hp.get("epochs"))
         self.bert_pooled = self._build_bert_pooled()
 
         if "Bert.weights_path" in self.hp:
             self.bert.save_weights(self.hp["Bert.weights_path"])
 
         # Train pooling model
-        xtp = self._pool_bert_predictions(x)
+        xtp = self._pool_bert_predictions(xp)
         self.classifier.train(xtp, y)

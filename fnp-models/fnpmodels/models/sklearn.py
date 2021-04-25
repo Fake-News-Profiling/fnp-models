@@ -1,7 +1,9 @@
-import numpy as np
+import os
 from joblib import dump, load
-from sklearn.base import ClassifierMixin, BaseEstimator
 
+
+import numpy as np
+from sklearn.base import ClassifierMixin, BaseEstimator
 from sklearn.decomposition import PCA
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.linear_model import LogisticRegression
@@ -19,7 +21,8 @@ class SklearnModel(AbstractModel):
     def __init__(self, hyperparameters: ScopedHyperParameters):
         super().__init__(hyperparameters)
 
-        if "weights_path" in self.hp:
+        if "weights_path" in self.hp and os.path.exists(self.hp["weights_path"] + ".joblib"):
+            print("Loading model weights:", self.hp["weights_path"])
             self.model = load(self.hp["weights_path"] + ".joblib")
         else:
             self.model = None
