@@ -76,7 +76,7 @@ class TwitterDatabaseHandler(AbstractTwitterHandler):
     """ Communicates with a local database of Twitter data """
 
     def get_user_tweet_feed(self, username: str, *args, **kwargs) -> List[Tweet]:
-        user_path = os.path.join(self.config.twitter_dir, "tweet_feeds", username)
-        raw_tweets = parse_author_tweets([user_path]).values()
+        user_path = os.path.join(self.config.twitter_dir, "tweet_feeds", username + ".xml")
+        raw_tweets = list(parse_author_tweets([user_path]).values())[0]
         tweets = [Tweet(username, tweet, str(i)) for i, tweet in enumerate(raw_tweets)]
         return tweets

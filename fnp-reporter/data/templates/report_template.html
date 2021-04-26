@@ -57,18 +57,18 @@
                      style="width: 80%; display: block; margin-left: auto; margin-right: auto; padding: 20px">
 
 
-                <div class="card" style="padding: 20px">
-                    <div class={% if Bert_predict_proba[1] > 0.5 %} "alert alert-danger" {% else %} "alert alert-success" {% endif %} role="alert">
-                        <h3>BERT Model: {{ '%.2f' % Bert_predict_proba[1] }}%</h3>
+                <div class="card" style="padding: 20px; display: table; align-items: center; justify-content: center;">
+                    <div style="display: table-cell; width: 20%; margin: 10px;" class={% if Readability_predict_proba[1] > 0.5 %} "alert alert-danger" {% else %} "alert alert-success" {% endif %} role="alert">
+                        <h5>Readability: {{ '%.2f' % Readability_predict_proba[1] }}%</h5>
                     </div>
-                    <div class={% if Readability_predict_proba[1] > 0.5 %} "alert alert-danger" {% else %} "alert alert-success" {% endif %} role="alert">
-                        <h3>Readability Model: {{ '%.2f' % Readability_predict_proba[1] }}%</h3>
+                    <div style="display: table-cell; width: 20%; margin: 10px;" class={% if Sentiment_predict_proba[1] > 0.5 %} "alert alert-danger" {% else %} "alert alert-success" {% endif %} role="alert">
+                        <h5>Sentiment: {{ '%.2f' % Sentiment_predict_proba[1] }}%</h5>
                     </div>
-                    <div class={% if Sentiment_predict_proba[1] > 0.5 %} "alert alert-danger" {% else %} "alert alert-success" {% endif %} role="alert">
-                        <h3>Sentiment Model: {{ '%.2f' % Sentiment_predict_proba[1] }}%</h3>
+                    <div style="display: table-cell; width: 20%; margin: 10px;" class={% if Ner_predict_proba[1] > 0.5 %} "alert alert-danger" {% else %} "alert alert-success" {% endif %} role="alert" style="margin-bottom: 0;">
+                        <h5>NER: {{ '%.2f' % Ner_predict_proba[1] }}%</h5>
                     </div>
-                    <div class={% if Ner_predict_proba[1] > 0.5 %} "alert alert-danger" {% else %} "alert alert-success" {% endif %} role="alert" style="margin-bottom: 0;">
-                        <h3>NER Model: {{ '%.2f' % Ner_predict_proba[1] }}%</h3>
+                    <div style="display: table-cell; width: 20%; margin: 10px;" class={% if Bert_predict_proba[1] > 0.5 %} "alert alert-danger" {% else %} "alert alert-success" {% endif %} role="alert">
+                        <h5>BERT: {{ '%.2f' % Bert_predict_proba[1] }}%</h5>
                     </div>
                 </div>
             </p>

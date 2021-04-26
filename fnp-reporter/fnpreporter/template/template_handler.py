@@ -16,7 +16,8 @@ class UserProfilerTemplateHandler:
         full_filename = filename + ".html"
         report = self.template.render(data)
         os.makedirs(self.report_dir, exist_ok=True)
-        filepath = os.path.join(self.report_dir, full_filename)
+        filepath = os.path.abspath(os.path.join(self.report_dir, full_filename))
+        print(filepath)
 
         with open(filepath, "w", encoding="UTF-8") as report_file:
             print(report, file=report_file)
