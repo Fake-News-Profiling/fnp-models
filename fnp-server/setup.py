@@ -7,9 +7,9 @@ setup(
     description="Fake News Profiling Server",
     long_description=open("README.md").read(),
     install_requires=[
-        "wheel"
+        "wheel",
         "flask",
-        "dacite"
+        "dacite",
         "requests",
         "twython",
         # "fnp-models",

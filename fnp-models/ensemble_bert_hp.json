@@ -1,0 +1,98 @@
+{
+  "bert": {
+    "learning_rate": 0.00002,
+    "epochs": 4,
+    "batch_size": 128,
+    "selected_encoder_outputs": "default",
+    "Bert": {
+      "encoder_url": "https://tfhub.dev/tensorflow/small_bert/bert_en_uncased_L-12_H-128_A-2/1",
+      "hidden_size": 128,
+      "preprocessing": "[replace_emojis_no_sep, remove_tags]",
+      "dense_kernel_reg": 0.00001,
+      "use_batch_norm": false,
+      "num_hidden_layers": 0,
+      "dense_activation": "tanh",
+      "dropout_rate": 0.1,
+      "tweet_feed_len": 1,
+      "weights_path": "data/weights/bert_weights"
+    },
+    "Classifier": {
+      "pooler": "max",
+      "pooling_type": "last_hidden_layer",
+      "model_type": "RandomForestClassifier",
+      "scale": false,
+      "n_estimators": 202,
+      "criterion": "entropy",
+      "min_samples_split": 6,
+      "min_samples_leaf": 8,
+      "min_impurity_decrease": 0,
+      "ignore_preprocessing": true,
+      "weights_path": "data/weights/bert_classifier_weights"
+    }
+  },
+
+  "readability": {
+    "data_type": "readability",
+    "model_type": "SVC",
+    "C": 2.126186365416362,
+    "use_pca": true,
+    "ignore_preprocessing": false,
+    "weights_path": "data/weights/readability_weights"
+  },
+
+  "sentiment": {
+    "data_type": "sentiment",
+    "Sentiment": {
+      "library": "vader"
+    },
+    "model_type": "XGBClassifier",
+    "learning_rate": 0.12689703856562107,
+    "gamma": 0,
+    "max_depth": 8,
+    "min_child_weight": 8,
+    "subsample": 0.6225295857803277,
+    "colsample_bytree": 0.5955606179327705,
+    "colsample_bylevel": 0.5,
+    "colsample_bynode": 0.6251921172699271,
+    "reg_lambda": 0,
+    "use_pca": true,
+    "ignore_preprocessing": false,
+    "weights_path": "data/weights/sentiment_weights"
+  },
+
+  "ner": {
+    "data_type": "ner",
+    "Ner": {
+      "library": "stanza"
+    },
+    "model_type": "XGBClassifier",
+    "learning_rate": 0.02768628608048948,
+    "gamma": 3.69570911960424,
+    "max_depth": 7,
+    "min_child_weight": 2,
+    "subsample": 0.7746438810941617,
+    "colsample_bytree": 0.49295036240854295,
+    "colsample_bylevel": 0.7381592709842704,
+    "colsample_bynode": 0.5807673935803902,
+    "reg_lambda": 0.2877716065197798,
+    "use_pca": true,
+    "ignore_preprocessing": false,
+    "weights_path": "data/weights/ner_weights"
+  },
+
+  "ensemble": {
+    "model_type": "XGBClassifier",
+    "learning_rate": 0.029958707211519872,
+    "gamma": 8,
+    "max_depth": 5,
+    "min_child_weight": 6,
+    "subsample": 0.7432457880978142,
+    "colsample_bytree": 0.3046703788043738,
+    "colsample_bylevel": 0.645953171695951,
+    "colsample_bynode": 0.4345912903970289,
+    "reg_lambda": 0.4850237314297551,
+    "use_pca": false,
+    "ignore_preprocessing": true,
+    "weights_path": "data/weights/ensembler_weights"
+  }
+}

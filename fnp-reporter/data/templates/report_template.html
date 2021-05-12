@@ -48,7 +48,7 @@
             <!-- Classification details -->
             <p>
                 We looked at <span class="username">@{{ username }}</span>'s last 
-                {{ num_tweets_used }} tweets and predicted a <bf>{{ '%.2f' % Ensemble_predict_proba[1] }}%</bf>
+                {{ num_tweets_used }} tweets and predicted a <bf>{{ '%.2f' % (Ensemble_predict_proba[1] * 100) }}%</bf>
                 probability that they are a fake news spreader.
 
                 <hr>
@@ -59,16 +59,16 @@
 
                 <div class="card" style="padding: 20px; display: table; align-items: center; justify-content: center;">
                     <div style="display: table-cell; width: 20%; margin: 10px;" class={% if Readability_predict_proba[1] > 0.5 %} "alert alert-danger" {% else %} "alert alert-success" {% endif %} role="alert">
-                        <h5>Readability: {{ '%.2f' % Readability_predict_proba[1] }}%</h5>
+                        <h5>Readability: {{ '%.2f' % (Readability_predict_proba[1] * 100) }}%</h5>
                     </div>
                     <div style="display: table-cell; width: 20%; margin: 10px;" class={% if Sentiment_predict_proba[1] > 0.5 %} "alert alert-danger" {% else %} "alert alert-success" {% endif %} role="alert">
-                        <h5>Sentiment: {{ '%.2f' % Sentiment_predict_proba[1] }}%</h5>
+                        <h5>Sentiment: {{ '%.2f' % (Sentiment_predict_proba[1] * 100) }}%</h5>
                     </div>
                     <div style="display: table-cell; width: 20%; margin: 10px;" class={% if Ner_predict_proba[1] > 0.5 %} "alert alert-danger" {% else %} "alert alert-success" {% endif %} role="alert" style="margin-bottom: 0;">
-                        <h5>NER: {{ '%.2f' % Ner_predict_proba[1] }}%</h5>
+                        <h5>NER: {{ '%.2f' % (Ner_predict_proba[1] * 100) }}%</h5>
                     </div>
                     <div style="display: table-cell; width: 20%; margin: 10px;" class={% if Bert_predict_proba[1] > 0.5 %} "alert alert-danger" {% else %} "alert alert-success" {% endif %} role="alert">
-                        <h5>BERT: {{ '%.2f' % Bert_predict_proba[1] }}%</h5>
+                        <h5>BERT: {{ '%.2f' % (Bert_predict_proba[1] * 100) }}%</h5>
                     </div>
                 </div>
             </p>
