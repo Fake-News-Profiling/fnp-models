@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<title>Fake News Report</title>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<meta http-equiv="X-UA-Compatible" content="ie=edge">
+	<link 
+        rel="stylesheet" 
+        href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css" 
+		integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" 
+        crossorigin="anonymous">
+    <style>
+        .username {
+            color: #007bff;
+        }
+    </style>
+</head>
+
+<body>
+    <nav class="navbar justify-content-center navbar-expand-sm bg-primary navbar-light ">
+		<ul class="navbar-nav">
+			<li class="nav-item">
+                <a class="nav-link" style="color: white;" 
+                    href="https://twitter.com/{{ username }}">@{{ username }}</a>
+			</li>
+		</ul>
+    </nav>
+
+	<div style="width: 80%; margin: auto; ">
+        <!-- Page heading -->
+        <h1 style="padding: 20px; text-align: center;">
+            Fake News Report for <span class="username">@{{ username }}</span>
+        </h1>
+
+        <div style="width: 60%; margin: auto;">
+            <!-- Overall classification -->
+            {% if is_fake_news_spreader %}
+            <div class="alert alert-danger" role="alert">
+                <h2>Prediction: FAKE NEWS SPREADER</h2>
+            </div>
+            {% else %}
+            <div class="alert alert-success" role="alert">
+                <h2>Prediction: NOT a fake news spreader</h2>
+            </div>
+            {% endif %}
+
+            <!-- Classification details -->
+            <p>
+                We looked at <span class="username">@{{ username }}</span>'s last 
+                {{ num_tweets_used }} tweets and predicted a <bf>{{ '%.2f' % (Ensemble_predict_proba[1] * 100) }}%</bf>
+                probability that they are a fake news spreader.
+
+                <hr>
+                4 models were used to make the final classification. Their individual probabilities are outlined below.
+                <img src="https://lh3.googleusercontent.com/d/1hwwfjkZXQExyB91hGOhaEuMJMlPYollT=s1000"
+                     style="width: 80%; display: block; margin-left: auto; margin-right: auto; padding: 20px">
+
+
+                <div class="card" style="padding: 20px; display: table; align-items: center; justify-content: center;">
+                    <div style="display: table-cell; width: 20%; margin: 10px;" class={% if Readability_predict_proba[1] > 0.5 %} "alert alert-danger" {% else %} "alert alert-success" {% endif %} role="alert">
+                        <h5>Readability: {{ '%.2f' % (Readability_predict_proba[1] * 100) }}%</h5>
+                    </div>
+                    <div style="display: table-cell; width: 20%; margin: 10px;" class={% if Sentiment_predict_proba[1] > 0.5 %} "alert alert-danger" {% else %} "alert alert-success" {% endif %} role="alert">
+                        <h5>Sentiment: {{ '%.2f' % (Sentiment_predict_proba[1] * 100) }}%</h5>
+                    </div>
+                    <div style="display: table-cell; width: 20%; margin: 10px;" class={% if Ner_predict_proba[1] > 0.5 %} "alert alert-danger" {% else %} "alert alert-success" {% endif %} role="alert" style="margin-bottom: 0;">
+                        <h5>NER: {{ '%.2f' % (Ner_predict_proba[1] * 100) }}%</h5>
+                    </div>
+                    <div style="display: table-cell; width: 20%; margin: 10px;" class={% if Bert_predict_proba[1] > 0.5 %} "alert alert-danger" {% else %} "alert alert-success" {% endif %} role="alert">
+                        <h5>BERT: {{ '%.2f' % (Bert_predict_proba[1] * 100) }}%</h5>
+                    </div>
+                </div>
+            </p>
+        </div>
+	</div>
+</body>
+</html>

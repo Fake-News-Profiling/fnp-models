@@ -1,7 +1,0 @@
-# Cached data
-.vscode/
-__pycache__/
-/reports/
-
-# Configs
-service_config.json

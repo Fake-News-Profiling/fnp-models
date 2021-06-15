@@ -1,0 +1,16 @@
+# IDE
+.vscode/
+.idea/
+
+# Config files
+data/service_config.json
+data/service_config_local.json
+
+
+# Builds
+venv/
+build/
+dist/
+fnp_server.egg-info/
+
+data/weights/

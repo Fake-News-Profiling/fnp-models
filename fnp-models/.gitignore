@@ -1,0 +1,11 @@
+# IDE
+.vscode/
+.idea/
+__pycache__/
+.ipynb_checkpoints/
+
+# Builds
+venv/
+build/
+dist/
+fnp_models.egg-info/
