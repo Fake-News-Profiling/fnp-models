@@ -1,6 +1,19 @@
-# Fake News Profiling
-Repository containing packages for fake-news profiling.
-* `fnp-models` a package containing profiling models, as well as experimentation and evaluation tools.
-* `fnp-server` a server which runs various fake-news profiling services, providing an interface to them.
-* `fnp-reporter` a command-line application for Twitter fake-news user profiling, which fetches data from a 
-`fnp-server` and presents the information in an HTML report
+# Fake-News Profiling Models
+This package contains fake-news profiling models, as well as experimentation and evaluation tools.
+
+## Build and Import
+Build with `python setup.py sdist bdist_wheel`.
+
+Import into a local virtual environment with `python setup.py install`.
+
+## Packages
+`evaluation` contains functions used for evaluating the fake-news classification models.
+
+`experiments` contains `Experiment` classes used to test classification models as well as perform hyperparameter tuning
+for models. The `ExperimentHandler` coordinates saving config data, loading datasets, executing experiments and 
+reviewing results.
+
+`models` contains baseline and final fake-news classification models.
+
+`processing` contains tools for preprocessing text data as well as extracting readability, sentiment, or named-entity 
+information from text data.

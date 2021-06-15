@@ -2,11 +2,10 @@
 .vscode/
 .idea/
 __pycache__/
+.ipynb_checkpoints/
 
-# Directories
-saved_models/
-training/
-
-
-classifier/
+# Builds
 venv/
+build/
+dist/
+fnp_models.egg-info/
