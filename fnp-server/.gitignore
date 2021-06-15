@@ -4,6 +4,8 @@
 
 # Config files
 data/service_config.json
+data/service_config_local.json
+
 
 # Builds
 venv/

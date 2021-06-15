@@ -33,6 +33,7 @@ def main():
 
     # Startup the Flask server
     app = Flask("Fake News Profiling API")
+    app.config['JSONIFY_PRETTYPRINT_REGULAR'] = True
     app.json_encoder = DataEncoder
 
     # Load services and register them with the Flask server
